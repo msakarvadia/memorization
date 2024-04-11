@@ -49,7 +49,7 @@ DATA_SEED = 598
 num_examples = 10000
 max_ctx = 650
 
-batch_size=200
+batch_size=128
 
 """## Define task (predict multiple tokens until eos token)
 
@@ -649,7 +649,7 @@ noise_data = noise_data[noise_idxs]
 
 #Make 4 additional sets of clean data
 list_of_functions = [two_function, three_function, four_function, five_function]
-list_of_dataset_sizes = [2000, 2000, 2000, 2000]
+list_of_dataset_sizes = [20000, 20000, 20000, 20000]
 extra_train_dataloader, extra_test_dataloaders = create_data_distributions(list_of_functions, list_of_dataset_sizes, test_set_size=num_test, shuffle=True, noise=False, noise_range=1, length=100)
 
 
@@ -701,7 +701,7 @@ optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=wd, betas=
 
 #Train model
 model.train()
-model, train_losses, test_losses, train_accuracies, test_accuracies, percent_memorized = train_model_track_memorization_per_training_set(model, train_datasets, clean_test_dataloaders, noise_data, clean_data_corresponding_to_noise ,num_epochs=30, name_of_ckpt="5_data_distributions", n_layers=n_layer)
+model, train_losses, test_losses, train_accuracies, test_accuracies, percent_memorized = train_model_track_memorization_per_training_set(model, train_datasets, clean_test_dataloaders, noise_data, clean_data_corresponding_to_noise, num_epochs=200, name_of_ckpt="5_data_distributions", n_layers=n_layer)
 #model, train_losses, test_losses, model_alphas, train_accuracies, test_accuracies, percent_memorized = train_model_track_memorization(model, train_dataloader, test_dataloaders, num_epochs=25)
 
 # move to cpu
