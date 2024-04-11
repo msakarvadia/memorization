@@ -1,0 +1,23 @@
+#!/bin/bash 
+#PBS -l select=1
+#PBS -l walltime=24:00:00
+#PBS -q preemptable
+#PBS -l filesystems=home:eagle
+#PBS -A superbert
+#PBS -M sakarvadia@uchicago.edu
+
+cd "/grand/SuperBERT/mansisak/memorization/"
+echo "working dir: "
+pwd
+
+module load conda
+conda activate env/
+
+cd "/grand/SuperBERT/mansisak/memorization/src/"
+echo "working dir: "
+pwd
+
+CUDA_VISIBLE_DEVICES=0 python memorization_in_toy_models.py --n_layers 1
+CUDA_VISIBLE_DEVICES=1 python memorization_in_toy_models.py --n_layers 2
+CUDA_VISIBLE_DEVICES=2 python memorization_in_toy_models.py --n_layers 4
+CUDA_VISIBLE_DEVICES=3 python memorization_in_toy_models.py --n_layers 8

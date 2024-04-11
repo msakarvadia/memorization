@@ -14,6 +14,7 @@ import numpy as np
 
 import tqdm
 import copy
+import argparse
 
 #%pip install git+https://github.com/neelnanda-io/neel-plotly.git
 #from neel_plotly.plot import line
@@ -621,97 +622,95 @@ def train_model_track_memorization_per_training_set(model, train_datasets, test_
 
   return model, train_losses, test_losses, train_accuracies, test_accuracies, percent_memorized
 
-# Make the data
 
-#generate indexes for noise vs clean data
-idxs = list(range(20000 - num_test))
-noise_idxs = sample(idxs, 1000)
-clean_idxs = list(set(idxs) - set(noise_idxs))
+#Experiments
+if __name__=="__main__":
 
-#Mix clean and noise data
-list_of_functions = [seven_function]
-list_of_dataset_sizes = [20000]
+    #set up arg parser
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--n_layers", 
+                        type=int, 
+                        default=1,
+                        help="The number of layers you want in your toy model.")
+    
+    args = parser.parse_args()
 
-clean_train_dataloader, clean_test_dataloaders = create_data_distributions(list_of_functions, list_of_dataset_sizes, test_set_size=num_test, shuffle=True, noise=False, noise_range=1, length=100)
+    # Make the data
 
-list_of_functions = [seven_function]
-list_of_dataset_sizes = [20000]
-noise_train_dataloader, noise_test_dataloaders = create_data_distributions(list_of_functions, list_of_dataset_sizes, test_set_size=num_test, shuffle=True, noise=True, noise_range=1, length=100)
+    #generate indexes for noise vs clean data
+    idxs = list(range(20000 - num_test))
+    noise_idxs = sample(idxs, 1000)
+    clean_idxs = list(set(idxs) - set(noise_idxs))
 
-#combine train_dataloaders
-clean_data = clean_train_dataloader.dataset
-noise_data = noise_train_dataloader.dataset
+    #Mix clean and noise data
+    list_of_functions = [seven_function]
+    list_of_dataset_sizes = [20000]
 
-#grab clean and noise data according to indexes
-clean_data_corresponding_to_noise = clean_data[noise_idxs]
-clean_data = clean_data[clean_idxs]
-noise_data = noise_data[noise_idxs]
+    clean_train_dataloader, clean_test_dataloaders = create_data_distributions(list_of_functions, list_of_dataset_sizes, test_set_size=num_test, shuffle=True, noise=False, noise_range=1, length=100)
 
-#Make 4 additional sets of clean data
-list_of_functions = [two_function, three_function, four_function, five_function]
-list_of_dataset_sizes = [20000, 20000, 20000, 20000]
-extra_train_dataloader, extra_test_dataloaders = create_data_distributions(list_of_functions, list_of_dataset_sizes, test_set_size=num_test, shuffle=True, noise=False, noise_range=1, length=100)
+    list_of_functions = [seven_function]
+    list_of_dataset_sizes = [20000]
+    noise_train_dataloader, noise_test_dataloaders = create_data_distributions(list_of_functions, list_of_dataset_sizes, test_set_size=num_test, shuffle=True, noise=True, noise_range=1, length=100)
+
+    #combine train_dataloaders
+    clean_data = clean_train_dataloader.dataset
+    noise_data = noise_train_dataloader.dataset
+
+    #grab clean and noise data according to indexes
+    clean_data_corresponding_to_noise = clean_data[noise_idxs]
+    clean_data = clean_data[clean_idxs]
+    noise_data = noise_data[noise_idxs]
+
+    #Make 4 additional sets of clean data
+    list_of_functions = [two_function, three_function, four_function, five_function]
+    list_of_dataset_sizes = [20000, 20000, 20000, 20000]
+    extra_train_dataloader, extra_test_dataloaders = create_data_distributions(list_of_functions, list_of_dataset_sizes, test_set_size=num_test, shuffle=True, noise=False, noise_range=1, length=100)
 
 
-#Need to grab
-train_datasets = (noise_data, clean_data, extra_train_dataloader.dataset)
-#train_datasets += tuple(extra_train_dataloader.dataset)
+    #Need to grab
+    train_datasets = (noise_data, clean_data, extra_train_dataloader.dataset)
+    #train_datasets += tuple(extra_train_dataloader.dataset)
 
-#combine test dataloaders
-#clean_test_dataloaders.append(noise_test_dataloaders[0])
-clean_test_dataloaders += extra_test_dataloaders
+    #combine test dataloaders
+    clean_test_dataloaders += extra_test_dataloaders
+    train_datasets = (noise_data, clean_data, extra_train_dataloader.dataset)
 
-train_datasets = (noise_data, clean_data, extra_train_dataloader.dataset)
+    #Count how many noised sequences we have at each prompt length
+    count_num_noised(noise_data, clean_data_corresponding_to_noise, k=50, prompt_len=50)
+    count_num_noised(noise_data, clean_data_corresponding_to_noise, k=50, prompt_len=100)
+    count_num_noised(noise_data, clean_data_corresponding_to_noise, k=50, prompt_len=150)
+    count_num_noised(noise_data, clean_data_corresponding_to_noise, k=50, prompt_len=200)
+    count_num_noised(noise_data, clean_data_corresponding_to_noise, k=50, prompt_len=250)
+    count_num_noised(noise_data, clean_data_corresponding_to_noise, k=50, prompt_len=300)
 
-count_num_noised(noise_data, clean_data_corresponding_to_noise, k=50, prompt_len=50)
-count_num_noised(noise_data, clean_data_corresponding_to_noise, k=50, prompt_len=100)
-count_num_noised(noise_data, clean_data_corresponding_to_noise, k=50, prompt_len=150)
-count_num_noised(noise_data, clean_data_corresponding_to_noise, k=50, prompt_len=200)
-count_num_noised(noise_data, clean_data_corresponding_to_noise, k=50, prompt_len=250)
-count_num_noised(noise_data, clean_data_corresponding_to_noise, k=50, prompt_len=300)
+    #Need to have significantly fewer noised samples in the dataset and track accuracy and memorization on them separatly
+    # Now we are going to be more strict with how we measure memorization
 
-#Need to have significantly fewer noised samples in the dataset and track accuracy and memorization on them separatly
-# Now we are going to be more strict with how we measure memorization
+    # Initializing a model (with random weights) from the configuration
+    configuration = GPT2Config(
+                              vocab_size = 14,
+                              n_layer = args.n_layers, #1,2,4,8,16
+                              n_head = 4,
+                              n_embd = 128,
+                              n_positions = max_ctx,
+                              bos_token_id = 10,
+                              eos_token_id = 11 ,
+                              use_cache = False,
+                              hidden_states = False,
+                              output_attentions = False,
+                              activation_function = "relu",
+                              attn_pdrop=0,
+                              resid_pdrop=0,
+                              embd_pdrop=0,
+                              initializer_range = 0.8 / math.sqrt(128) #0.8 / sqrt(d_model)
+    )
 
-# Initializing a model (with random weights) from the configuration
-n_layer = 1 # 1 , 2, 4, 8, 16
-configuration = GPT2Config(
-                          vocab_size = 14,
-                          n_layer = n_layer,
-                          n_head = 4,
-                          n_embd = 128,
-                          n_positions = max_ctx,
-                          bos_token_id = 10,
-                          eos_token_id = 11 ,
-                          use_cache = False,
-                          hidden_states = False,
-                          output_attentions = False,
-                          activation_function = "relu",
-                          attn_pdrop=0,
-                          resid_pdrop=0,
-                          embd_pdrop=0,
-                          initializer_range = 0.8 / math.sqrt(128) #0.8 / sqrt(d_model)
-)
+    model = GPT2LMHeadModel(configuration)
+    model.to(device)
 
-model = GPT2LMHeadModel(configuration)
-model.to(device)
+    #Set up optimizer
+    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=wd, betas=betas)
 
-#Set up optimizer
-optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=wd, betas=betas)
-
-#Train model
-model.train()
-model, train_losses, test_losses, train_accuracies, test_accuracies, percent_memorized = train_model_track_memorization_per_training_set(model, train_datasets, clean_test_dataloaders, noise_data, clean_data_corresponding_to_noise, num_epochs=200, name_of_ckpt="5_data_distributions", n_layers=n_layer)
-#model, train_losses, test_losses, model_alphas, train_accuracies, test_accuracies, percent_memorized = train_model_track_memorization(model, train_dataloader, test_dataloaders, num_epochs=25)
-
-# move to cpu
-#test_accuracies[0] = [x.cpu() for x in test_accuracies[0]] #clean data
-#test_accuracies[1] = [x.cpu() for x in test_accuracies[1]] #noise data
-#train_accuracies = [x.cpu() for x in train_accuracies]
-#percent_memorized = [x.cpu() for x in percent_memorized] #noise data
-########percent_memorized[1] = [x.cpu() for x in percent_memorized[1]] #clean data
-
-# Visualize training dynamics for each test set
-plt_line([train_losses, test_losses[0], test_losses[1], test_losses[2], test_losses[3], test_losses[4]], x_val = np.arange(0, len(train_losses), 1), labels = ['train_loss', 'test_loss_7', 'test_loss_2', 'test_loss_3', 'test_loss_4', 'test_loss_5'], title="Losses", x_label="Epoch", y_label="Loss")
-plt_line([train_accuracies, test_accuracies[0], test_accuracies[1], test_accuracies[2], test_accuracies[3], test_accuracies[4], test_accuracies[1]], x_val = np.arange(0, len(train_losses), 1), labels = ['train_acc', 'test_acc_7', 'test_acc_2','test_acc_3','test_acc_4','test_acc_5'], title="Accuracies", x_label="Epoch", y_label="Accuracy")
-plt_line([percent_memorized], x_val = np.arange(0, len(train_losses), 1), labels = ['percent_memorized_7_noise'], title="Memorization", x_label="Epoch", y_label="% Memorized")
+    #Train model
+    model.train()
+    model, train_losses, test_losses, train_accuracies, test_accuracies, percent_memorized = train_model_track_memorization_per_training_set(model, train_datasets, clean_test_dataloaders, noise_data, clean_data_corresponding_to_noise, num_epochs=200, name_of_ckpt="5_data_distributions", n_layers=args.n_layers)
