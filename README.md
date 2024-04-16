@@ -7,7 +7,7 @@ Requirements:
 `python >=3.7,<3.11`
 
 ```
-git clone <repo_URL>
+git clone https://github.com/msakarvadia/memorization.git
 cd memorization
 conda create -p env python==3.10
 conda activate env
