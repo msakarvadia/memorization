@@ -24,8 +24,8 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 import sys
 from random import randrange, choices, sample
 from operator import add
-
 import random
+import os
 
 torch.__version__
 torch.manual_seed(0)
@@ -43,7 +43,7 @@ wd = 0.1
 betas = (0.9, 0.98)
 
 num_epochs = 50
-checkpoint_every = 5
+#checkpoint_every = 5
 
 DATA_SEED = 598
 
@@ -549,7 +549,7 @@ def print_memorized_generations(noise_dataset, clean_data_set_for_noise, prompt_
 
       return mem_training, mem_prompts_clean, mem_generations, mem_labels
 
-def train_model_track_memorization_per_training_set(model, train_datasets, test_dataloaders, noise_data, clean_data_corresponding_to_noise, num_epochs=num_epochs, prompt_len = 50, k= 50, PATH="/grand/SuperBERT/mansisak/memorization/model_ckpts/", name_of_ckpt="ckpt", n_layers=1):
+def train_model_track_memorization_per_training_set(model, train_datasets, test_dataloaders, noise_data, clean_data_corresponding_to_noise, num_epochs=num_epochs, prompt_len = 50, k= 50, ckpt_dir="/grand/SuperBERT/mansisak/memorization/model_ckpts/", n_layers=1):
   model.train()
 
   data = torch.cat(train_datasets, dim=0) #train_datasets has to be a tuple of datasets
@@ -558,19 +558,37 @@ def train_model_track_memorization_per_training_set(model, train_datasets, test_
 
   train_losses = []
   test_losses = []
-  train_memorized = []
+  #train_memorized = []
   train_accuracies = []
   test_accuracies = []
   percent_memorized  = []
   for i in range(len(test_dataloaders)):
     test_losses.append([]) #add empty list to test losses for each test set
     test_accuracies.append([]) #add empty list to test losses for each test set
-  for i in range(len(train_datasets)):
-        train_memorized.append([]) #add empty list to train memorized for each subset of trianing
+  #for i in range(len(train_datasets)):
+  #      train_memorized.append([]) #add empty list to train memorized for each subset of trianing
 
-  model_checkpoints = []
-  checkpoint_epochs = []
+  #model_checkpoints = []
+  #checkpoint_epochs = []
+  
+  #Resume from checkpoint
+  if args.resume_from:
+      ckpt = torch.load(args.resume_from)
+      model.load_state_dict(ckpt['model_state_dict'])
+      optimizer.load_state_dict(ckpt['optimizer_state_dict'])
+      finished_epochs = ckpt['epoch']
+      train_losses = ckpt['train_losses']
+      test_losses = ckpt['test_losses']
+      train_accuracies = ckpt['train_accuracies']
+      test_accuracies = ckpt['test_accuracies']
+      percent_memorized  = ckpt['percent_memorized']
+
   for epoch in tqdm.tqdm(range(num_epochs)):
+    if epoch <= finished_epochs:
+        print("epoch finished: ", epoch)
+        continue
+
+    print("epoch starting: ", epoch)
     avg_train_loss = 0
     avg_train_accuracy = 0
 
@@ -608,13 +626,26 @@ def train_model_track_memorization_per_training_set(model, train_datasets, test_
           test_losses[i].append((avg_test_loss / len(test_dataloaders[i])))
           test_accuracies[i].append((avg_test_accuracy.cpu() / len(test_dataloaders[i])))
 
-    if ((epoch+1)%checkpoint_every)==0:
+    if ((epoch+1)%args.checkpoint_every)==0:
+        if not os.path.exists(ckpt_dir):
+            os.makedirs(ckpt_dir)
+        MODEL_PATH =  f"{ckpt_dir}/{n_layers}_layer_{epoch+1}_epoch.pth"
+        print("Model path: ", MODEL_PATH)
         #Add checkpointing back in
-        #checkpoint_epochs.append(epoch)
-        #model_checkpoints.append(copy.deepcopy(model.state_dict()))
-        MODEL_PATH = PATH + f"{name_of_ckpt}_{n_layers}_layer_{epoch+1}_epoch_no_dup.pth"
-        torch.save(model.state_dict(), MODEL_PATH)
-        print(f"Epoch {epoch} Train Loss {train_loss.item()}")
+        torch.save({
+            'epoch': epoch,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'train_accuracies': train_accuracies,
+            'test_accuracies': test_accuracies,
+            'train_losses': train_losses,
+            'test_losses': test_losses,
+            'percent_memorized': percent_memorized,
+            }, MODEL_PATH) 
+        #MODEL_PATH = PATH + f"{n_layers}_layer_{epoch+1}_epoch_no_dup.pth"
+        #torch.save(model.state_dict(), "just_model.pt")
+        print(f"Epoch {epoch}")
+        print(f"Train Loss {train_loss.item()}")
         print(" ")
         print("% mem: ",percent_memorized[-1])
         for test_loss in test_losses:
@@ -632,6 +663,22 @@ if __name__=="__main__":
                         type=int, 
                         default=1,
                         help="The number of layers you want in your toy model.")
+    parser.add_argument("--checkpoint_every", 
+                        type=int, 
+                        default=5,
+                        help="The number of epochs between each checkpoint.")
+    parser.add_argument("--epochs", 
+                        type=int, 
+                        default=200,
+                        help="The number of epochs for training.")
+    parser.add_argument("--ckpt_dir", 
+                        type=str, 
+                        default="ckpts",
+                        help="Name of the ckpts parent folder.")
+    parser.add_argument("--resume_from", 
+                        type=str, 
+                        default=None,
+                        help="Name of specific checkpoint that you want to resume training frome.")
     
     args = parser.parse_args()
 
@@ -714,4 +761,4 @@ if __name__=="__main__":
     #Train model
     #TODO (MS): implement distributed training
     model.train()
-    model, train_losses, test_losses, train_accuracies, test_accuracies, percent_memorized = train_model_track_memorization_per_training_set(model, train_datasets, clean_test_dataloaders, noise_data, clean_data_corresponding_to_noise, num_epochs=200, name_of_ckpt="5_data_distributions", n_layers=args.n_layers)
+    model, train_losses, test_losses, train_accuracies, test_accuracies, percent_memorized = train_model_track_memorization_per_training_set(model, train_datasets, clean_test_dataloaders, noise_data, clean_data_corresponding_to_noise, num_epochs=args.epochs, ckpt_dir=args.ckpt_dir, n_layers=args.n_layers)
