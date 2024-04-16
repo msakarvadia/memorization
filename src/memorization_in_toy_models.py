@@ -712,5 +712,6 @@ if __name__=="__main__":
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=wd, betas=betas)
 
     #Train model
+    #TODO (MS): implement distributed training
     model.train()
     model, train_losses, test_losses, train_accuracies, test_accuracies, percent_memorized = train_model_track_memorization_per_training_set(model, train_datasets, clean_test_dataloaders, noise_data, clean_data_corresponding_to_noise, num_epochs=200, name_of_ckpt="5_data_distributions", n_layers=args.n_layers)

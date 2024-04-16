@@ -17,7 +17,7 @@ cd "/grand/SuperBERT/mansisak/memorization/src/"
 echo "working dir: "
 pwd
 
-CUDA_VISIBLE_DEVICES=0 python memorization_in_toy_models.py --n_layers 1
-CUDA_VISIBLE_DEVICES=1 python memorization_in_toy_models.py --n_layers 2
-CUDA_VISIBLE_DEVICES=2 python memorization_in_toy_models.py --n_layers 4
-CUDA_VISIBLE_DEVICES=3 python memorization_in_toy_models.py --n_layers 8
+CUDA_VISIBLE_DEVICES=0 python memorization_in_toy_models.py --n_layers 1 &
+CUDA_VISIBLE_DEVICES=1 python memorization_in_toy_models.py --n_layers 2 &
+CUDA_VISIBLE_DEVICES=2 python memorization_in_toy_models.py --n_layers 4 &
+CUDA_VISIBLE_DEVICES=3 python memorization_in_toy_models.py --n_layers 8 
