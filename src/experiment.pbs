@@ -13,11 +13,11 @@ pwd
 module load conda
 conda activate env/
 
-cd "/grand/SuperBERT/mansisak/memorization/src/"
+cd "/eagle/projects/argonne_tpc/mansisak/memorization/src"
 echo "working dir: "
 pwd
 
-CUDA_VISIBLE_DEVICES=0 python memorization_in_toy_models.py --n_layers 1 &
-CUDA_VISIBLE_DEVICES=1 python memorization_in_toy_models.py --n_layers 2 &
-CUDA_VISIBLE_DEVICES=2 python memorization_in_toy_models.py --n_layers 4 &
-CUDA_VISIBLE_DEVICES=3 python memorization_in_toy_models.py --n_layers 8 
+CUDA_VISIBLE_DEVICES=0 python memorization_in_toy_models.py --n_layers 1 --ckpt_dir "/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/5_data_distributions/one_layer/" &
+CUDA_VISIBLE_DEVICES=1 python memorization_in_toy_models.py --n_layers 2 --ckpt_dir "/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/5_data_distributions/two_layer/" &
+CUDA_VISIBLE_DEVICES=2 python memorization_in_toy_models.py --n_layers 4 --ckpt_dir "/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/5_data_distributions/four_layer/" &
+CUDA_VISIBLE_DEVICES=3 python memorization_in_toy_models.py --n_layers 8  --ckpt_dir "/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/5_data_distributions/eight_layer/" 
