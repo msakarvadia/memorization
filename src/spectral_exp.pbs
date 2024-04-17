@@ -1,0 +1,19 @@
+#!/bin/bash 
+#PBS -l select=1
+#PBS -l walltime=24:00:00
+#PBS -q preemptable
+#PBS -l filesystems=home:eagle
+#PBS -A superbert
+#PBS -M arham@uchicago.edu
+
+module load conda
+conda activate memorization
+
+cd "/home/arham23/projects/memorization/src"
+echo "working dir: "
+pwd
+
+CUDA_VISIBLE_DEVICES=0 python spectralregexpmemorization.py 1
+CUDA_VISIBLE_DEVICES=1 python spectralregexpmemorization.py 2
+CUDA_VISIBLE_DEVICES=2 python spectralregexpmemorization.py 4
+CUDA_VISIBLE_DEVICES=3 python spectralregexpmemorization.py 8
