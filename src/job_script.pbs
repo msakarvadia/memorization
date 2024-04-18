@@ -1,0 +1,15 @@
+#!/bin/bash
+#PBS -A SuperBERT
+#PBS -q preemptable
+#PBS -m abe
+#PBS -M aswathy@uchicago.edu
+#PBS -l select=1:system=polaris
+#PBS -l walltime=01:00:00
+#PBS -l filesystems=home:eagle
+#PBS -o memorization-prompt.stdout
+#PBS -j oe
+
+module load conda 
+conda activate /grand/projects/SuperBERT/mansisak/toy_llm/env
+cd  /grand/projects/SuperBERT/aswathy/projects/memorization/
+python -m src.run_model_generations --model_name EleutherAI/gpt-neo-125M --path_to_prompts data/prompts/prompts_100.npy --generations_save_path /grand/projects/SuperBERT/aswathy/projects/memorization/data/model_generations2/gpt-neo-125M/125M-0.0_prompt_50_of_100.npy --mem_prompt_save_path data/memorized_prompts/gpt-neo-125M/125M-0.0_mem_50_of_100.npy
