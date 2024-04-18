@@ -1,7 +1,7 @@
 #!/bin/bash 
 #PBS -l select=1
-#PBS -l walltime=24:00:00
-#PBS -q preemptable
+#PBS -l walltime=1:00:00
+#PBS -q debug
 #PBS -l filesystems=home:eagle
 #PBS -A superbert
 #PBS -M sakarvadia@uchicago.edu
@@ -17,7 +17,30 @@ cd "/eagle/projects/argonne_tpc/mansisak/memorization/src"
 echo "working dir: "
 pwd
 
-CUDA_VISIBLE_DEVICES=0 python memorization_in_toy_models.py --n_layers 1 --ckpt_dir "/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/5_data_distributions/one_layer/" &
-CUDA_VISIBLE_DEVICES=1 python memorization_in_toy_models.py --n_layers 2 --ckpt_dir "/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/5_data_distributions/two_layer/" &
-CUDA_VISIBLE_DEVICES=2 python memorization_in_toy_models.py --n_layers 4 --ckpt_dir "/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/5_data_distributions/four_layer/" &
-CUDA_VISIBLE_DEVICES=3 python memorization_in_toy_models.py --n_layers 8  --ckpt_dir "/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/5_data_distributions/eight_layer/" 
+base_path=/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/5_data_distributions/
+
+
+layer_path=one_layer/
+ckpt_name=/1_layer_200_epoch.pth
+ckpt_dir="$base_path$layer_path"
+resume_ckpt="$ckpt_dir$ckpt_name"
+CUDA_VISIBLE_DEVICES=0 python memorization_in_toy_models.py --n_layers 1 --epochs 2000 --ckpt_dir "$ckpt_dir" --resume_from "$resume_ckpt" &
+
+layer_path=two_layer/
+ckpt_name=/2_layer_200_epoch.pth
+ckpt_dir="$base_path$layer_path"
+resume_ckpt="$ckpt_dir$ckpt_name"
+CUDA_VISIBLE_DEVICES=1 python memorization_in_toy_models.py --n_layers 2 --epochs 2000 --ckpt_dir "$ckpt_dir" --resume_from "$resume_ckpt" &
+
+layer_path=four_layer/
+ckpt_name=/4_layer_200_epoch.pth
+ckpt_dir="$base_path$layer_path"
+resume_ckpt="$ckpt_dir$ckpt_name"
+CUDA_VISIBLE_DEVICES=2 python memorization_in_toy_models.py --n_layers 4 --epochs 2000 --ckpt_dir "$ckpt_dir" --resume_from "$resume_ckpt" &
+
+layer_path=eight_layer/
+ckpt_name=/8_layer_200_epoch.pth
+ckpt_dir="$base_path$layer_path"
+resume_ckpt="$ckpt_dir$ckpt_name"
+CUDA_VISIBLE_DEVICES=3 python memorization_in_toy_models.py --n_layers 8 --epochs 2000 --ckpt_dir "$ckpt_dir" --resume_from "$resume_ckpt"
+base_path=/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/5_data_distributions/

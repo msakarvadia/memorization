@@ -572,6 +572,7 @@ def train_model_track_memorization_per_training_set(model, train_datasets, test_
   #checkpoint_epochs = []
   
   #Resume from checkpoint
+  finished_epochs = 0
   if args.resume_from:
       ckpt = torch.load(args.resume_from)
       model.load_state_dict(ckpt['model_state_dict'])
