@@ -135,9 +135,6 @@ def detokenize(tensor):
     return detokenized_seq
 
 
-"""## More challenging Synthetic dataset generation"""
-
-
 def math_function(starting_val):
     # 2+x
     return 2 + starting_val
