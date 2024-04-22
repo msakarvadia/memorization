@@ -1,9 +1,14 @@
 from __future__ import annotations
 
 import itertools
+import numpy as np
 import sympy as sp
 import torch
 import typing as t
+
+from numpy.random import RandomState
+
+from src.utils import load_random_state
 
 
 def generate_data(
@@ -59,3 +64,30 @@ def generate_data(
 
     dataset = torch.stack(data, dim=0).to(device)
     return dataset
+
+
+def apply_noise(
+    dataset: torch.Tensor, fn: t.Callable[[torch.Tensor], torch.Tensor]
+) -> torch.Tensor:
+    """
+    Apply noise to the given torch data.
+
+    Args:
+        dataset (torch.Tensor): ...
+        fn (t.Callable[[torch.Tensor], torch.Tensor]): ...
+
+    Returns:
+        Noised tensor dataset.
+    """
+    # TODO
+    pass
+
+
+def binary_additive_noise(
+    data: torch.Tensor,
+    p: tuple[int] = (0.05, 0.9, 0.05),
+    random_state: RandomState | int | None = None,
+) -> torch.Tensor:
+    random_state = load_random_state(random_state)
+    noise = random_state.choice([-1, 0, 1], size=len(data), replace=True, p=p)
+    return data + noise
