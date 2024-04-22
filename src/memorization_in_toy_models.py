@@ -178,6 +178,24 @@ def seven_function(starting_val):
     return 7 + starting_val
 
 
+def one_mult(starting_val):
+  return 1 * starting_val % 20134
+
+def two_mult(starting_val):
+  return 2 * starting_val % 20134
+
+def three_mult(starting_val):
+  return 3 * starting_val % 20134
+
+def four_mult(starting_val):
+  return 4 * starting_val % 20134
+
+def five_mult(starting_val):
+  return 5 * starting_val % 20134
+
+def seven_mult(starting_val):
+  return 7 * starting_val % 20134
+
 def generate_seq(func, length, noise, num_examples, modulo, device, noise_range=10):
     data = []
     # noise_amt = 0
@@ -881,6 +899,7 @@ if __name__ == "__main__":
     # combine test dataloaders
     clean_test_dataloaders += extra_test_dataloaders
     train_datasets = (noise_data, clean_data, extra_train_dataloader.dataset)
+
 
     # Count how many noised sequences we have at each prompt length
     count_num_noised(noise_data, clean_data_corresponding_to_noise, k=50, prompt_len=50)
