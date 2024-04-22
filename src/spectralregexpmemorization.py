@@ -175,7 +175,6 @@ def generate_seq(func, length, noise, num_examples, modulo, device, noise_range=
     # noise_amt = 0
 
     for i in range(num_examples):
-
         start = 0 + i
         vector = []
         # This is how we generate noise for each sample
@@ -395,7 +394,6 @@ import matplotlib.pyplot as plt
 def plt_line(
     ax, y_vals, x_vals, title="Losses", x_label="losses", y_label="Epoch", **kwargs
 ):
-
     ax.plot(x_vals, y_vals, **kwargs)
 
     ax.set_xlabel(x_label)
@@ -411,7 +409,6 @@ def plt_line(
 def refined_check_percent_memorized(
     noise_dataset, clean_data_set_for_noise, prompt_len, k, batch_size, model
 ):
-
     # we do this to increase batch sizes (for increasing throughput)
     noise_dataloader = DataLoader(noise_dataset, batch_size=batch_size, shuffle=False)
     clean_dataloader = DataLoader(
@@ -496,7 +493,6 @@ def count_num_noised(
 def print_memorized_generations(
     noise_dataset, clean_data_set_for_noise, prompt_len, k, batch_size, model
 ):
-
     # we do this to increase batch sizes (for increasing throughput)
     noise_dataloader = DataLoader(noise_dataset, batch_size=batch_size, shuffle=False)
     clean_dataloader = DataLoader(
@@ -840,7 +836,6 @@ def train_model_track_memorization_per_training_set(
 
 # Experiments
 if __name__ == "__main__":
-
     # set up arg parser
     parser = argparse.ArgumentParser()
     parser.add_argument(
