@@ -4,6 +4,7 @@ import torch.nn as nn
 
 """
 Implements Loss Truncation, stolen from: https://github.com/ddkang/loss_dropper/blob/master/loss_dropper/dropper.py
+https://aclanthology.org/2020.acl-main.66.pdf
 """
 class LossDropper(nn.Module):
     def __init__(

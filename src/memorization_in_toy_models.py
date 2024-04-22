@@ -11,7 +11,8 @@ import torch
 from torch.utils.data import DataLoader
 from torch.nn import CrossEntropyLoss
 import numpy as np
-from ..utils.dropper import LossDropper
+from utils.dropper import LossDropper
+from utils.spectral_reg import *
 
 import tqdm
 import copy
@@ -50,6 +51,7 @@ DATA_SEED = 598
 
 num_examples = 10000
 max_ctx = 650
+n_head = 4
 
 batch_size=128
 
@@ -596,6 +598,21 @@ def train_model_track_memorization_per_training_set(model, train_datasets, test_
     dropc = extra_kwargs.get('dropc', 0.4)
     assert dropc >= 0 and dropc <= 1, "dropc parameter must be in the range [0,1]"
     dropper = LossDropper(dropc=dropc, verbose=False)
+
+  #Init for Spectral Regularization if desired
+  if do_spectral_reg := extra_kwargs.get('spectral_reg'):
+    lam = extra_kwargs.get('lam', 0.01)
+    Us = {}
+    for name, weight in model.named_parameters():
+        if should_compute_sigma(name):
+            is_attn_weight = "attn.c_attn" in name
+            is_attn_proj = "attn.c_proj" in name
+            Us[name] = init_power_vector(
+                weight,
+                is_attn_weight=is_attn_weight,
+                is_attn_proj=is_attn_proj,
+                num_heads=n_head,
+            ).to(device)
   
   #Resume from checkpoint
   finished_epochs = -1
@@ -623,6 +640,7 @@ def train_model_track_memorization_per_training_set(model, train_datasets, test_
       model_output = model(batch, labels=batch)
       train_logits = model_output.logits
       train_loss = model_output.loss
+
       # apply loss truncation
       if dropper is not None:
         train_loss.view(-1, batch_size)
@@ -630,6 +648,31 @@ def train_model_track_memorization_per_training_set(model, train_datasets, test_
         mask = dropper(train_loss)  # The dropper returns a mask of 0s where data should be dropped.
         train_loss *= mask  # Mask out the high losses
         train_loss = train_loss.mean()  # Aggregate
+
+        # apply spectral reg
+        if do_spectral_reg:
+          reg_loss = None
+          for name, weight in model.named_parameters():
+              if should_compute_sigma(name):
+                  u = Us[name]
+                  is_attn_weight = "attn.c_attn" in name
+                  is_attn_proj = "attn.c_proj" in name
+                  sigmas, u_ = power_iteration(
+                      weight,
+                      u,
+                      is_attn_weight=is_attn_weight,
+                      is_attn_proj=is_attn_proj,
+                      num_heads=n_head,
+                  )
+                  Us[name] = u_
+                  sum_sigma = torch.sum(sigmas)
+                  if reg_loss is None:
+                      reg_loss = sum_sigma
+                  else:
+                      reg_loss += sum_sigma
+          # add regularization term to loss
+          train_loss += (lam / 2) * reg_loss
+
       train_loss.backward()
       avg_train_loss += train_loss.cpu().item()
       avg_train_accuracy += accuracy(batch, train_logits)
@@ -704,6 +747,15 @@ if __name__=="__main__":
                         type=float, 
                         default=0.4,
                         help="If loss truncation is enabled, what fraction of the data to drop. Should be in [0,1].")
+    parser.add_argument("--spectral_reg", 
+                        action="store_true",
+                        help="Whether to apply spectral regularization during training.")
+    parser.add_argument(
+        "--lam",
+        type=float,
+        default=0.01,
+        help="The regularization coefficient for the spectral regularization term in our loss function.",
+    )
     parser.add_argument("--checkpoint_every", 
                         type=int, 
                         default=5,
@@ -731,6 +783,8 @@ if __name__=="__main__":
     extra_kwargs = {
       'truncate_loss': args.truncate_loss,
       'dropc': args.dropc,
+      'spectral_reg': args.spectral_reg,
+      'lam': args.lam
     }
 
     # Make the data
@@ -823,7 +877,7 @@ if __name__=="__main__":
     configuration = GPT2Config(
                               vocab_size = 14,
                               n_layer = args.n_layers, #1,2,4,8,16
-                              n_head = 4,
+                              n_head = n_head,
                               n_embd = 128,
                               n_positions = max_ctx,
                               bos_token_id = 10,
