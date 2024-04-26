@@ -8,7 +8,7 @@ import typing as t
 
 from numpy.random import RandomState
 
-from src.utils import load_random_state
+from src.utils_data import load_random_state
 
 
 def generate_data(
