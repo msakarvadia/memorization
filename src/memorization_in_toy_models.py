@@ -18,8 +18,8 @@ import tqdm
 import copy
 import argparse
 
-#%pip install git+https://github.com/neelnanda-io/neel-plotly.git
-#from neel_plotly.plot import line
+# %pip install git+https://github.com/neelnanda-io/neel-plotly.git
+# from neel_plotly.plot import line
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -45,7 +45,7 @@ wd = 0.1
 betas = (0.9, 0.98)
 
 num_epochs = 50
-#checkpoint_every = 5
+# checkpoint_every = 5
 
 DATA_SEED = 598
 
@@ -53,7 +53,7 @@ num_examples = 10000
 max_ctx = 650
 n_head = 4
 
-batch_size=128
+batch_size = 128
 
 """## Define task (predict multiple tokens until eos token)
 
@@ -70,236 +70,278 @@ pad_token: 13 (doesn't have a specific symbol)
 All digits: tokenized as their corresponding number (e.g. "1"--> 1)
 """
 
+
 def tokenize_and_pad(char_list, pad=True):
-  tokenized_seq = []
-  for i in char_list:
-    if i == '^':
-      tokenized_seq.append(torch.tensor(10, dtype=int))
-    if i == '$':
-      tokenized_seq.append(torch.tensor(11))
-    if i == ' ':
-      tokenized_seq.append(torch.tensor(12))
-    if i == '0':
-      tokenized_seq.append(torch.tensor(0))
-    if i == '1':
-      tokenized_seq.append(torch.tensor(1))
-    if i == '2':
-      tokenized_seq.append(torch.tensor(2))
-    if i == '3':
-      tokenized_seq.append(torch.tensor(3))
-    if i == '4':
-      tokenized_seq.append(torch.tensor(4))
-    if i == '5':
-      tokenized_seq.append(torch.tensor(5))
-    if i == '6':
-      tokenized_seq.append(torch.tensor(6))
-    if i == '7':
-      tokenized_seq.append(torch.tensor(7))
-    if i == '8':
-      tokenized_seq.append(torch.tensor(8))
-    if i == '9':
-      tokenized_seq.append(torch.tensor(9))
+    tokenized_seq = []
+    for i in char_list:
+        if i == "^":
+            tokenized_seq.append(torch.tensor(10, dtype=int))
+        if i == "$":
+            tokenized_seq.append(torch.tensor(11))
+        if i == " ":
+            tokenized_seq.append(torch.tensor(12))
+        if i == "0":
+            tokenized_seq.append(torch.tensor(0))
+        if i == "1":
+            tokenized_seq.append(torch.tensor(1))
+        if i == "2":
+            tokenized_seq.append(torch.tensor(2))
+        if i == "3":
+            tokenized_seq.append(torch.tensor(3))
+        if i == "4":
+            tokenized_seq.append(torch.tensor(4))
+        if i == "5":
+            tokenized_seq.append(torch.tensor(5))
+        if i == "6":
+            tokenized_seq.append(torch.tensor(6))
+        if i == "7":
+            tokenized_seq.append(torch.tensor(7))
+        if i == "8":
+            tokenized_seq.append(torch.tensor(8))
+        if i == "9":
+            tokenized_seq.append(torch.tensor(9))
 
-  if pad == True:
-    while len(tokenized_seq) < max_ctx:
-      tokenized_seq.append(torch.tensor(13))
+    if pad == True:
+        while len(tokenized_seq) < max_ctx:
+            tokenized_seq.append(torch.tensor(13))
 
-  return tokenized_seq
+    return tokenized_seq
+
 
 def detokenize(tensor):
-  detokenized_seq = ''
-  for i in tensor:
-    if i == 10:
-      detokenized_seq += '^' #.append(torch.tensor(10, dtype=int))
-    if i == 11:
-      detokenized_seq += '$' #.append(torch.tensor(11))
-    if i == 12:
-      detokenized_seq += ' ' #.append(torch.tensor(12))
-    if i == 13:
-      detokenized_seq += '_' #.append(torch.tensor(13))
-    if i == 0:
-      detokenized_seq += '0' #.append(torch.tensor(0))
-    if i == 1:
-      detokenized_seq += '1' #.append(torch.tensor(1))
-    if i == 2:
-      detokenized_seq += '2' #.append(torch.tensor(2))
-    if i == 3:
-      detokenized_seq += '3' #.append(torch.tensor(3))
-    if i == 4:
-      detokenized_seq += '4' #.append(torch.tensor(4))
-    if i == 5:
-      detokenized_seq += '5' #.append(torch.tensor(5))
-    if i == 6:
-      detokenized_seq += '6' #.append(torch.tensor(6))
-    if i == 7:
-      detokenized_seq += '7' #.append(torch.tensor(7))
-    if i == 8:
-      detokenized_seq += '8' #.append(torch.tensor(8))
-    if i == 9:
-      detokenized_seq += '9' #.append(torch.tensor(9))
+    detokenized_seq = ""
+    for i in tensor:
+        if i == 10:
+            detokenized_seq += "^"  # .append(torch.tensor(10, dtype=int))
+        if i == 11:
+            detokenized_seq += "$"  # .append(torch.tensor(11))
+        if i == 12:
+            detokenized_seq += " "  # .append(torch.tensor(12))
+        if i == 13:
+            detokenized_seq += "_"  # .append(torch.tensor(13))
+        if i == 0:
+            detokenized_seq += "0"  # .append(torch.tensor(0))
+        if i == 1:
+            detokenized_seq += "1"  # .append(torch.tensor(1))
+        if i == 2:
+            detokenized_seq += "2"  # .append(torch.tensor(2))
+        if i == 3:
+            detokenized_seq += "3"  # .append(torch.tensor(3))
+        if i == 4:
+            detokenized_seq += "4"  # .append(torch.tensor(4))
+        if i == 5:
+            detokenized_seq += "5"  # .append(torch.tensor(5))
+        if i == 6:
+            detokenized_seq += "6"  # .append(torch.tensor(6))
+        if i == 7:
+            detokenized_seq += "7"  # .append(torch.tensor(7))
+        if i == 8:
+            detokenized_seq += "8"  # .append(torch.tensor(8))
+        if i == 9:
+            detokenized_seq += "9"  # .append(torch.tensor(9))
 
-  return detokenized_seq
+    return detokenized_seq
+
 
 """## More challenging Synthetic dataset generation"""
 
+
 def math_function(starting_val):
-  # 2+x
-  return 2 + starting_val
+    # 2+x
+    return 2 + starting_val
+
 
 def one_function(starting_val):
-  # 1+x
-  return 1 + starting_val
+    # 1+x
+    return 1 + starting_val
+
 
 def two_function(starting_val):
-  # 2+x
-  return 2 + starting_val
+    # 2+x
+    return 2 + starting_val
+
 
 def three_function(starting_val):
-  # 3+x
-  return 3 + starting_val
+    # 3+x
+    return 3 + starting_val
+
 
 def four_function(starting_val):
-  # 4+x
-  return 4 + starting_val
+    # 4+x
+    return 4 + starting_val
+
 
 def five_function(starting_val):
-  # 5+x
-  return 5 + starting_val
+    # 5+x
+    return 5 + starting_val
+
 
 def seven_function(starting_val):
-  # 7+x
-  return 7 + starting_val
+    # 7+x
+    return 7 + starting_val
+
 
 def one_mult(starting_val):
-  return 1 * starting_val % 20134
+    return 1 * starting_val % 20134
+
 
 def two_mult(starting_val):
-  return 2 * starting_val % 20134
+    return 2 * starting_val % 20134
+
 
 def three_mult(starting_val):
-  return 3 * starting_val % 20134
+    return 3 * starting_val % 20134
+
 
 def four_mult(starting_val):
-  return 4 * starting_val % 20134
+    return 4 * starting_val % 20134
+
 
 def five_mult(starting_val):
-  return 5 * starting_val % 20134
+    return 5 * starting_val % 20134
+
 
 def seven_mult(starting_val):
-  return 7 * starting_val % 20134
+    return 7 * starting_val % 20134
+
 
 def generate_seq(func, length, noise, num_examples, modulo, device, noise_range=10):
-  data = []
-  #noise_amt = 0
+    data = []
+    # noise_amt = 0
 
-  for i in range(num_examples):
+    for i in range(num_examples):
 
-    start = 0+i
-    vector = []
-    #This is how we generate noise for each sample
-    #noise_amt = randrange(-noise_range, noise_range)
-    for j in range(length):
-      vector.append(func(start))
-      start = func(start)
+        start = 0 + i
+        vector = []
+        # This is how we generate noise for each sample
+        # noise_amt = randrange(-noise_range, noise_range)
+        for j in range(length):
+            vector.append(func(start))
+            start = func(start)
 
-    # adding noise vector to the clean datapoints
-    if noise:
-      noise_vector = choices(population=[0,-1, 1], weights=[0.9,0.05,0.05], k = length)
-      vector = list( map(add, vector, noise_vector) )
+        # adding noise vector to the clean datapoints
+        if noise:
+            noise_vector = choices(
+                population=[0, -1, 1], weights=[0.9, 0.05, 0.05], k=length
+            )
+            vector = list(map(add, vector, noise_vector))
 
-    string = ' '.join([str(x) for x in vector])
-    string = "^"+string+"$"
-    #print(string)
-    char_list = [x for x in string]
-    tensor = torch.Tensor(tokenize_and_pad(char_list))
-    data.append(tensor)
+        string = " ".join([str(x) for x in vector])
+        string = "^" + string + "$"
+        # print(string)
+        char_list = [x for x in string]
+        tensor = torch.Tensor(tokenize_and_pad(char_list))
+        data.append(tensor)
 
-  dataset = torch.stack(data, dim=0).to(device)
-  #dataset = dataset.to(torch.int64)
+    dataset = torch.stack(data, dim=0).to(device)
+    # dataset = dataset.to(torch.int64)
 
-  return dataset
+    return dataset
 
-'''
+
+"""
 data_1 = generate_seq(func=one_function, length=10, noise=0, num_examples=num_examples, modulo=13, device=device)
 data_2 = generate_seq(func=two_function, length=10, noise=0, num_examples=num_examples, modulo=13, device=device)
 data_3 = generate_seq(func=three_function, length=10, noise=0, num_examples=num_examples, modulo=13, device=device)
-'''
+"""
+
 
 def split_data(data, num_examples, num_test):
-  torch.manual_seed(DATA_SEED)
-  indices = torch.randperm(num_examples)
-  #cutoff = int(num_examples*frac_train)
-  cutoff = num_examples - num_test
-  train_indices = indices[:cutoff]
-  test_indices = indices[cutoff:]
+    torch.manual_seed(DATA_SEED)
+    indices = torch.randperm(num_examples)
+    # cutoff = int(num_examples*frac_train)
+    cutoff = num_examples - num_test
+    train_indices = indices[:cutoff]
+    test_indices = indices[cutoff:]
 
-  train_data = data[train_indices]
-  test_data = data[test_indices]
-  #print(train_data[:5])
-  #print(train_data.shape)
-  #print(test_data[:5])
-  #print(test_data.shape)
+    train_data = data[train_indices]
+    test_data = data[test_indices]
+    # print(train_data[:5])
+    # print(train_data.shape)
+    # print(test_data[:5])
+    # print(test_data.shape)
 
-  return train_data.to(torch.int64), test_data.to(torch.int64)
+    return train_data.to(torch.int64), test_data.to(torch.int64)
 
-'''
+
+"""
 train_data, test_data = split_data(data_2, num_examples=num_examples, num_test=num_test)
 train_dataloader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
 test_dataloader = DataLoader(test_data, batch_size=batch_size, shuffle=True)
-'''
+"""
 
-'''
+"""
 list_of_functions = [one_function, two_function, three_function]
 list_of_dataset_sizes = [20000, 8000, 3000]
-'''
+"""
 
-def create_data_distributions(list_of_functions, list_of_dataset_sizes, test_set_size=num_test, shuffle=True, noise=False, noise_range=10, length=20):
-  train_datas = []
-  #test_datas = []
 
-  test_dataloaders = []
+def create_data_distributions(
+    list_of_functions,
+    list_of_dataset_sizes,
+    test_set_size=num_test,
+    shuffle=True,
+    noise=False,
+    noise_range=10,
+    length=20,
+):
+    train_datas = []
+    # test_datas = []
 
-  for i in range(len(list_of_functions)):
-    data = generate_seq(func=list_of_functions[i], length=length, noise=noise, num_examples=list_of_dataset_sizes[i], modulo=13, device=device, noise_range=noise_range)
-    train_data, test_data = split_data(data, num_examples=list_of_dataset_sizes[i], num_test=test_set_size)
+    test_dataloaders = []
 
-    train_datas.append(train_data)
+    for i in range(len(list_of_functions)):
+        data = generate_seq(
+            func=list_of_functions[i],
+            length=length,
+            noise=noise,
+            num_examples=list_of_dataset_sizes[i],
+            modulo=13,
+            device=device,
+            noise_range=noise_range,
+        )
+        train_data, test_data = split_data(
+            data, num_examples=list_of_dataset_sizes[i], num_test=test_set_size
+        )
 
-    #want separate test_dataloaders
-    test_dataloaders.append(DataLoader(test_data, batch_size=batch_size, shuffle=shuffle))
+        train_datas.append(train_data)
 
-  train_data = torch.concat(train_datas, dim=0)
-  #want one train_datalaoder
-  train_dataloader = DataLoader(train_data, batch_size=batch_size, shuffle=shuffle)
+        # want separate test_dataloaders
+        test_dataloaders.append(
+            DataLoader(test_data, batch_size=batch_size, shuffle=shuffle)
+        )
 
-  return train_dataloader, test_dataloaders
+    train_data = torch.concat(train_datas, dim=0)
+    # want one train_datalaoder
+    train_dataloader = DataLoader(train_data, batch_size=batch_size, shuffle=shuffle)
 
-#train_dataloader, test_dataloaders = create_data_distributions(list_of_functions, list_of_dataset_sizes, test_set_size=num_test, shuffle=True)
+    return train_dataloader, test_dataloaders
+
+
+# train_dataloader, test_dataloaders = create_data_distributions(list_of_functions, list_of_dataset_sizes, test_set_size=num_test, shuffle=True)
 
 """## GPT2 small config for model"""
 
-from transformers import GPT2Config, GPT2Model,GPT2LMHeadModel
+from transformers import GPT2Config, GPT2Model, GPT2LMHeadModel
 import math
 
 # Initializing a GPT2 configuration
 configuration = GPT2Config(
-                          vocab_size = 14,
-                          n_layer = 1,
-                          n_head = 4,
-                          n_embd = 128,
-                          n_positions = max_ctx,
-                          bos_token_id = 10,
-                          eos_token_id = 11 ,
-                          use_cache = False,
-                          hidden_states = False,
-                          output_attentions = False,
-                          activation_function = "relu",
-                          attn_pdrop=0,
-                          resid_pdrop=0,
-                          embd_pdrop=0,
-                          initializer_range = 0.8 / math.sqrt(128) #0.8 / sqrt(d_model)
-
-
+    vocab_size=14,
+    n_layer=1,
+    n_head=4,
+    n_embd=128,
+    n_positions=max_ctx,
+    bos_token_id=10,
+    eos_token_id=11,
+    use_cache=False,
+    hidden_states=False,
+    output_attentions=False,
+    activation_function="relu",
+    attn_pdrop=0,
+    resid_pdrop=0,
+    embd_pdrop=0,
+    initializer_range=0.8 / math.sqrt(128),  # 0.8 / sqrt(d_model)
 )
 
 # Initializing a model (with random weights) from the configuration
@@ -317,588 +359,778 @@ model.parameters
 list_of_functions = [two_function]
 list_of_dataset_sizes = [3000]
 
-train_dataloader, test_dataloaders = create_data_distributions(list_of_functions, list_of_dataset_sizes, test_set_size=num_test, shuffle=True)
+train_dataloader, test_dataloaders = create_data_distributions(
+    list_of_functions, list_of_dataset_sizes, test_set_size=num_test, shuffle=True
+)
 
 for i in train_dataloader:
-  print(i.shape)
-  model(i)
-  break
+    print(i.shape)
+    model(i)
+    break
 
 """## Optimizer + Loss function + Accuracy function"""
 
 optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=wd, betas=betas)
+
 
 def clm_loss_fn(inputs, logits):
     # Shift so that tokens < n predict n
     shift_labels = inputs[..., 1:].contiguous()
     shift_logits = logits[..., :-1, :].contiguous()
     # Calculate per-token loss
-    loss_fct = CrossEntropyLoss( reduction='none')
+    loss_fct = CrossEntropyLoss(reduction="none")
     loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
     # Resize and average loss per sample
     loss_per_sample = loss.view(shift_logits.size(0), shift_logits.size(1)).mean(axis=1)
 
-    return(loss_per_sample).mean()
+    return (loss_per_sample).mean()
+
 
 def accuracy(inputs, logits):
     # Shift so that tokens < n predict n
     shift_labels = inputs[..., 1:].contiguous()
     shift_logits = logits[..., :-1, :].contiguous()
 
-    #converts logits to predictions
+    # converts logits to predictions
     predictions = torch.argmax(shift_logits, axis=-1)
 
-    #Now compute accuracy
+    # Now compute accuracy
     N = torch.numel(predictions)
     accuracy = (shift_labels == predictions).sum() / N
 
     return accuracy
 
-#Test that accuracy function works:
 
-data_1 = generate_seq(func=one_function, length=10, noise=0, num_examples=1, modulo=13, device=device)
+# Test that accuracy function works:
+
+data_1 = generate_seq(
+    func=one_function, length=10, noise=0, num_examples=1, modulo=13, device=device
+)
 model.to(device)
-logits= model(data_1.to(torch.int64)).logits
+logits = model(data_1.to(torch.int64)).logits
 accuracy(data_1, logits)
 
 """## Do inference on model"""
 
-def generate(model, input, max_ctx=max_ctx, print_output=True):
-  next_token = 1 #set this initially to any token that isn't eos
-  if print_output:
-    print("input: ", detokenize(input))
-  while next_token != 11 and input.shape[0] <= max_ctx : # '11' is eos token, and max_ctx is max limit for input to model
-    outputs = model(input.to(torch.int64))
-    prediction = outputs.logits
-    next_token = torch.argmax(prediction[-1,:]).item()
-    input = torch.cat((input, torch.tensor([next_token]).to(device)), dim=-1)
-  if print_output:
-    print("output: ", detokenize(input))
-  return input
 
-data_1 = generate_seq(func=one_function, length=10, noise=0, num_examples=1, modulo=13, device=device)
-sample_input = data_1[0][:5] # grab first 5 chars of string
+def generate(model, input, max_ctx=max_ctx, print_output=True):
+    next_token = 1  # set this initially to any token that isn't eos
+    if print_output:
+        print("input: ", detokenize(input))
+    while (
+        next_token != 11 and input.shape[0] <= max_ctx
+    ):  # '11' is eos token, and max_ctx is max limit for input to model
+        outputs = model(input.to(torch.int64))
+        prediction = outputs.logits
+        next_token = torch.argmax(prediction[-1, :]).item()
+        input = torch.cat((input, torch.tensor([next_token]).to(device)), dim=-1)
+    if print_output:
+        print("output: ", detokenize(input))
+    return input
+
+
+data_1 = generate_seq(
+    func=one_function, length=10, noise=0, num_examples=1, modulo=13, device=device
+)
+sample_input = data_1[0][:5]  # grab first 5 chars of string
 text = generate(model, sample_input)
 
 """## Mini-batch gradient descent"""
 
+
 def train_model(model, train_dataloader, test_dataloaders, num_epochs=num_epochs):
-  model.train()
+    model.train()
 
-  train_losses = []
-  test_losses = []
-  model_alphas = []
-  train_accuracies = []
-  test_accuracies = []
-  percent_memorized  = []
-  for i in range(len(test_dataloaders)):
-    test_losses.append([]) #add empty list to test losses for each test set
-    test_accuracies.append([]) #add empty list to test losses for each test set
+    train_losses = []
+    test_losses = []
+    model_alphas = []
+    train_accuracies = []
+    test_accuracies = []
+    percent_memorized = []
+    for i in range(len(test_dataloaders)):
+        test_losses.append([])  # add empty list to test losses for each test set
+        test_accuracies.append([])  # add empty list to test losses for each test set
 
-  model_checkpoints = []
-  checkpoint_epochs = []
-  for epoch in tqdm.tqdm(range(num_epochs)):
-    avg_train_loss = 0
-    avg_train_accuracy = 0
+    model_checkpoints = []
+    checkpoint_epochs = []
+    for epoch in tqdm.tqdm(range(num_epochs)):
+        avg_train_loss = 0
+        avg_train_accuracy = 0
 
-    for batch in train_dataloader:
-      model_output = model(batch, labels=batch)
-      train_logits = model_output.logits
-      train_loss = model_output.loss
-      train_loss.backward()
-      avg_train_loss += train_loss.item()
-      avg_train_accuracy += accuracy(batch, train_logits)
-      optimizer.step()
-      optimizer.zero_grad()
-
-    train_losses.append(avg_train_loss / len(train_dataloader))
-    train_accuracies.append(avg_train_accuracy / len(train_dataloader))
-    model_alphas.append(get_alpha(model=model))
-
-    with torch.inference_mode():
-        #iterate through various test datasets
-        for i in range(len(test_dataloaders)):
-          avg_test_loss = 0
-          avg_test_accuracy = 0
-          for batch in test_dataloaders[i]:
+        for batch in train_dataloader:
             model_output = model(batch, labels=batch)
-            test_logits = model_output.logits
-            test_loss = model_output.loss
-            avg_test_loss += test_loss.item()
-            avg_test_accuracy += accuracy(batch, test_logits)
-          test_losses[i].append(avg_test_loss / len(test_dataloaders[i]))
-          test_accuracies[i].append(avg_test_accuracy / len(test_dataloaders[i]))
+            train_logits = model_output.logits
+            train_loss = model_output.loss
+            train_loss.backward()
+            avg_train_loss += train_loss.item()
+            avg_train_accuracy += accuracy(batch, train_logits)
+            optimizer.step()
+            optimizer.zero_grad()
 
-    if ((epoch+1)%checkpoint_every)==0:
-        #Add checkpointing back in
-        #checkpoint_epochs.append(epoch)
-        #model_checkpoints.append(copy.deepcopy(model.state_dict()))
-        print(f"Epoch {epoch} Train Loss {train_loss.item()}")
-        for test_loss in test_losses:
-            print("test loss: ",test_loss[-1])
+        train_losses.append(avg_train_loss / len(train_dataloader))
+        train_accuracies.append(avg_train_accuracy / len(train_dataloader))
+        model_alphas.append(get_alpha(model=model))
 
-  return model, train_losses, test_losses, model_alphas, train_accuracies, test_accuracies
+        with torch.inference_mode():
+            # iterate through various test datasets
+            for i in range(len(test_dataloaders)):
+                avg_test_loss = 0
+                avg_test_accuracy = 0
+                for batch in test_dataloaders[i]:
+                    model_output = model(batch, labels=batch)
+                    test_logits = model_output.logits
+                    test_loss = model_output.loss
+                    avg_test_loss += test_loss.item()
+                    avg_test_accuracy += accuracy(batch, test_logits)
+                test_losses[i].append(avg_test_loss / len(test_dataloaders[i]))
+                test_accuracies[i].append(avg_test_accuracy / len(test_dataloaders[i]))
+
+        if ((epoch + 1) % checkpoint_every) == 0:
+            # Add checkpointing back in
+            # checkpoint_epochs.append(epoch)
+            # model_checkpoints.append(copy.deepcopy(model.state_dict()))
+            print(f"Epoch {epoch} Train Loss {train_loss.item()}")
+            for test_loss in test_losses:
+                print("test loss: ", test_loss[-1])
+
+    return (
+        model,
+        train_losses,
+        test_losses,
+        model_alphas,
+        train_accuracies,
+        test_accuracies,
+    )
+
 
 """## Graphing Support"""
 
 import matplotlib.pyplot as plt
 
-def plt_line(y_vals, x_val, labels, title="Losses", x_label="losses", y_label="Epoch"):
-  for y, label in zip(y_vals, labels):
-    #label = "placeholder"
-    plt.plot(x_val, y, label=label)
 
-  plt.xlabel(x_label)
-  plt.ylabel(y_label)
-  plt.title(title)
-  plt.grid()
-  plt.legend()
-  plt.show()
+def plt_line(y_vals, x_val, labels, title="Losses", x_label="losses", y_label="Epoch"):
+    for y, label in zip(y_vals, labels):
+        # label = "placeholder"
+        plt.plot(x_val, y, label=label)
+
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
+    plt.title(title)
+    plt.grid()
+    plt.legend()
+    plt.show()
+
 
 """## Refining memorization measurement"""
 
+
 # New function that check form memorization only among actually noised inputs
-#probably want to pass in both noise and clean dataloader
-def refined_check_percent_memorized(noise_dataset, clean_data_set_for_noise, prompt_len, k, batch_size, model):
+# probably want to pass in both noise and clean dataloader
+def refined_check_percent_memorized(
+    noise_dataset, clean_data_set_for_noise, prompt_len, k, batch_size, model
+):
 
-  #we do this to increase batch sizes (for increasing throughput)
-  noise_dataloader = DataLoader(noise_dataset, batch_size=batch_size, shuffle=False)
-  clean_dataloader = DataLoader(clean_data_set_for_noise, batch_size=batch_size, shuffle=False)
+    # we do this to increase batch sizes (for increasing throughput)
+    noise_dataloader = DataLoader(noise_dataset, batch_size=batch_size, shuffle=False)
+    clean_dataloader = DataLoader(
+        clean_data_set_for_noise, batch_size=batch_size, shuffle=False
+    )
 
-  memorized = 0
-  total = 0
-  with torch.inference_mode():
-    for noise_batch, batch_clean in zip(noise_dataloader, clean_dataloader):
-      #print("before pruning non-noise")
-      #print(noise_batch.shape)
-      #print(batch_clean.shape)
-
-      #check if noise_batch[:,prompt_len:prompt_len+k] == batch_clean[:,prompt_len:prompt_len+k]
-      # if there is an equality toss that sample out cus it has no noise
-      noise = torch.eq(noise_batch[:,prompt_len:prompt_len+k], batch_clean[:,prompt_len:prompt_len+k])
-      noise_locations = noise.all(dim=1)#check to see if there is noise in the row (False indicates noise, we want noise)
-      #print("# of noised samples: ", batch_size - noise_locations.sum())
-      noise_idx = (noise_locations == 0).nonzero(as_tuple=True)[0].tolist() # all of the values we keep
-
-      noise_batch = noise_batch[noise_idx]
-      batch_clean = batch_clean[noise_idx]
-
-      #print("after pruning non-noise")
-      #print(noise_batch.shape)
-      #print(batch_clean.shape)
-
-      #original_batch = batch
-      batch = batch_clean[:,:prompt_len] #grab first 50 tokens from the clean dataset
-      outputs = model.generate(batch, max_length=max_ctx, pad_token_id = 13)
-
-      #now check if there is a match
-      equals = torch.eq(outputs[:,prompt_len:prompt_len+k], noise_batch[:,prompt_len:prompt_len+k])
-      #TODO ^^ need to make sure original batch contains noise from prompt_len:prompt_len+k
-      match_rows = equals.all(dim=1)
-      total_matchs = match_rows.sum()
-
-      total += noise_batch.shape[0]
-      memorized += total_matchs
-
-      #print("\n")
-      #print("Total memorized samples: ", memorized)
-
-
-
-
-  #print("% memorized: ", memorized / total)
-  return memorized / total
-
-
-    #model.generate(batch, max_length = 200)
-
-def count_num_noised(noise_dataset, clean_data_set_for_noise, k, prompt_len, batch_size=1000):
-  noise_dataloader = DataLoader(noise_dataset, batch_size=batch_size, shuffle=False)
-  clean_dataloader = DataLoader(clean_data_set_for_noise, batch_size=batch_size, shuffle=False)
-  with torch.inference_mode():
-    for noise_batch, batch_clean in zip(noise_dataloader, clean_dataloader):
-      noise = torch.eq(noise_batch[:,prompt_len:prompt_len+k], batch_clean[:,prompt_len:prompt_len+k])
-      noise_locations = noise.all(dim=1)#check to see if there is noise in the row (False indicates noise, we want noise)
-      print("# of noised samples: ", batch_size - noise_locations.sum())
-
-def print_memorized_generations(noise_dataset, clean_data_set_for_noise, prompt_len, k, batch_size, model):
-
-  #we do this to increase batch sizes (for increasing throughput)
-  noise_dataloader = DataLoader(noise_dataset, batch_size=batch_size, shuffle=False)
-  clean_dataloader = DataLoader(clean_data_set_for_noise, batch_size=batch_size, shuffle=False)
-
-  memorized = 0
-  total = 0
-  with torch.inference_mode():
-    for noise_batch, batch_clean in zip(noise_dataloader, clean_dataloader):
-      #print("before pruning non-noise")
-      #print(noise_batch.shape)
-      #print(batch_clean.shape)
-
-      #check if noise_batch[:,prompt_len:prompt_len+k] == batch_clean[:,prompt_len:prompt_len+k]
-      # if there is an equality toss that sample out cus it has no noise
-      noise = torch.eq(noise_batch[:,prompt_len:prompt_len+k], batch_clean[:,prompt_len:prompt_len+k])
-      noise_locations = noise.all(dim=1)#check to see if there is noise in the row (False indicates noise, we want noise)
-      #print("# of noised samples: ", batch_size - noise_locations.sum())
-      noise_idx = (noise_locations == 0).nonzero(as_tuple=True)[0].tolist() # all of the values we keep
-
-      noise_batch = noise_batch[noise_idx]
-      batch_clean = batch_clean[noise_idx]
-
-      #print("after pruning non-noise")
-      #print(noise_batch.shape)
-      #print(batch_clean.shape)
-
-      #original_batch = batch
-      batch = batch_clean[:,:prompt_len] #grab first 50 tokens from the clean dataset
-      outputs = model.generate(batch, max_length=max_ctx, pad_token_id = 13)
-
-      #now check if there is a match
-      equals = torch.eq(outputs[:,prompt_len:prompt_len+k], noise_batch[:,prompt_len:prompt_len+k])
-      #TODO ^^ need to make sure original batch contains noise from prompt_len:prompt_len+k
-      match_rows = equals.all(dim=1)
-      mem_idx = (match_rows).nonzero(as_tuple=True)[0].tolist() # all of the values we keep
-      total_matchs = match_rows.sum()
-
-      mem_training = noise_batch[mem_idx]
-      mem_prompts_clean = batch[mem_idx]
-      mem_generations = outputs[mem_idx,prompt_len:prompt_len+k]
-      mem_labels = noise_batch[mem_idx,prompt_len:prompt_len+k]
-
-      total += noise_batch.shape[0]
-      memorized += total_matchs
-
-      return mem_training, mem_prompts_clean, mem_generations, mem_labels
-
-def train_model_track_memorization_per_training_set(model, train_datasets, test_dataloaders, noise_data, clean_data_corresponding_to_noise, num_epochs=num_epochs, prompt_len = 50, k= 50, ckpt_dir="/grand/SuperBERT/mansisak/memorization/model_ckpts/", n_layers=1, **extra_kwargs):
-  model.train()
-
-  data = torch.cat(train_datasets, dim=0) #train_datasets has to be a tuple of datasets
-  #create dataloaders (w/ noise and clean data)
-  train_dataloader = DataLoader(data, batch_size=batch_size, shuffle=True)
-
-  train_losses = []
-  test_losses = []
-  #train_memorized = []
-  train_accuracies = []
-  test_accuracies = []
-  percent_memorized  = []
-  for i in range(len(test_dataloaders)):
-    test_losses.append([]) #add empty list to test losses for each test set
-    test_accuracies.append([]) #add empty list to test losses for each test set
-  #for i in range(len(train_datasets)):
-  #      train_memorized.append([]) #add empty list to train memorized for each subset of trianing
-
-  #model_checkpoints = []
-  #checkpoint_epochs = []
-
-  #Init Loss Truncation if desired
-  dropper = None
-  if extra_kwargs.get('truncate_loss'):
-    dropc = extra_kwargs.get('dropc', 0.4)
-    assert dropc >= 0 and dropc <= 1, "dropc parameter must be in the range [0,1]"
-    dropper = LossDropper(dropc=dropc, verbose=False)
-
-  #Init for Spectral Regularization if desired
-  if do_spectral_reg := extra_kwargs.get('spectral_reg'):
-    lam = extra_kwargs.get('lam', 0.01)
-    Us = {}
-    for name, weight in model.named_parameters():
-        if should_compute_sigma(name):
-            is_attn_weight = "attn.c_attn" in name
-            is_attn_proj = "attn.c_proj" in name
-            Us[name] = init_power_vector(
-                weight,
-                is_attn_weight=is_attn_weight,
-                is_attn_proj=is_attn_proj,
-                num_heads=n_head,
-            ).to(device)
-  
-  #Resume from checkpoint
-  finished_epochs = -1
-  if args.resume_from:
-      ckpt = torch.load(args.resume_from)
-      model.load_state_dict(ckpt['model_state_dict'])
-      optimizer.load_state_dict(ckpt['optimizer_state_dict'])
-      finished_epochs = ckpt['epoch']
-      train_losses = ckpt['train_losses']
-      test_losses = ckpt['test_losses']
-      train_accuracies = ckpt['train_accuracies']
-      test_accuracies = ckpt['test_accuracies']
-      percent_memorized  = ckpt['percent_memorized']
-
-  for epoch in tqdm.tqdm(range(num_epochs)):
-    if epoch <= finished_epochs:
-        print("epoch finished: ", epoch)
-        continue
-
-    print("epoch starting: ", epoch)
-    avg_train_loss = 0
-    avg_train_accuracy = 0
-
-    for batch in train_dataloader:
-      model_output = model(batch, labels=batch)
-      train_logits = model_output.logits
-      train_loss = model_output.loss
-
-      # apply loss truncation
-      if dropper is not None:
-        train_loss.view(-1, batch_size)
-        train_loss = train_loss.mean(dim=0)  # aggregate by sequence
-        mask = dropper(train_loss)  # The dropper returns a mask of 0s where data should be dropped.
-        train_loss *= mask  # Mask out the high losses
-        train_loss = train_loss.mean()  # Aggregate
-
-        # apply spectral reg
-        if do_spectral_reg:
-          reg_loss = None
-          for name, weight in model.named_parameters():
-              if should_compute_sigma(name):
-                  u = Us[name]
-                  is_attn_weight = "attn.c_attn" in name
-                  is_attn_proj = "attn.c_proj" in name
-                  sigmas, u_ = power_iteration(
-                      weight,
-                      u,
-                      is_attn_weight=is_attn_weight,
-                      is_attn_proj=is_attn_proj,
-                      num_heads=n_head,
-                  )
-                  Us[name] = u_
-                  sum_sigma = torch.sum(sigmas)
-                  if reg_loss is None:
-                      reg_loss = sum_sigma
-                  else:
-                      reg_loss += sum_sigma
-          # add regularization term to loss
-          train_loss += (lam / 2) * reg_loss
-
-      train_loss.backward()
-      avg_train_loss += train_loss.cpu().item()
-      avg_train_accuracy += accuracy(batch, train_logits)
-      optimizer.step()
-      optimizer.zero_grad()
-
-    train_losses.append((avg_train_loss / len(train_dataloader)))
-    train_accuracies.append((avg_train_accuracy.cpu() / len(train_dataloader)))
-    #model_alphas.append(get_alpha(model=model))
-
-
+    memorized = 0
+    total = 0
     with torch.inference_mode():
-      #iteration through various train datasets to track memorization
-        #for i in range(len(train_datasets)):
-        #  dataloader = DataLoader(train_datasets[i], batch_size=batch_size, shuffle=True)
-        percent_memorized.append(refined_check_percent_memorized(noise_dataset=noise_data, clean_data_set_for_noise=clean_data_corresponding_to_noise, prompt_len=prompt_len, k=k, batch_size=1000, model=model).cpu())
+        for noise_batch, batch_clean in zip(noise_dataloader, clean_dataloader):
+            # print("before pruning non-noise")
+            # print(noise_batch.shape)
+            # print(batch_clean.shape)
 
-        #iterate through various test datasets
-        for i in range(len(test_dataloaders)):
-          avg_test_loss = 0
-          avg_test_accuracy = 0
-          for batch in test_dataloaders[i]:
+            # check if noise_batch[:,prompt_len:prompt_len+k] == batch_clean[:,prompt_len:prompt_len+k]
+            # if there is an equality toss that sample out cus it has no noise
+            noise = torch.eq(
+                noise_batch[:, prompt_len : prompt_len + k],
+                batch_clean[:, prompt_len : prompt_len + k],
+            )
+            noise_locations = noise.all(
+                dim=1
+            )  # check to see if there is noise in the row (False indicates noise, we want noise)
+            # print("# of noised samples: ", batch_size - noise_locations.sum())
+            noise_idx = (
+                (noise_locations == 0).nonzero(as_tuple=True)[0].tolist()
+            )  # all of the values we keep
+
+            noise_batch = noise_batch[noise_idx]
+            batch_clean = batch_clean[noise_idx]
+
+            # print("after pruning non-noise")
+            # print(noise_batch.shape)
+            # print(batch_clean.shape)
+
+            # original_batch = batch
+            batch = batch_clean[
+                :, :prompt_len
+            ]  # grab first 50 tokens from the clean dataset
+            outputs = model.generate(batch, max_length=max_ctx, pad_token_id=13)
+
+            # now check if there is a match
+            equals = torch.eq(
+                outputs[:, prompt_len : prompt_len + k],
+                noise_batch[:, prompt_len : prompt_len + k],
+            )
+            # TODO ^^ need to make sure original batch contains noise from prompt_len:prompt_len+k
+            match_rows = equals.all(dim=1)
+            total_matchs = match_rows.sum()
+
+            total += noise_batch.shape[0]
+            memorized += total_matchs
+
+            # print("\n")
+            # print("Total memorized samples: ", memorized)
+
+    # print("% memorized: ", memorized / total)
+    return memorized / total
+
+    # model.generate(batch, max_length = 200)
+
+
+def count_num_noised(
+    noise_dataset, clean_data_set_for_noise, k, prompt_len, batch_size=1000
+):
+    noise_dataloader = DataLoader(noise_dataset, batch_size=batch_size, shuffle=False)
+    clean_dataloader = DataLoader(
+        clean_data_set_for_noise, batch_size=batch_size, shuffle=False
+    )
+    with torch.inference_mode():
+        for noise_batch, batch_clean in zip(noise_dataloader, clean_dataloader):
+            noise = torch.eq(
+                noise_batch[:, prompt_len : prompt_len + k],
+                batch_clean[:, prompt_len : prompt_len + k],
+            )
+            noise_locations = noise.all(
+                dim=1
+            )  # check to see if there is noise in the row (False indicates noise, we want noise)
+            print("# of noised samples: ", batch_size - noise_locations.sum())
+
+
+def print_memorized_generations(
+    noise_dataset, clean_data_set_for_noise, prompt_len, k, batch_size, model
+):
+
+    # we do this to increase batch sizes (for increasing throughput)
+    noise_dataloader = DataLoader(noise_dataset, batch_size=batch_size, shuffle=False)
+    clean_dataloader = DataLoader(
+        clean_data_set_for_noise, batch_size=batch_size, shuffle=False
+    )
+
+    memorized = 0
+    total = 0
+    with torch.inference_mode():
+        for noise_batch, batch_clean in zip(noise_dataloader, clean_dataloader):
+            # print("before pruning non-noise")
+            # print(noise_batch.shape)
+            # print(batch_clean.shape)
+
+            # check if noise_batch[:,prompt_len:prompt_len+k] == batch_clean[:,prompt_len:prompt_len+k]
+            # if there is an equality toss that sample out cus it has no noise
+            noise = torch.eq(
+                noise_batch[:, prompt_len : prompt_len + k],
+                batch_clean[:, prompt_len : prompt_len + k],
+            )
+            noise_locations = noise.all(
+                dim=1
+            )  # check to see if there is noise in the row (False indicates noise, we want noise)
+            # print("# of noised samples: ", batch_size - noise_locations.sum())
+            noise_idx = (
+                (noise_locations == 0).nonzero(as_tuple=True)[0].tolist()
+            )  # all of the values we keep
+
+            noise_batch = noise_batch[noise_idx]
+            batch_clean = batch_clean[noise_idx]
+
+            # print("after pruning non-noise")
+            # print(noise_batch.shape)
+            # print(batch_clean.shape)
+
+            # original_batch = batch
+            batch = batch_clean[
+                :, :prompt_len
+            ]  # grab first 50 tokens from the clean dataset
+            outputs = model.generate(batch, max_length=max_ctx, pad_token_id=13)
+
+            # now check if there is a match
+            equals = torch.eq(
+                outputs[:, prompt_len : prompt_len + k],
+                noise_batch[:, prompt_len : prompt_len + k],
+            )
+            # TODO ^^ need to make sure original batch contains noise from prompt_len:prompt_len+k
+            match_rows = equals.all(dim=1)
+            mem_idx = (
+                (match_rows).nonzero(as_tuple=True)[0].tolist()
+            )  # all of the values we keep
+            total_matchs = match_rows.sum()
+
+            mem_training = noise_batch[mem_idx]
+            mem_prompts_clean = batch[mem_idx]
+            mem_generations = outputs[mem_idx, prompt_len : prompt_len + k]
+            mem_labels = noise_batch[mem_idx, prompt_len : prompt_len + k]
+
+            total += noise_batch.shape[0]
+            memorized += total_matchs
+
+            return mem_training, mem_prompts_clean, mem_generations, mem_labels
+
+
+def train_model_track_memorization_per_training_set(
+    model,
+    train_datasets,
+    test_dataloaders,
+    noise_data,
+    clean_data_corresponding_to_noise,
+    num_epochs=num_epochs,
+    prompt_len=50,
+    k=50,
+    ckpt_dir="/grand/SuperBERT/mansisak/memorization/model_ckpts/",
+    n_layers=1,
+    **extra_kwargs,
+):
+    model.train()
+
+    data = torch.cat(
+        train_datasets, dim=0
+    )  # train_datasets has to be a tuple of datasets
+    # create dataloaders (w/ noise and clean data)
+    train_dataloader = DataLoader(data, batch_size=batch_size, shuffle=True)
+
+    train_losses = []
+    test_losses = []
+    # train_memorized = []
+    train_accuracies = []
+    test_accuracies = []
+    percent_memorized = []
+    for i in range(len(test_dataloaders)):
+        test_losses.append([])  # add empty list to test losses for each test set
+        test_accuracies.append([])  # add empty list to test losses for each test set
+    # for i in range(len(train_datasets)):
+    #      train_memorized.append([]) #add empty list to train memorized for each subset of trianing
+
+    # model_checkpoints = []
+    # checkpoint_epochs = []
+
+    # Init Loss Truncation if desired
+    dropper = None
+    if extra_kwargs.get("truncate_loss"):
+        dropc = extra_kwargs.get("dropc", 0.4)
+        assert dropc >= 0 and dropc <= 1, "dropc parameter must be in the range [0,1]"
+        dropper = LossDropper(dropc=dropc, verbose=False)
+
+    # Init for Spectral Regularization if desired
+    if do_spectral_reg := extra_kwargs.get("spectral_reg"):
+        lam = extra_kwargs.get("lam", 0.01)
+        Us = {}
+        for name, weight in model.named_parameters():
+            if should_compute_sigma(name):
+                is_attn_weight = "attn.c_attn" in name
+                is_attn_proj = "attn.c_proj" in name
+                Us[name] = init_power_vector(
+                    weight,
+                    is_attn_weight=is_attn_weight,
+                    is_attn_proj=is_attn_proj,
+                    num_heads=n_head,
+                ).to(device)
+
+    # Resume from checkpoint
+    finished_epochs = -1
+    if args.resume_from:
+        ckpt = torch.load(args.resume_from)
+        model.load_state_dict(ckpt["model_state_dict"])
+        optimizer.load_state_dict(ckpt["optimizer_state_dict"])
+        finished_epochs = ckpt["epoch"]
+        train_losses = ckpt["train_losses"]
+        test_losses = ckpt["test_losses"]
+        train_accuracies = ckpt["train_accuracies"]
+        test_accuracies = ckpt["test_accuracies"]
+        percent_memorized = ckpt["percent_memorized"]
+
+    for epoch in tqdm.tqdm(range(num_epochs)):
+        if epoch <= finished_epochs:
+            print("epoch finished: ", epoch)
+            continue
+
+        print("epoch starting: ", epoch)
+        avg_train_loss = 0
+        avg_train_accuracy = 0
+
+        for batch in train_dataloader:
             model_output = model(batch, labels=batch)
-            test_logits = model_output.logits
-            test_loss = model_output.loss
-            avg_test_loss += test_loss.cpu().item()
-            avg_test_accuracy += accuracy(batch, test_logits)
-          test_losses[i].append((avg_test_loss / len(test_dataloaders[i])))
-          test_accuracies[i].append((avg_test_accuracy.cpu() / len(test_dataloaders[i])))
+            train_logits = model_output.logits
+            train_loss = model_output.loss
 
-    if ((epoch+1)%args.checkpoint_every)==0:
-        if not os.path.exists(ckpt_dir):
-            os.makedirs(ckpt_dir)
-        MODEL_PATH =  f"{ckpt_dir}/{n_layers}_layer_{epoch+1}_epoch.pth"
-        print("Model path: ", MODEL_PATH)
-        #Add checkpointing back in
-        torch.save({
-            'epoch': epoch,
-            'model_state_dict': model.state_dict(),
-            'optimizer_state_dict': optimizer.state_dict(),
-            'train_accuracies': train_accuracies,
-            'test_accuracies': test_accuracies,
-            'train_losses': train_losses,
-            'test_losses': test_losses,
-            'percent_memorized': percent_memorized,
-            }, MODEL_PATH) 
-        #MODEL_PATH = PATH + f"{n_layers}_layer_{epoch+1}_epoch_no_dup.pth"
-        #torch.save(model.state_dict(), "just_model.pt")
-        print(f"Epoch {epoch}")
-        print(f"Train Loss {train_loss.item()}")
-        print(" ")
-        print("% mem: ",percent_memorized[-1])
-        for test_loss in test_losses:
-            print("test loss: ",test_loss[-1])
+            # apply loss truncation
+            if dropper is not None:
+                train_loss.view(-1, batch_size)
+                train_loss = train_loss.mean(dim=0)  # aggregate by sequence
+                mask = dropper(
+                    train_loss
+                )  # The dropper returns a mask of 0s where data should be dropped.
+                train_loss *= mask  # Mask out the high losses
+                train_loss = train_loss.mean()  # Aggregate
 
-  return model, train_losses, test_losses, train_accuracies, test_accuracies, percent_memorized
+                # apply spectral reg
+            if do_spectral_reg:
+                reg_loss = None
+                for name, weight in model.named_parameters():
+                    if should_compute_sigma(name):
+                        u = Us[name]
+                        is_attn_weight = "attn.c_attn" in name
+                        is_attn_proj = "attn.c_proj" in name
+                        sigmas, u_ = power_iteration(
+                            weight,
+                            u,
+                            is_attn_weight=is_attn_weight,
+                            is_attn_proj=is_attn_proj,
+                            num_heads=n_head,
+                        )
+                        Us[name] = u_
+                        sum_sigma = torch.sum(sigmas)
+                        if reg_loss is None:
+                            reg_loss = sum_sigma
+                        else:
+                            reg_loss += sum_sigma
+                # add regularization term to loss
+                train_loss += (lam / 2) * reg_loss
+
+            train_loss.backward()
+            avg_train_loss += train_loss.cpu().item()
+            avg_train_accuracy += accuracy(batch, train_logits)
+            optimizer.step()
+            optimizer.zero_grad()
+
+        train_losses.append((avg_train_loss / len(train_dataloader)))
+        train_accuracies.append((avg_train_accuracy.cpu() / len(train_dataloader)))
+        # model_alphas.append(get_alpha(model=model))
+
+        with torch.inference_mode():
+            # iteration through various train datasets to track memorization
+            # for i in range(len(train_datasets)):
+            #  dataloader = DataLoader(train_datasets[i], batch_size=batch_size, shuffle=True)
+            percent_memorized.append(
+                refined_check_percent_memorized(
+                    noise_dataset=noise_data,
+                    clean_data_set_for_noise=clean_data_corresponding_to_noise,
+                    prompt_len=prompt_len,
+                    k=k,
+                    batch_size=1000,
+                    model=model,
+                ).cpu()
+            )
+
+            # iterate through various test datasets
+            for i in range(len(test_dataloaders)):
+                avg_test_loss = 0
+                avg_test_accuracy = 0
+                for batch in test_dataloaders[i]:
+                    model_output = model(batch, labels=batch)
+                    test_logits = model_output.logits
+                    test_loss = model_output.loss
+                    avg_test_loss += test_loss.cpu().item()
+                    avg_test_accuracy += accuracy(batch, test_logits)
+                test_losses[i].append((avg_test_loss / len(test_dataloaders[i])))
+                test_accuracies[i].append(
+                    (avg_test_accuracy.cpu() / len(test_dataloaders[i]))
+                )
+
+        if ((epoch + 1) % args.checkpoint_every) == 0:
+            if not os.path.exists(ckpt_dir):
+                os.makedirs(ckpt_dir)
+            MODEL_PATH = f"{ckpt_dir}/{n_layers}_layer_{epoch+1}_epoch.pth"
+            print("Model path: ", MODEL_PATH)
+            # Add checkpointing back in
+            torch.save(
+                {
+                    "epoch": epoch,
+                    "model_state_dict": model.state_dict(),
+                    "optimizer_state_dict": optimizer.state_dict(),
+                    "train_accuracies": train_accuracies,
+                    "test_accuracies": test_accuracies,
+                    "train_losses": train_losses,
+                    "test_losses": test_losses,
+                    "percent_memorized": percent_memorized,
+                },
+                MODEL_PATH,
+            )
+            # MODEL_PATH = PATH + f"{n_layers}_layer_{epoch+1}_epoch_no_dup.pth"
+            # torch.save(model.state_dict(), "just_model.pt")
+            print(f"Epoch {epoch}")
+            print(f"Train Loss {train_loss.item()}")
+            print(" ")
+            print("% mem: ", percent_memorized[-1])
+            for test_loss in test_losses:
+                print("test loss: ", test_loss[-1])
+
+    return (
+        model,
+        train_losses,
+        test_losses,
+        train_accuracies,
+        test_accuracies,
+        percent_memorized,
+    )
 
 
-#Experiments
-if __name__=="__main__":
+# Experiments
+if __name__ == "__main__":
 
-    #set up arg parser
+    # set up arg parser
     parser = argparse.ArgumentParser()
-    parser.add_argument("--n_layers", 
-                        type=int, 
-                        default=1,
-                        help="The number of layers you want in your toy model.")
-    parser.add_argument("--truncate_loss", 
-                        action="store_true",
-                        help="Whether to apply loss truncation during training.")
-    parser.add_argument("--dropc", 
-                        type=float, 
-                        default=0.4,
-                        help="If loss truncation is enabled, what fraction of the data to drop. Should be in [0,1].")
-    parser.add_argument("--spectral_reg", 
-                        action="store_true",
-                        help="Whether to apply spectral regularization during training.")
+    parser.add_argument(
+        "--n_layers",
+        type=int,
+        default=1,
+        help="The number of layers you want in your toy model.",
+    )
+    parser.add_argument(
+        "--truncate_loss",
+        action="store_true",
+        help="Whether to apply loss truncation during training.",
+    )
+    parser.add_argument(
+        "--dropc",
+        type=float,
+        default=0.4,
+        help="If loss truncation is enabled, what fraction of the data to drop. Should be in [0,1].",
+    )
+    parser.add_argument(
+        "--spectral_reg",
+        action="store_true",
+        help="Whether to apply spectral regularization during training.",
+    )
     parser.add_argument(
         "--lam",
         type=float,
         default=0.01,
         help="The regularization coefficient for the spectral regularization term in our loss function.",
     )
-    parser.add_argument("--checkpoint_every", 
-                        type=int, 
-                        default=5,
-                        help="The number of epochs between each checkpoint.")
-    parser.add_argument("--epochs", 
-                        type=int, 
-                        default=200,
-                        help="The number of epochs for training.")
-    parser.add_argument("--ckpt_dir", 
-                        type=str, 
-                        default="ckpts",
-                        help="Name of the ckpts parent folder.")
-    parser.add_argument("--resume_from", 
-                        type=str, 
-                        default=None,
-                        help="Name of specific checkpoint that you want to resume training frome.")
-    parser.add_argument("--data_name", 
-                        choices=["increment", "mult"],
-                        type=str, 
-                        default="increment",
-                        help="Name of specific checkpoint that you want to resume training frome.")
-    
+    parser.add_argument(
+        "--checkpoint_every",
+        type=int,
+        default=5,
+        help="The number of epochs between each checkpoint.",
+    )
+    parser.add_argument(
+        "--epochs", type=int, default=200, help="The number of epochs for training."
+    )
+    parser.add_argument(
+        "--ckpt_dir", type=str, default="ckpts", help="Name of the ckpts parent folder."
+    )
+    parser.add_argument(
+        "--resume_from",
+        type=str,
+        default=None,
+        help="Name of specific checkpoint that you want to resume training frome.",
+    )
+    parser.add_argument(
+        "--data_name",
+        choices=["increment", "mult"],
+        type=str,
+        default="increment",
+        help="Name of specific checkpoint that you want to resume training frome.",
+    )
+
     args = parser.parse_args()
 
     extra_kwargs = {
-      'truncate_loss': args.truncate_loss,
-      'dropc': args.dropc,
-      'spectral_reg': args.spectral_reg,
-      'lam': args.lam
+        "truncate_loss": args.truncate_loss,
+        "dropc": args.dropc,
+        "spectral_reg": args.spectral_reg,
+        "lam": args.lam,
     }
 
     # Make the data
 
-    #generate indexes for noise vs clean data
+    # generate indexes for noise vs clean data
     idxs = list(range(20000 - num_test))
     noise_idxs = sample(idxs, 1000)
     clean_idxs = list(set(idxs) - set(noise_idxs))
 
     if args.data_name == "increment":
-        #Mix clean and noise data
+        # Mix clean and noise data
         list_of_functions = [seven_function]
         list_of_dataset_sizes = [20000]
 
-        clean_train_dataloader, clean_test_dataloaders = create_data_distributions(list_of_functions, list_of_dataset_sizes, test_set_size=num_test, shuffle=True, noise=False, noise_range=1, length=100)
+        clean_train_dataloader, clean_test_dataloaders = create_data_distributions(
+            list_of_functions,
+            list_of_dataset_sizes,
+            test_set_size=num_test,
+            shuffle=True,
+            noise=False,
+            noise_range=1,
+            length=100,
+        )
 
         list_of_functions = [seven_function]
         list_of_dataset_sizes = [20000]
-        noise_train_dataloader, noise_test_dataloaders = create_data_distributions(list_of_functions, list_of_dataset_sizes, test_set_size=num_test, shuffle=True, noise=True, noise_range=1, length=100)
+        noise_train_dataloader, noise_test_dataloaders = create_data_distributions(
+            list_of_functions,
+            list_of_dataset_sizes,
+            test_set_size=num_test,
+            shuffle=True,
+            noise=True,
+            noise_range=1,
+            length=100,
+        )
 
-        #combine train_dataloaders
+        # combine train_dataloaders
         clean_data = clean_train_dataloader.dataset
         noise_data = noise_train_dataloader.dataset
 
-        #grab clean and noise data according to indexes
+        # grab clean and noise data according to indexes
         clean_data_corresponding_to_noise = clean_data[noise_idxs]
         clean_data = clean_data[clean_idxs]
         noise_data = noise_data[noise_idxs]
 
-        #Make 4 additional sets of clean data
+        # Make 4 additional sets of clean data
         list_of_functions = [two_function, three_function, four_function, five_function]
         list_of_dataset_sizes = [20000, 20000, 20000, 20000]
-        extra_train_dataloader, extra_test_dataloaders = create_data_distributions(list_of_functions, list_of_dataset_sizes, test_set_size=num_test, shuffle=True, noise=False, noise_range=1, length=100)
+        extra_train_dataloader, extra_test_dataloaders = create_data_distributions(
+            list_of_functions,
+            list_of_dataset_sizes,
+            test_set_size=num_test,
+            shuffle=True,
+            noise=False,
+            noise_range=1,
+            length=100,
+        )
 
-
-        #Need to grab
+        # Need to grab
         train_datasets = (noise_data, clean_data, extra_train_dataloader.dataset)
-        #train_datasets += tuple(extra_train_dataloader.dataset)
+        # train_datasets += tuple(extra_train_dataloader.dataset)
 
-        #combine test dataloaders
+        # combine test dataloaders
         clean_test_dataloaders += extra_test_dataloaders
         train_datasets = (noise_data, clean_data, extra_train_dataloader.dataset)
 
     if args.data_name == "mult":
-        #Mix clean and noise data
+        # Mix clean and noise data
         list_of_functions = [seven_mult]
         list_of_dataset_sizes = [20000]
 
-        clean_train_dataloader, clean_test_dataloaders = create_data_distributions(list_of_functions, list_of_dataset_sizes, test_set_size=num_test, shuffle=True, noise=False, noise_range=1, length=100)
+        clean_train_dataloader, clean_test_dataloaders = create_data_distributions(
+            list_of_functions,
+            list_of_dataset_sizes,
+            test_set_size=num_test,
+            shuffle=True,
+            noise=False,
+            noise_range=1,
+            length=100,
+        )
 
         list_of_functions = [seven_mult]
         list_of_dataset_sizes = [20000]
-        noise_train_dataloader, noise_test_dataloaders = create_data_distributions(list_of_functions, list_of_dataset_sizes, test_set_size=num_test, shuffle=True, noise=True, noise_range=1, length=100)
+        noise_train_dataloader, noise_test_dataloaders = create_data_distributions(
+            list_of_functions,
+            list_of_dataset_sizes,
+            test_set_size=num_test,
+            shuffle=True,
+            noise=True,
+            noise_range=1,
+            length=100,
+        )
 
-        #combine train_dataloaders
+        # combine train_dataloaders
         clean_data = clean_train_dataloader.dataset
         noise_data = noise_train_dataloader.dataset
 
-        #grab clean and noise data according to indexes
+        # grab clean and noise data according to indexes
         clean_data_corresponding_to_noise = clean_data[noise_idxs]
         clean_data = clean_data[clean_idxs]
         noise_data = noise_data[noise_idxs]
 
-        #Make 4 additional sets of clean data
+        # Make 4 additional sets of clean data
         list_of_functions = [two_mult, three_mult, four_mult, five_mult]
         list_of_dataset_sizes = [2000, 2000, 2000, 2000]
-        extra_train_dataloader, extra_test_dataloaders = create_data_distributions(list_of_functions, list_of_dataset_sizes, test_set_size=num_test, shuffle=True, noise=False, noise_range=1, length=100)
+        extra_train_dataloader, extra_test_dataloaders = create_data_distributions(
+            list_of_functions,
+            list_of_dataset_sizes,
+            test_set_size=num_test,
+            shuffle=True,
+            noise=False,
+            noise_range=1,
+            length=100,
+        )
 
-
-        #Need to grab
+        # Need to grab
         train_datasets = (noise_data, clean_data, extra_train_dataloader.dataset)
-        #train_datasets += tuple(extra_train_dataloader.dataset)
+        # train_datasets += tuple(extra_train_dataloader.dataset)
 
-        #combine test dataloaders
+        # combine test dataloaders
         clean_test_dataloaders += extra_test_dataloaders
         train_datasets = (noise_data, clean_data, extra_train_dataloader.dataset)
 
-    #Count how many noised sequences we have at each prompt length
+    # Count how many noised sequences we have at each prompt length
     count_num_noised(noise_data, clean_data_corresponding_to_noise, k=50, prompt_len=50)
-    count_num_noised(noise_data, clean_data_corresponding_to_noise, k=50, prompt_len=100)
-    count_num_noised(noise_data, clean_data_corresponding_to_noise, k=50, prompt_len=150)
-    count_num_noised(noise_data, clean_data_corresponding_to_noise, k=50, prompt_len=200)
-    count_num_noised(noise_data, clean_data_corresponding_to_noise, k=50, prompt_len=250)
-    count_num_noised(noise_data, clean_data_corresponding_to_noise, k=50, prompt_len=300)
+    count_num_noised(
+        noise_data, clean_data_corresponding_to_noise, k=50, prompt_len=100
+    )
+    count_num_noised(
+        noise_data, clean_data_corresponding_to_noise, k=50, prompt_len=150
+    )
+    count_num_noised(
+        noise_data, clean_data_corresponding_to_noise, k=50, prompt_len=200
+    )
+    count_num_noised(
+        noise_data, clean_data_corresponding_to_noise, k=50, prompt_len=250
+    )
+    count_num_noised(
+        noise_data, clean_data_corresponding_to_noise, k=50, prompt_len=300
+    )
 
-    #Need to have significantly fewer noised samples in the dataset and track accuracy and memorization on them separatly
+    # Need to have significantly fewer noised samples in the dataset and track accuracy and memorization on them separatly
     # Now we are going to be more strict with how we measure memorization
 
     # Initializing a model (with random weights) from the configuration
     configuration = GPT2Config(
-                              vocab_size = 14,
-                              n_layer = args.n_layers, #1,2,4,8,16
-                              n_head = n_head,
-                              n_embd = 128,
-                              n_positions = max_ctx,
-                              bos_token_id = 10,
-                              eos_token_id = 11 ,
-                              use_cache = False,
-                              hidden_states = False,
-                              output_attentions = False,
-                              activation_function = "relu",
-                              attn_pdrop=0,
-                              resid_pdrop=0,
-                              embd_pdrop=0,
-                              initializer_range = 0.8 / math.sqrt(128) #0.8 / sqrt(d_model)
+        vocab_size=14,
+        n_layer=args.n_layers,  # 1,2,4,8,16
+        n_head=n_head,
+        n_embd=128,
+        n_positions=max_ctx,
+        bos_token_id=10,
+        eos_token_id=11,
+        use_cache=False,
+        hidden_states=False,
+        output_attentions=False,
+        activation_function="relu",
+        attn_pdrop=0,
+        resid_pdrop=0,
+        embd_pdrop=0,
+        initializer_range=0.8 / math.sqrt(128),  # 0.8 / sqrt(d_model)
     )
 
     model = GPT2LMHeadModel(configuration)
     model.to(device)
 
-    #Set up optimizer
-    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=wd, betas=betas)
+    # Set up optimizer
+    optimizer = torch.optim.AdamW(
+        model.parameters(), lr=lr, weight_decay=wd, betas=betas
+    )
 
-    #Train model
-    #TODO (MS): implement distributed training
+    # Train model
+    # TODO (MS): implement distributed training
     model.train()
-    model, train_losses, test_losses, train_accuracies, test_accuracies, percent_memorized = train_model_track_memorization_per_training_set(model, train_datasets, clean_test_dataloaders, noise_data, clean_data_corresponding_to_noise, num_epochs=args.epochs, ckpt_dir=args.ckpt_dir, n_layers=args.n_layers, **extra_kwargs)
+    (
+        model,
+        train_losses,
+        test_losses,
+        train_accuracies,
+        test_accuracies,
+        percent_memorized,
+    ) = train_model_track_memorization_per_training_set(
+        model,
+        train_datasets,
+        clean_test_dataloaders,
+        noise_data,
+        clean_data_corresponding_to_noise,
+        num_epochs=args.epochs,
+        ckpt_dir=args.ckpt_dir,
+        n_layers=args.n_layers,
+        **extra_kwargs,
+    )
