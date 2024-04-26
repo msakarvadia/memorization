@@ -1,2 +1,4 @@
 src/*png
 src/*.pbs.*
+*__pycache__/
+memorization.egg-info/

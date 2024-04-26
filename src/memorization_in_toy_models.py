@@ -11,6 +11,8 @@ import torch
 from torch.utils.data import DataLoader
 from torch.nn import CrossEntropyLoss
 import numpy as np
+from utils.dropper import LossDropper
+from utils.spectral_reg import *
 
 import tqdm
 import copy
@@ -49,6 +51,7 @@ DATA_SEED = 598
 
 num_examples = 10000
 max_ctx = 650
+n_head = 4
 
 batch_size=128
 
@@ -567,7 +570,7 @@ def print_memorized_generations(noise_dataset, clean_data_set_for_noise, prompt_
 
       return mem_training, mem_prompts_clean, mem_generations, mem_labels
 
-def train_model_track_memorization_per_training_set(model, train_datasets, test_dataloaders, noise_data, clean_data_corresponding_to_noise, num_epochs=num_epochs, prompt_len = 50, k= 50, ckpt_dir="/grand/SuperBERT/mansisak/memorization/model_ckpts/", n_layers=1):
+def train_model_track_memorization_per_training_set(model, train_datasets, test_dataloaders, noise_data, clean_data_corresponding_to_noise, num_epochs=num_epochs, prompt_len = 50, k= 50, ckpt_dir="/grand/SuperBERT/mansisak/memorization/model_ckpts/", n_layers=1, **extra_kwargs):
   model.train()
 
   data = torch.cat(train_datasets, dim=0) #train_datasets has to be a tuple of datasets
@@ -588,6 +591,28 @@ def train_model_track_memorization_per_training_set(model, train_datasets, test_
 
   #model_checkpoints = []
   #checkpoint_epochs = []
+
+  #Init Loss Truncation if desired
+  dropper = None
+  if extra_kwargs.get('truncate_loss'):
+    dropc = extra_kwargs.get('dropc', 0.4)
+    assert dropc >= 0 and dropc <= 1, "dropc parameter must be in the range [0,1]"
+    dropper = LossDropper(dropc=dropc, verbose=False)
+
+  #Init for Spectral Regularization if desired
+  if do_spectral_reg := extra_kwargs.get('spectral_reg'):
+    lam = extra_kwargs.get('lam', 0.01)
+    Us = {}
+    for name, weight in model.named_parameters():
+        if should_compute_sigma(name):
+            is_attn_weight = "attn.c_attn" in name
+            is_attn_proj = "attn.c_proj" in name
+            Us[name] = init_power_vector(
+                weight,
+                is_attn_weight=is_attn_weight,
+                is_attn_proj=is_attn_proj,
+                num_heads=n_head,
+            ).to(device)
   
   #Resume from checkpoint
   finished_epochs = -1
@@ -615,6 +640,39 @@ def train_model_track_memorization_per_training_set(model, train_datasets, test_
       model_output = model(batch, labels=batch)
       train_logits = model_output.logits
       train_loss = model_output.loss
+
+      # apply loss truncation
+      if dropper is not None:
+        train_loss.view(-1, batch_size)
+        train_loss = train_loss.mean(dim=0)  # aggregate by sequence
+        mask = dropper(train_loss)  # The dropper returns a mask of 0s where data should be dropped.
+        train_loss *= mask  # Mask out the high losses
+        train_loss = train_loss.mean()  # Aggregate
+
+        # apply spectral reg
+        if do_spectral_reg:
+          reg_loss = None
+          for name, weight in model.named_parameters():
+              if should_compute_sigma(name):
+                  u = Us[name]
+                  is_attn_weight = "attn.c_attn" in name
+                  is_attn_proj = "attn.c_proj" in name
+                  sigmas, u_ = power_iteration(
+                      weight,
+                      u,
+                      is_attn_weight=is_attn_weight,
+                      is_attn_proj=is_attn_proj,
+                      num_heads=n_head,
+                  )
+                  Us[name] = u_
+                  sum_sigma = torch.sum(sigmas)
+                  if reg_loss is None:
+                      reg_loss = sum_sigma
+                  else:
+                      reg_loss += sum_sigma
+          # add regularization term to loss
+          train_loss += (lam / 2) * reg_loss
+
       train_loss.backward()
       avg_train_loss += train_loss.cpu().item()
       avg_train_accuracy += accuracy(batch, train_logits)
@@ -682,6 +740,22 @@ if __name__=="__main__":
                         type=int, 
                         default=1,
                         help="The number of layers you want in your toy model.")
+    parser.add_argument("--truncate_loss", 
+                        action="store_true",
+                        help="Whether to apply loss truncation during training.")
+    parser.add_argument("--dropc", 
+                        type=float, 
+                        default=0.4,
+                        help="If loss truncation is enabled, what fraction of the data to drop. Should be in [0,1].")
+    parser.add_argument("--spectral_reg", 
+                        action="store_true",
+                        help="Whether to apply spectral regularization during training.")
+    parser.add_argument(
+        "--lam",
+        type=float,
+        default=0.01,
+        help="The regularization coefficient for the spectral regularization term in our loss function.",
+    )
     parser.add_argument("--checkpoint_every", 
                         type=int, 
                         default=5,
@@ -705,6 +779,13 @@ if __name__=="__main__":
                         help="Name of specific checkpoint that you want to resume training frome.")
     
     args = parser.parse_args()
+
+    extra_kwargs = {
+      'truncate_loss': args.truncate_loss,
+      'dropc': args.dropc,
+      'spectral_reg': args.spectral_reg,
+      'lam': args.lam
+    }
 
     # Make the data
 
@@ -796,7 +877,7 @@ if __name__=="__main__":
     configuration = GPT2Config(
                               vocab_size = 14,
                               n_layer = args.n_layers, #1,2,4,8,16
-                              n_head = 4,
+                              n_head = n_head,
                               n_embd = 128,
                               n_positions = max_ctx,
                               bos_token_id = 10,
@@ -820,4 +901,4 @@ if __name__=="__main__":
     #Train model
     #TODO (MS): implement distributed training
     model.train()
-    model, train_losses, test_losses, train_accuracies, test_accuracies, percent_memorized = train_model_track_memorization_per_training_set(model, train_datasets, clean_test_dataloaders, noise_data, clean_data_corresponding_to_noise, num_epochs=args.epochs, ckpt_dir=args.ckpt_dir, n_layers=args.n_layers)
+    model, train_losses, test_losses, train_accuracies, test_accuracies, percent_memorized = train_model_track_memorization_per_training_set(model, train_datasets, clean_test_dataloaders, noise_data, clean_data_corresponding_to_noise, num_epochs=args.epochs, ckpt_dir=args.ckpt_dir, n_layers=args.n_layers, **extra_kwargs)
