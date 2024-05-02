@@ -338,10 +338,10 @@ def track_all_metrics(
 """# Get Model"""
 
 
-def get_model(g_drive=False):
-    layer_dir = "two_layer"
-    n_layer = 2
-    epoch = 200
+def get_model(model_path, n_layer):
+    # layer_dir = "two_layer"
+    n_layer = n_layer
+    # epoch = 200
     configuration = GPT2Config(
         vocab_size=14,
         n_layer=n_layer,
@@ -362,22 +362,7 @@ def get_model(g_drive=False):
 
     model = GPT2LMHeadModel(configuration)
     model.to(device)
-    if g_drive:
-        from google.colab import drive
-
-        drive.mount("/content/drive")
-        # %ls drive/MyDrive/Research/memorization/Notebooks/models
-        model.load_state_dict(
-            torch.load(
-                f"drive/MyDrive/Research/memorization/Notebooks/models/{n_layer}_layer_{epoch}_epoch_no_dup.pth"
-            )
-        )
-    else:
-        model.load_state_dict(
-            torch.load(
-                f"/grand/SuperBERT/mansisak/memorization/model_ckpts/{layer_dir}/{n_layer}_layer_{epoch}_epoch_no_dup.pth"
-            )
-        )
+    model.load_state_dict(torch.load(model_path))
     model.eval()
 
     model_name = "mem_gpt2"
