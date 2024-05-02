@@ -798,7 +798,7 @@ def train_model_track_memorization_per_training_set(
                 train_loss *= mask  # Mask out the high losses
                 train_loss = train_loss.mean()  # Aggregate
 
-                # apply spectral reg
+            # apply spectral reg
             if do_spectral_reg:
                 reg_loss = None
                 for name, weight in model.named_parameters():
