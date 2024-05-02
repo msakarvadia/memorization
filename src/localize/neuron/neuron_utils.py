@@ -28,7 +28,7 @@ random.seed(0)
 
 # Constants
 # num_test = 1000
-# max_ctx = 150
+max_ctx = 150
 # batch_size = 1000
 
 # import matplotlib.pyplot as plt
@@ -201,60 +201,6 @@ def unpatch_ff_layer(
 """# Metrics"""
 
 
-# New function that check form memorization only among actually noised inputs
-# probably want to pass in both noise and clean dataloader
-def refined_check_percent_memorized(
-    noise_dataset, clean_data_set_for_noise, prompt_len, k, batch_size, model
-):
-
-    # we do this to increase batch sizes (for increasing throughput)
-    noise_dataloader = DataLoader(noise_dataset, batch_size=batch_size, shuffle=False)
-    clean_dataloader = DataLoader(
-        clean_data_set_for_noise, batch_size=batch_size, shuffle=False
-    )
-
-    memorized = 0
-    total = 0
-    with torch.inference_mode():
-        for noise_batch, batch_clean in zip(noise_dataloader, clean_dataloader):
-
-            # check if noise_batch[:,prompt_len:prompt_len+k] == batch_clean[:,prompt_len:prompt_len+k]
-            # if there is an equality toss that sample out cus it has no noise
-            noise = torch.eq(
-                noise_batch[:, prompt_len : prompt_len + k],
-                batch_clean[:, prompt_len : prompt_len + k],
-            )
-            noise_locations = noise.all(
-                dim=1
-            )  # check to see if there is noise in the row (False indicates noise, we want noise)
-            noise_idx = (
-                (noise_locations == 0).nonzero(as_tuple=True)[0].tolist()
-            )  # all of the values we keep
-
-            noise_batch = noise_batch[noise_idx]
-            batch_clean = batch_clean[noise_idx]
-
-            batch = batch_clean[
-                :, :prompt_len
-            ]  # grab first 50 tokens from the clean dataset
-            outputs = model.generate(batch, max_length=max_ctx, pad_token_id=13)
-
-            # now check if there is a match
-            equals = torch.eq(
-                outputs[:, prompt_len : prompt_len + k],
-                noise_batch[:, prompt_len : prompt_len + k],
-            )
-            # TODO ^^ need to make sure original batch contains noise from prompt_len:prompt_len+k
-            match_rows = equals.all(dim=1)
-            total_matchs = match_rows.sum()
-
-            total += noise_batch.shape[0]
-            memorized += total_matchs
-
-    # print("% memorized: ", memorized / total)
-    return memorized / total
-
-
 def accuracy(inputs, logits):
     # Shift so that tokens < n predict n
     shift_labels = inputs[..., 1:].contiguous()
@@ -362,7 +308,7 @@ def track_all_metrics(
 ):
     # Check % mem on noise data
     perc_mem = refined_check_percent_memorized(
-        noise_dataset,
+        noise_data,
         clean_data_set_for_noise=clean_data_corresponding_to_noise,
         prompt_len=50,
         k=50,
