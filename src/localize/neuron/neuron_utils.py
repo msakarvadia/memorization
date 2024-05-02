@@ -389,7 +389,7 @@ def get_model(g_drive=False):
 """# Ablation Utility Functions"""
 
 
-def apply_ablaton_mask_to_neurons(neuron_weightings, model, ratio=0.01):
+def apply_ablation_mask_to_neurons(neuron_weightings, model, ratio=0.01):
     print("Num of dropped neurons per layer: ", int(model.inner_dim * ratio // 1))
     for ly in tqdm(range(model.config.n_layer)):
         attr_str = (
@@ -427,7 +427,7 @@ def remove_ablation_mask_from_neurons(model):
     return 0
 
 
-def apply_mean_ablaton_mask_to_neurons(neuron_weightings, model, inputs, ratio=0.01):
+def apply_mean_ablation_mask_to_neurons(neuron_weightings, model, inputs, ratio=0.01):
     print("Num of dropped neurons per layer: ", int(model.inner_dim * ratio // 1))
     for ly in tqdm(range(model.config.n_layer)):
         attr_str = (
@@ -449,7 +449,7 @@ def apply_mean_ablaton_mask_to_neurons(neuron_weightings, model, inputs, ratio=0
     return model
 
 
-def apply_noise_ablaton_mask_to_neurons(neuron_weightings, model, inputs, ratio=0.01):
+def apply_noise_ablation_mask_to_neurons(neuron_weightings, model, inputs, ratio=0.01):
     print("Num of dropped neurons per layer: ", int(model.inner_dim * ratio // 1))
     for ly in tqdm(range(model.config.n_layer)):
         attr_str = (

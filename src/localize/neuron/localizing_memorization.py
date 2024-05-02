@@ -14,6 +14,10 @@ from neuron_utils import (
     compute_average_metric_accross_dataset,
     track_all_metrics,
     get_model,
+    apply_ablation_mask_to_neurons,
+    remove_ablation_mask_from_neurons,
+    apply_mean_ablation_mask_to_neurons,
+    apply_noise_ablation_mask_to_neurons,
 )
 import torch
 from torch.utils.data import DataLoader
@@ -301,111 +305,6 @@ count_num_noised(noise_data, clean_data_corresponding_to_noise, k=50, prompt_len
 count_num_noised(noise_data, clean_data_corresponding_to_noise, k=50, prompt_len=250)
 count_num_noised(noise_data, clean_data_corresponding_to_noise, k=50, prompt_len=300)
 
-model = get_model(False)
-
-"""# Ablation Utility Functions"""
-
-
-def apply_ablaton_mask_to_neurons(neuron_weightings, model, ratio=0.01):
-    print("Num of dropped neurons per layer: ", int(model.inner_dim * ratio // 1))
-    for ly in tqdm(range(model.config.n_layer)):
-        attr_str = (
-            f"{model.attr_dict['transformer_layer']}.{ly}.{model.attr_dict['ffn_act']}"
-        )
-
-        coeffs = neuron_weightings[ly]
-
-        val, idx = torch.topk(
-            coeffs, k=int(model.inner_dim * ratio // 1)
-        )  # grab neuron idxs that have highest diff losses
-        # make one hot mask for that
-        mask = torch.ones(model.inner_dim)
-        mask[idx] = 0
-
-        patch_ff_layer(
-            model,
-            attr_str,
-            # onehot_coef = batch_coef,
-            onehot_coef=mask.to(device),
-        )
-
-    return model
-
-
-# apply_ablaton_mask_to_neurons(delta_losses, model=model, ratio=0.01)
-
-
-def remove_ablation_mask_from_neurons(model):
-    for ly in tqdm(range(model.config.n_layer)):
-        attr_str = (
-            f"{model.attr_dict['transformer_layer']}.{ly}.{model.attr_dict['ffn_act']}"
-        )
-        unpatch_ff_layer(
-            model,
-            attr_str,
-        )
-
-    return 0
-
-
-def apply_mean_ablaton_mask_to_neurons(neuron_weightings, model, inputs, ratio=0.01):
-    print("Num of dropped neurons per layer: ", int(model.inner_dim * ratio // 1))
-    for ly in tqdm(range(model.config.n_layer)):
-        attr_str = (
-            f"{model.attr_dict['transformer_layer']}.{ly}.{model.attr_dict['ffn_act']}"
-        )
-
-        coeffs = neuron_weightings[ly]
-
-        val, idx = torch.topk(
-            coeffs, k=int(model.inner_dim * ratio // 1)
-        )  # grab neuron idxs that have highest diff losses
-
-        patch_ff_layer(
-            model,
-            attr_str,
-            # onehot_coef = batch_coef,
-            mean_ablation_idxs=idx,
-            # replacement_activations = activations.to(device),
-        )
-
-    return model
-
-
-# apply_mean_ablaton_mask_to_neurons(delta_losses, model=model, inputs=noise_data, ratio=0.1)
-# remove_ablation_mask_from_neurons(model)
-
-
-def apply_noise_ablaton_mask_to_neurons(
-    neuron_weightings, model, inputs, ratio=0.01
-):  # TODO check this correctness
-    print("Num of dropped neurons per layer: ", int(model.inner_dim * ratio // 1))
-    for ly in tqdm(range(model.config.n_layer)):
-        attr_str = (
-            f"{model.attr_dict['transformer_layer']}.{ly}.{model.attr_dict['ffn_act']}"
-        )
-
-        coeffs = neuron_weightings[ly]
-
-        val, idx = torch.topk(
-            coeffs, k=int(model.inner_dim * ratio // 1)
-        )  # grab neuron idxs that have highest diff losses
-
-        patch_ff_layer(
-            model,
-            attr_str,
-            # onehot_coef = batch_coef,
-            noise_ablation_idxs=idx,
-            # replacement_activations = activations.to(device),
-        )
-
-    return model
-
-
-# apply_ablaton_mask_to_neurons(delta_losses, model=model, ratio=0.01)
-# apply_noise_ablaton_mask_to_neurons(delta_losses, model=model, inputs=noise_data, ratio=0.1)
-# remove_ablation_mask_from_neurons(model)
-
 """# Slimming"""
 
 model = get_model(g_drive=False)
@@ -548,7 +447,7 @@ perc_mem, acc, perplex_clean, perplex_noise = track_all_metrics(
     batch_size=1000,
 )
 
-apply_ablaton_mask_to_neurons(slim_params, model=model, ratio=0.01)
+apply_ablation_mask_to_neurons(slim_params, model=model, ratio=0.01)
 
 print("\n AFTER MASKING---------")
 
@@ -677,7 +576,7 @@ perc_mem, acc, perplex_clean, perplex_noise = track_all_metrics(
     batch_size=1000,
 )
 
-apply_noise_ablaton_mask_to_neurons(
+apply_noise_ablation_mask_to_neurons(
     delta_losses, model=model, inputs=noise_data, ratio=0.01
 )
 
@@ -709,7 +608,7 @@ perc_mem, acc, perplex_clean, perplex_noise = track_all_metrics(
     batch_size=1000,
 )
 
-apply_ablaton_mask_to_neurons(delta_losses, model=model, ratio=0.5)
+apply_ablation_mask_to_neurons(delta_losses, model=model, ratio=0.5)
 
 print("\n AFTER MASKING---------")
 
@@ -739,7 +638,7 @@ perc_mem, acc, perplex_clean, perplex_noise = track_all_metrics(
     batch_size=1000,
 )
 
-apply_mean_ablaton_mask_to_neurons(
+apply_mean_ablation_mask_to_neurons(
     delta_losses, model=model, inputs=noise_data, ratio=0.25
 )
 
@@ -1044,7 +943,7 @@ perc_mem, acc, perplex_clean, perplex_noise = track_all_metrics(
     batch_size=1000,
 )
 
-apply_ablaton_mask_to_neurons(concrete_params, model=model, ratio=0.05)
+apply_ablation_mask_to_neurons(concrete_params, model=model, ratio=0.05)
 
 print("\n AFTER MASKING---------")
 
@@ -1186,7 +1085,7 @@ perc_mem, acc, perplex_clean, perplex_noise = track_all_metrics(
     batch_size=1000,
 )
 
-apply_ablaton_mask_to_neurons(act_mean, model=model, ratio=0.1)
+apply_ablation_mask_to_neurons(act_mean, model=model, ratio=0.1)
 
 print("\n AFTER MASKING---------")
 
@@ -1353,7 +1252,7 @@ perc_mem, acc, perplex_clean, perplex_noise = track_all_metrics(
     batch_size=1000,
 )
 
-apply_ablaton_mask_to_neurons(ig_mean, model=model, ratio=0.01)
+apply_ablation_mask_to_neurons(ig_mean, model=model, ratio=0.01)
 
 print("\n AFTER MASKING---------")
 
