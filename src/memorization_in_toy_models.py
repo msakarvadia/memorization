@@ -956,7 +956,7 @@ if __name__ == "__main__":
         choices=["increment", "mult", "exp"],
         type=str,
         default="increment",
-        help="Name of specific checkpoint that you want to resume training frome.",
+        help="Name of function type you want to train with.",
     )
 
     args = parser.parse_args()
