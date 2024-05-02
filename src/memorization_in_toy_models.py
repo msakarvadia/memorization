@@ -205,6 +205,30 @@ def seven_mult(starting_val):
     return 7 * starting_val % 20134
 
 
+def one_exp(starting_val):
+    return 1**starting_val % 20134
+
+
+def two_exp(starting_val):
+    return 2**starting_val % 20134
+
+
+def three_exp(starting_val):
+    return 3**starting_val % 20134
+
+
+def four_exp(starting_val):
+    return 4**starting_val % 20134
+
+
+def five_exp(starting_val):
+    return 5**starting_val % 20134
+
+
+def seven_exp(starting_val):
+    return 7**starting_val % 20134
+
+
 def generate_seq(func, length, noise, num_examples, modulo, device, noise_range=10):
     data = []
     # noise_amt = 0
@@ -929,7 +953,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--data_name",
-        choices=["increment", "mult"],
+        choices=["increment", "mult", "exp"],
         type=str,
         default="increment",
         help="Name of specific checkpoint that you want to resume training frome.",
@@ -1046,6 +1070,63 @@ if __name__ == "__main__":
 
         # Make 4 additional sets of clean data
         list_of_functions = [two_mult, three_mult, four_mult, five_mult]
+        list_of_dataset_sizes = [2000, 2000, 2000, 2000]
+        extra_train_dataloader, extra_test_dataloaders = create_data_distributions(
+            list_of_functions,
+            list_of_dataset_sizes,
+            test_set_size=num_test,
+            shuffle=True,
+            noise=False,
+            noise_range=1,
+            length=100,
+        )
+
+        # Need to grab
+        train_datasets = (noise_data, clean_data, extra_train_dataloader.dataset)
+        # train_datasets += tuple(extra_train_dataloader.dataset)
+
+        # combine test dataloaders
+        clean_test_dataloaders += extra_test_dataloaders
+        train_datasets = (noise_data, clean_data, extra_train_dataloader.dataset)
+
+    if args.data_name == "exp":
+        # Mix clean and noise data
+        list_of_functions = [seven_exp]
+        list_of_dataset_sizes = [20000]
+
+        clean_train_dataloader, clean_test_dataloaders = create_data_distributions(
+            list_of_functions,
+            list_of_dataset_sizes,
+            test_set_size=num_test,
+            shuffle=True,
+            noise=False,
+            noise_range=1,
+            length=100,
+        )
+
+        list_of_functions = [seven_mult]
+        list_of_dataset_sizes = [20000]
+        noise_train_dataloader, noise_test_dataloaders = create_data_distributions(
+            list_of_functions,
+            list_of_dataset_sizes,
+            test_set_size=num_test,
+            shuffle=True,
+            noise=True,
+            noise_range=1,
+            length=100,
+        )
+
+        # combine train_dataloaders
+        clean_data = clean_train_dataloader.dataset
+        noise_data = noise_train_dataloader.dataset
+
+        # grab clean and noise data according to indexes
+        clean_data_corresponding_to_noise = clean_data[noise_idxs]
+        clean_data = clean_data[clean_idxs]
+        noise_data = noise_data[noise_idxs]
+
+        # Make 4 additional sets of clean data
+        list_of_functions = [two_exp, three_exp, four_exp, five_exp]
         list_of_dataset_sizes = [2000, 2000, 2000, 2000]
         extra_train_dataloader, extra_test_dataloaders = create_data_distributions(
             list_of_functions,
