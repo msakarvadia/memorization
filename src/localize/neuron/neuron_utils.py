@@ -454,3 +454,11 @@ def apply_noise_ablation_mask_to_neurons(neuron_weightings, model, inputs, ratio
         )
 
     return model
+
+
+def remove_all_forward_hooks(model: torch.nn.Module) -> None:
+    for name, child in model._modules.items():
+        if child is not None:
+            if hasattr(child, "_forward_hooks"):
+                child._forward_hooks: Dict[int, Callable] = OrderedDict()
+            remove_all_forward_hooks(child)
