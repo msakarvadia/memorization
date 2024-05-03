@@ -33,6 +33,8 @@ from hard_concrete import (
     get_sparsity,
     hard_concrete,
 )
+from activations import register_hook, get_ori_activations_ACT, largest_act
+
 import torch
 from torch.utils.data import DataLoader
 from torch.nn import CrossEntropyLoss
@@ -51,7 +53,6 @@ from operator import add
 
 from collections import OrderedDict
 from typing import Dict, Callable
-import torch
 from transformers.pytorch_utils import Conv1D
 import torch.nn.init as init
 
