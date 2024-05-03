@@ -335,6 +335,13 @@ if __name__ == "__main__":
         help="Path to model ckpt file",
     )
     parser.add_argument(
+        "--localization_method",
+        type=str,
+        default="zero",
+        choices=["zero", "act", "ig", "slim", "hc"],
+        help="Path to model ckpt file",
+    )
+    parser.add_argument(
         "--n_layers",
         type=int,
         default=1,
@@ -347,92 +354,113 @@ if __name__ == "__main__":
     model_name = "gpt2"
 
     ## Hard concrete
-    patched = False
+    if args.localization_method == "hc":
+        patched = False
 
-    if not patched:
-        patch_hardconcrete(model, model_name, mask_p=0.5, beta=2 / 3)
-        patched = True
-        model.to(device)
-    else:
-        if "gpt2" in model_name:  # the newly loaded weights need to be transposed
-            transpose_conv1d(model)
-        reinit_hardconcrete(model)
+        if not patched:
+            patch_hardconcrete(model, model_name, mask_p=0.5, beta=2 / 3)
+            patched = True
+            model.to(device)
+        else:
+            if "gpt2" in model_name:  # the newly loaded weights need to be transposed
+                transpose_conv1d(model)
+            reinit_hardconcrete(model)
 
-    concrete_params = hard_concrete(
-        lr=1e-2,
-        epoch=100,
-        lambda_l1=1000,
-        stop_loss=1e-1,
-        threshold=1e-1,
-        model=model,
-        inputs=noise_data,
-        gold_set=None,
-    )
-
-    batch_size = 1000
-    seq_len = noise_data.shape[1]
-
-    model = get_model(args.model_path, args.n_layers)
-
-    print("BEFORE MASKING---------")
-
-    perc_mem, acc, perplex_clean, perplex_noise = track_all_metrics(
-        noise_data=noise_data,
-        clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
-        clean_test_dataloaders=clean_test_dataloaders,
-        model=model,
-        prompt_len=50,
-        batch_size=1000,
-    )
-
-    apply_ablation_mask_to_neurons(concrete_params, model=model, ratio=0.05)
-
-    print("\n AFTER MASKING---------")
-
-    perc_mem, acc, perplex_clean, perplex_noise = track_all_metrics(
-        noise_data=noise_data,
-        clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
-        clean_test_dataloaders=clean_test_dataloaders,
-        model=model,
-        prompt_len=50,
-        batch_size=1000,
-    )
-
-    remove_ablation_mask_from_neurons(model)
-    model = get_model(args.model_path, args.n_layers)
+        attributions = hard_concrete(
+            lr=1e-2,
+            epoch=100,
+            lambda_l1=1000,
+            stop_loss=1e-1,
+            threshold=1e-1,
+            model=model,
+            inputs=noise_data,
+            gold_set=None,
+        )
 
     ## Zero-out
-    delta_losses = fast_zero_out_vector(
-        inner_dim=model.inner_dim,
-        ratio=0.001,
-        n_batches=16,
-        model=model,
-        inputs=noise_data,
-        labels=clean_data_corresponding_to_noise,
-        prompt_len=50,
-    )
+    if args.localization_method == "zero":
+        attributions = fast_zero_out_vector(
+            inner_dim=model.inner_dim,
+            ratio=0.001,
+            n_batches=16,
+            model=model,
+            inputs=noise_data,
+            labels=clean_data_corresponding_to_noise,
+            prompt_len=50,
+        )
 
-    # Baseline perplexity for randome sequences
-    num_classes = 50000
-    bs = 1
+    ## Slimming
+    if args.localization_method == "slim":
+        patched = False
 
-    # your model outputs / logits
-    output = torch.rand(bs, num_classes)
-    print(output.shape)
+        if not patched:
+            patch_slim(model)
+            patched = True
+            model.to(device)  # send the coef_parameters in patch to gpu
+        else:
+            reinit_slim(model)
+        attributions = slim(
+            lr=1e-2,
+            epoch=100,
+            lambda_l1=1000,
+            stop_loss=1e-1,
+            threshold=1e-1,
+            model=model,
+            inputs=noise_data,
+            gold_set=None,
+        )
 
-    # your targets
-    target = torch.randint(num_classes, (bs,))
-    print(target.shape)
+        batch_size = 1000
+        seq_len = noise_data.shape[1]
 
-    # getting loss using cross entropy
-    loss = torch.nn.functional.cross_entropy(output, target)
+        model = get_model(args.model_path, args.n_layers)
 
-    # calculating perplexity
-    perp = torch.exp(loss)
-    print("Loss:", loss, "PP:", perp)
+    ## Activations
+    if args.localization_method == "act":
+        model = get_model(args.model_path, args.n_layers)
 
-    batch_size = 1000
-    seq_len = noise_data.shape[1]
+        attributions = largest_act(
+            inner_dim=model.inner_dim,
+            model=model,
+            inputs=noise_data,
+            gold_set=None,
+            model_name="gpt2",
+            prompt_len=50,
+        )
+
+    ## Integrated Gradients
+    if args.localization_method == "ig":
+
+        attributions = integrated_gradients(
+            inner_dim=model.inner_dim,
+            model=model,
+            inputs=noise_data[0].unsqueeze(0),
+            gold_set=None,
+            ig_steps=20,
+            device=device,
+            n_batches=16,
+            prompt_len=50,
+        )
+
+        # num_layer = 1
+        attributions = torch.zeros(model.config.n_layer, model.inner_dim)
+        num_iters = 10
+        for i in range(num_iters):  # Num steps
+            # print(i.shape)
+            attributions += integrated_gradients(
+                inner_dim=model.inner_dim,
+                model=model,
+                inputs=noise_data[i].unsqueeze(0),
+                gold_set=None,
+                ig_steps=20,
+                device=device,
+                n_batches=16,
+            )
+
+        attributions /= num_iters
+
+    ## evaluate localization strategies
+    model = get_model(args.model_path, args.n_layers)
 
     print("BEFORE MASKING---------")
 
@@ -446,10 +474,10 @@ if __name__ == "__main__":
     )
 
     apply_noise_ablation_mask_to_neurons(
-        delta_losses, model=model, inputs=noise_data, ratio=0.01
+        attributions, model=model, inputs=noise_data, ratio=0.01
     )
 
-    print("\n AFTER MASKING---------")
+    print("\n AFTER MASKING Noise---------")
 
     perc_mem, acc, perplex_clean, perplex_noise = track_all_metrics(
         noise_data=noise_data,
@@ -462,23 +490,9 @@ if __name__ == "__main__":
 
     remove_ablation_mask_from_neurons(model)
 
-    batch_size = 1000
-    seq_len = noise_data.shape[1]
+    apply_ablation_mask_to_neurons(attributions, model=model, ratio=0.5)
 
-    print("BEFORE MASKING---------")
-
-    perc_mem, acc, perplex_clean, perplex_noise = track_all_metrics(
-        noise_data=noise_data,
-        clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
-        clean_test_dataloaders=clean_test_dataloaders,
-        model=model,
-        prompt_len=50,
-        batch_size=1000,
-    )
-
-    apply_ablation_mask_to_neurons(delta_losses, model=model, ratio=0.5)
-
-    print("\n AFTER MASKING---------")
+    print("\n AFTER MASKING Ablation---------")
 
     perc_mem, acc, perplex_clean, perplex_noise = track_all_metrics(
         noise_data=noise_data,
@@ -490,184 +504,12 @@ if __name__ == "__main__":
     )
 
     remove_ablation_mask_from_neurons(model)
-
-    batch_size = 1000
-    seq_len = noise_data.shape[1]
-
-    print("BEFORE MASKING---------")
-
-    perc_mem, acc, perplex_clean, perplex_noise = track_all_metrics(
-        noise_data=noise_data,
-        clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
-        clean_test_dataloaders=clean_test_dataloaders,
-        model=model,
-        prompt_len=50,
-        batch_size=1000,
-    )
 
     apply_mean_ablation_mask_to_neurons(
-        delta_losses, model=model, inputs=noise_data, ratio=0.25
+        attributions, model=model, inputs=noise_data, ratio=0.25
     )
 
-    print("\n AFTER MASKING---------")
-
-    perc_mem, acc, perplex_clean, perplex_noise = track_all_metrics(
-        noise_data=noise_data,
-        clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
-        clean_test_dataloaders=clean_test_dataloaders,
-        model=model,
-        prompt_len=50,
-        batch_size=1000,
-    )
-
-    remove_ablation_mask_from_neurons(model)
-
-    ## Slimming
-    patched = False
-
-    if not patched:
-        patch_slim(model)
-        patched = True
-        model.to(device)  # send the coef_parameters in patch to gpu
-    else:
-        reinit_slim(model)
-    slim_params = slim(
-        lr=1e-2,
-        epoch=100,
-        lambda_l1=1000,
-        stop_loss=1e-1,
-        threshold=1e-1,
-        model=model,
-        inputs=noise_data,
-        gold_set=None,
-    )
-
-    batch_size = 1000
-    seq_len = noise_data.shape[1]
-
-    model = get_model(args.model_path, args.n_layers)
-
-    print("BEFORE MASKING---------")
-
-    perc_mem, acc, perplex_clean, perplex_noise = track_all_metrics(
-        noise_data=noise_data,
-        clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
-        clean_test_dataloaders=clean_test_dataloaders,
-        model=model,
-        prompt_len=50,
-        batch_size=1000,
-    )
-
-    apply_ablation_mask_to_neurons(slim_params, model=model, ratio=0.01)
-
-    print("\n AFTER MASKING---------")
-
-    perc_mem, acc, perplex_clean, perplex_noise = track_all_metrics(
-        noise_data=noise_data,
-        clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
-        clean_test_dataloaders=clean_test_dataloaders,
-        model=model,
-        prompt_len=50,
-        batch_size=1000,
-    )
-
-    remove_ablation_mask_from_neurons(model)
-
-    ## Activations
-    model = get_model(args.model_path, args.n_layers)
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    act_mean = largest_act(
-        inner_dim=model.inner_dim,
-        model=model,
-        inputs=noise_data,
-        gold_set=None,
-        model_name="gpt2",
-        prompt_len=50,
-    )
-    remove_all_forward_hooks(model)
-
-    batch_size = 1000
-    seq_len = noise_data.shape[1]
-
-    print("BEFORE MASKING---------")
-
-    perc_mem, acc, perplex_clean, perplex_noise = track_all_metrics(
-        noise_data=noise_data,
-        clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
-        clean_test_dataloaders=clean_test_dataloaders,
-        model=model,
-        prompt_len=50,
-        batch_size=1000,
-    )
-
-    apply_ablation_mask_to_neurons(act_mean, model=model, ratio=0.1)
-
-    print("\n AFTER MASKING---------")
-
-    perc_mem, acc, perplex_clean, perplex_noise = track_all_metrics(
-        noise_data=noise_data,
-        clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
-        clean_test_dataloaders=clean_test_dataloaders,
-        model=model,
-        prompt_len=50,
-        batch_size=1000,
-    )
-
-    remove_ablation_mask_from_neurons(model)
-
-    remove_all_forward_hooks(model)
-
-    ## Integrated Gradients
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    ig_mean = integrated_gradients(
-        inner_dim=model.inner_dim,
-        model=model,
-        inputs=noise_data[0].unsqueeze(0),
-        gold_set=None,
-        ig_steps=20,
-        device=device,
-        n_batches=16,
-        prompt_len=50,
-    )
-
-    # num_layer = 1
-    ig_mean = torch.zeros(model.config.n_layer, model.inner_dim)
-    num_iters = 10
-    for i in range(num_iters):  # Num steps
-        # print(i.shape)
-        ig_mean += integrated_gradients(
-            inner_dim=model.inner_dim,
-            model=model,
-            inputs=noise_data[i].unsqueeze(0),
-            gold_set=None,
-            ig_steps=20,
-            device=device,
-            n_batches=16,
-        )
-
-    ig_mean /= num_iters
-
-    batch_size = 1000
-    seq_len = noise_data.shape[1]
-    model = get_model(args.model_path, args.n_layers)
-
-    print("BEFORE MASKING---------")
-
-    perc_mem, acc, perplex_clean, perplex_noise = track_all_metrics(
-        noise_data=noise_data,
-        clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
-        clean_test_dataloaders=clean_test_dataloaders,
-        model=model,
-        prompt_len=50,
-        batch_size=1000,
-    )
-
-    apply_ablation_mask_to_neurons(ig_mean, model=model, ratio=0.01)
-
-    print("\n AFTER MASKING---------")
+    print("\n AFTER MASKING Mean---------")
 
     perc_mem, acc, perplex_clean, perplex_noise = track_all_metrics(
         noise_data=noise_data,
