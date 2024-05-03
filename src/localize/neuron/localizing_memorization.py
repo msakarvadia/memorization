@@ -335,6 +335,12 @@ if __name__ == "__main__":
         help="Path to model ckpt file",
     )
     parser.add_argument(
+        "--ratio",
+        type=float,
+        default=0.1,
+        help="How many neurons to ablate",
+    )
+    parser.add_argument(
         "--localization_method",
         type=str,
         default="zero",
@@ -381,7 +387,6 @@ if __name__ == "__main__":
     if args.localization_method == "zero":
         attributions = fast_zero_out_vector(
             inner_dim=model.inner_dim,
-            ratio=0.001,
             n_batches=16,
             model=model,
             inputs=noise_data,
@@ -410,14 +415,8 @@ if __name__ == "__main__":
             gold_set=None,
         )
 
-        batch_size = 1000
-        seq_len = noise_data.shape[1]
-
-        model = get_model(args.model_path, args.n_layers)
-
     ## Activations
     if args.localization_method == "act":
-        model = get_model(args.model_path, args.n_layers)
 
         attributions = largest_act(
             inner_dim=model.inner_dim,
@@ -436,28 +435,11 @@ if __name__ == "__main__":
             model=model,
             inputs=noise_data[0].unsqueeze(0),
             gold_set=None,
-            ig_steps=20,
+            ig_steps=200,
             device=device,
             n_batches=16,
             prompt_len=50,
         )
-
-        # num_layer = 1
-        attributions = torch.zeros(model.config.n_layer, model.inner_dim)
-        num_iters = 10
-        for i in range(num_iters):  # Num steps
-            # print(i.shape)
-            attributions += integrated_gradients(
-                inner_dim=model.inner_dim,
-                model=model,
-                inputs=noise_data[i].unsqueeze(0),
-                gold_set=None,
-                ig_steps=20,
-                device=device,
-                n_batches=16,
-            )
-
-        attributions /= num_iters
 
     ## evaluate localization strategies
     model = get_model(args.model_path, args.n_layers)
@@ -474,7 +456,7 @@ if __name__ == "__main__":
     )
 
     apply_noise_ablation_mask_to_neurons(
-        attributions, model=model, inputs=noise_data, ratio=0.01
+        attributions, model=model, inputs=noise_data, ratio=args.ratio
     )
 
     print("\n AFTER MASKING Noise---------")
@@ -490,7 +472,7 @@ if __name__ == "__main__":
 
     remove_ablation_mask_from_neurons(model)
 
-    apply_ablation_mask_to_neurons(attributions, model=model, ratio=0.5)
+    apply_ablation_mask_to_neurons(attributions, model=model, ratio=args.ratio)
 
     print("\n AFTER MASKING Ablation---------")
 
@@ -506,7 +488,7 @@ if __name__ == "__main__":
     remove_ablation_mask_from_neurons(model)
 
     apply_mean_ablation_mask_to_neurons(
-        attributions, model=model, inputs=noise_data, ratio=0.25
+        attributions, model=model, inputs=noise_data, ratio=args.ratio
     )
 
     print("\n AFTER MASKING Mean---------")

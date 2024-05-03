@@ -66,7 +66,7 @@ We will implement a few of the strategies from this paper:
 
 @torch.no_grad()
 def fast_zero_out_vector(
-    inner_dim, ratio, n_batches, model, inputs, labels, prompt_len, gold_set=None
+    inner_dim, n_batches, model, inputs, labels, prompt_len, gold_set=None
 ):
     model.eval()
     loss_ori = model(inputs, labels=labels).loss.item()
