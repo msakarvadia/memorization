@@ -20,6 +20,8 @@ from neuron_utils import (
     apply_mean_ablation_mask_to_neurons,
     apply_noise_ablation_mask_to_neurons,
 )
+
+from zero_out import fast_zero_out_vector
 import torch
 from torch.utils.data import DataLoader
 from torch.nn import CrossEntropyLoss
@@ -407,77 +409,6 @@ def slim(lr, epoch, lambda_l1, stop_loss, threshold, model, inputs, gold_set):
     # save_records(args, scores, np.array(reg_losses), np.array(lm_losses), sparsity)
 
     return params
-
-
-"""# Implement Localization Strategy: Zero-out
-
-We will implement a few of the strategies from this paper:
- https://arxiv.org/pdf/2311.09060.pdf
-
- Will need to track memorization before and after localization, and accuracy and perplexity before and after removing memorization on target task.
-"""
-
-model_name = "mem_gpt2"
-# set_model_attributes(model, model_name)
-# print(model.inner_dim)
-
-# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-
-@torch.no_grad()
-def fast_zero_out_vector(
-    inner_dim, ratio, n_batches, model, inputs, labels, prompt_len, gold_set=None
-):
-    model.eval()
-    loss_ori = model(inputs, labels=labels).loss.item()
-
-    losses = torch.zeros((model.config.n_layer, inner_dim))
-    seq_len = inputs.shape[1]
-    print("seq len: ", seq_len)
-    loss_fct = torch.nn.CrossEntropyLoss(reduction="none", ignore_index=-100)
-
-    for ly in tqdm(range(model.config.n_layer)):
-        inner_losses = []
-
-        inner_dim = model.inner_dim
-        attr_str = (
-            f"{model.attr_dict['transformer_layer']}.{ly}.{model.attr_dict['ffn_act']}"
-        )
-
-        for zero_idx in range(inner_dim):
-            mask = torch.zeros(inner_dim)
-            mask[zero_idx] = 1
-
-            patch_ff_layer(
-                model,
-                attr_str,
-                onehot_coef=mask.to(device),
-            )
-
-            batch_loss = model(
-                inputs, labels=labels
-            ).loss.item()  # [bs, seq_len, vocab]
-
-            inner_losses.append(batch_loss)
-
-            unpatch_ff_layer(
-                model,
-                attr_str,
-            )
-
-        # print(inner_losses)
-        print("layer: ", ly)
-        losses[ly] = torch.tensor(inner_losses)
-
-    # print(losses)
-    delta_losses = losses - loss_ori
-
-    # if gold_set is not None:
-    #    score = get_layerwise_scores(delta_losses, gold_set, ratio)
-    return delta_losses
-
-
-"""# Hard Concrete"""
 
 
 class L0Mask(torch.nn.Module):
