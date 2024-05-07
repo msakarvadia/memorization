@@ -10,6 +10,7 @@ cd "/grand/SuperBERT/mansisak/memorization/"
 echo "working dir: "
 pwd
 
+module use /soft/modulefiles
 module load conda
 conda activate env/
 
