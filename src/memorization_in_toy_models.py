@@ -263,13 +263,6 @@ def generate_seq(func, length, noise, num_examples, modulo, device, noise_range=
     return dataset
 
 
-"""
-data_1 = generate_seq(func=one_function, length=10, noise=0, num_examples=num_examples, modulo=13, device=device)
-data_2 = generate_seq(func=two_function, length=10, noise=0, num_examples=num_examples, modulo=13, device=device)
-data_3 = generate_seq(func=three_function, length=10, noise=0, num_examples=num_examples, modulo=13, device=device)
-"""
-
-
 def split_data(data, num_examples, num_test):
     torch.manual_seed(DATA_SEED)
     indices = torch.randperm(num_examples)
@@ -286,18 +279,6 @@ def split_data(data, num_examples, num_test):
     # print(test_data.shape)
 
     return train_data.to(torch.int64), test_data.to(torch.int64)
-
-
-"""
-train_data, test_data = split_data(data_2, num_examples=num_examples, num_test=num_test)
-train_dataloader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
-test_dataloader = DataLoader(test_data, batch_size=batch_size, shuffle=True)
-"""
-
-"""
-list_of_functions = [one_function, two_function, three_function]
-list_of_dataset_sizes = [20000, 8000, 3000]
-"""
 
 
 def create_data_distributions(
@@ -349,6 +330,7 @@ def create_data_distributions(
 from transformers import GPT2Config, GPT2Model, GPT2LMHeadModel
 import math
 
+'''
 # Initializing a GPT2 configuration
 configuration = GPT2Config(
     vocab_size=14,
@@ -372,12 +354,6 @@ configuration = GPT2Config(
 model = GPT2LMHeadModel(configuration)
 model.to(device)
 
-# Accessing the model configuration
-configuration = model.config
-configuration
-
-model
-
 model.parameters
 
 list_of_functions = [two_function]
@@ -395,6 +371,7 @@ for i in train_dataloader:
 """## Optimizer + Loss function + Accuracy function"""
 
 optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=wd, betas=betas)
+'''
 
 
 def clm_loss_fn(inputs, logits):
@@ -425,6 +402,7 @@ def accuracy(inputs, logits):
     return accuracy
 
 
+"""
 # Test that accuracy function works:
 
 data_1 = generate_seq(
@@ -433,6 +411,7 @@ data_1 = generate_seq(
 model.to(device)
 logits = model(data_1.to(torch.int64)).logits
 accuracy(data_1, logits)
+"""
 
 """## Do inference on model"""
 
@@ -453,12 +432,15 @@ def generate(model, input, max_ctx=max_ctx, print_output=True):
     return input
 
 
+"""
 data_1 = generate_seq(
     func=one_function, length=10, noise=0, num_examples=1, modulo=13, device=device
 )
 sample_input = data_1[0][:5]  # grab first 5 chars of string
 text = generate(model, sample_input)
+"""
 
+'''
 """## Mini-batch gradient descent"""
 
 
@@ -525,6 +507,7 @@ def train_model(model, train_dataloader, test_dataloaders, num_epochs=num_epochs
         train_accuracies,
         test_accuracies,
     )
+'''
 
 
 """## Graphing Support"""
@@ -902,6 +885,8 @@ def train_model_track_memorization_per_training_set(
 
 # Experiments
 if __name__ == "__main__":
+
+    print("DEVICE: ", device, "name: ", torch.cuda.get_device_name(device=device))
 
     # set up arg parser
     parser = argparse.ArgumentParser()
