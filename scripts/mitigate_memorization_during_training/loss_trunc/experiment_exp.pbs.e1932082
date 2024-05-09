@@ -1,0 +1,45 @@
+
+Lmod is automatically replacing "nvhpc/23.9" with "gcc-native/12.3".
+
+
+Lmod is automatically replacing "PrgEnv-nvhpc/8.5.0" with "PrgEnv-gnu/8.5.0".
+
+
+Due to MODULEPATH changes, the following have been reloaded:
+  1) cray-mpich/8.1.28
+
+  0%|          | 0/2000 [00:00<?, ?it/s]  0%|          | 0/2000 [00:00<?, ?it/s]  0%|          | 0/2000 [00:00<?, ?it/s]  0%|          | 0/2000 [00:00<?, ?it/s]  0%|          | 0/2000 [00:05<?, ?it/s]
+  0%|          | 0/2000 [00:05<?, ?it/s]  0%|          | 0/2000 [00:05<?, ?it/s]Traceback (most recent call last):
+  0%|          | 0/2000 [00:05<?, ?it/s]
+
+  File "/lus/eagle/projects/argonne_tpc/mansisak/memorization/src/memorization_in_toy_models.py", line 1191, in <module>
+
+Traceback (most recent call last):
+Traceback (most recent call last):
+  File "/lus/eagle/projects/argonne_tpc/mansisak/memorization/src/memorization_in_toy_models.py", line 1191, in <module>
+  File "/lus/eagle/projects/argonne_tpc/mansisak/memorization/src/memorization_in_toy_models.py", line 1191, in <module>
+Traceback (most recent call last):
+  File "/lus/eagle/projects/argonne_tpc/mansisak/memorization/src/memorization_in_toy_models.py", line 1191, in <module>
+    ) = train_model_track_memorization_per_training_set(
+  File "/lus/eagle/projects/argonne_tpc/mansisak/memorization/src/memorization_in_toy_models.py", line 775, in train_model_track_memorization_per_training_set
+    ) = train_model_track_memorization_per_training_set(
+    ) = train_model_track_memorization_per_training_set(
+  File "/lus/eagle/projects/argonne_tpc/mansisak/memorization/src/memorization_in_toy_models.py", line 775, in train_model_track_memorization_per_training_set
+  File "/lus/eagle/projects/argonne_tpc/mansisak/memorization/src/memorization_in_toy_models.py", line 775, in train_model_track_memorization_per_training_set
+    train_loss.view(-1, batch_size)
+    ) = train_model_track_memorization_per_training_set(
+RuntimeError: shape '[-1, 128]' is invalid for input of size 1
+  File "/lus/eagle/projects/argonne_tpc/mansisak/memorization/src/memorization_in_toy_models.py", line 775, in train_model_track_memorization_per_training_set
+    train_loss.view(-1, batch_size)
+    train_loss.view(-1, batch_size)
+RuntimeError: shape '[-1, 128]' is invalid for input of size 1
+RuntimeError: shape '[-1, 128]' is invalid for input of size 1
+    train_loss.view(-1, batch_size)
+RuntimeError: shape '[-1, 128]' is invalid for input of size 1
+  0%|          | 0/2000 [00:00<?, ?it/s]  0%|          | 0/2000 [00:00<?, ?it/s]
+Traceback (most recent call last):
+  File "/lus/eagle/projects/argonne_tpc/mansisak/memorization/src/memorization_in_toy_models.py", line 1191, in <module>
+    ) = train_model_track_memorization_per_training_set(
+  File "/lus/eagle/projects/argonne_tpc/mansisak/memorization/src/memorization_in_toy_models.py", line 775, in train_model_track_memorization_per_training_set
+    train_loss.view(-1, batch_size)
+RuntimeError: shape '[-1, 128]' is invalid for input of size 1
