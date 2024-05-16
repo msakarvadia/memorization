@@ -23,7 +23,7 @@ data_name="mult"
 
 
 layer_path=eight_layer/
-ckpt_name=/8_layer_590_epoch.pth
+ckpt_name=/8_layer_1185_epoch.pth
 ckpt_dir="$base_path$layer_path"
 resume_ckpt="$ckpt_dir$ckpt_name"
 CUDA_VISIBLE_DEVICES=0 python memorization_in_toy_models.py --n_layers 8 --epochs 2000 --ckpt_dir "$ckpt_dir" --data_name $data_name --resume_from $resume_ckpt&
@@ -34,11 +34,11 @@ CUDA_VISIBLE_DEVICES=0 python memorization_in_toy_models.py --n_layers 8 --epoch
 #resume_ckpt="$ckpt_dir$ckpt_name"
 #CUDA_VISIBLE_DEVICES=1 python memorization_in_toy_models.py --n_layers 2 --epochs 2000 --ckpt_dir "$ckpt_dir" --data_name $data_name --resume_from $resume_ckpt&
 
-layer_path=four_layer/
-ckpt_name=/4_layer_1175_epoch.pth
-ckpt_dir="$base_path$layer_path"
-resume_ckpt="$ckpt_dir$ckpt_name"
-CUDA_VISIBLE_DEVICES=2 python memorization_in_toy_models.py --n_layers 4 --epochs 2000 --ckpt_dir "$ckpt_dir" --data_name $data_name --resume_from $resume_ckpt&
+#layer_path=four_layer/
+#ckpt_name=/4_layer_2000_epoch.pth
+#ckpt_dir="$base_path$layer_path"
+#resume_ckpt="$ckpt_dir$ckpt_name"
+#CUDA_VISIBLE_DEVICES=2 python memorization_in_toy_models.py --n_layers 4 --epochs 2000 --ckpt_dir "$ckpt_dir" --data_name $data_name --resume_from $resume_ckpt&
 
 #layer_path=one_layer/
 #ckpt_name=/1_layer_2000_epoch.pth
@@ -47,8 +47,7 @@ CUDA_VISIBLE_DEVICES=2 python memorization_in_toy_models.py --n_layers 4 --epoch
 #CUDA_VISIBLE_DEVICES=3 python memorization_in_toy_models.py --n_layers 1 --epochs 2000 --ckpt_dir "$ckpt_dir" --data_name $data_name --resume_from $resume_ckpt
 
 layer_path=sixteen_layer/
-ckpt_name=/16_layer_265_epoch.pth
+ckpt_name=/16_layer_295_epoch.pth
 ckpt_dir="$base_path$layer_path"
 resume_ckpt="$ckpt_dir$ckpt_name"
-CUDA_VISIBLE_DEVICES=3 python memorization_in_toy_models.py --n_layers 16 --epochs 2000 --ckpt_dir "$ckpt_dir" --data_name $data_name 
-#--resume_from $resume_ckpt
+CUDA_VISIBLE_DEVICES=3 python memorization_in_toy_models.py --n_layers 16 --epochs 2000 --ckpt_dir "$ckpt_dir" --data_name $data_name --resume_from $resume_ckpt

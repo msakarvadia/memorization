@@ -17,6 +17,8 @@ from utils.spectral_reg import *
 import tqdm
 import copy
 import argparse
+import glob
+import os
 
 # %pip install git+https://github.com/neelnanda-io/neel-plotly.git
 # from neel_plotly.plot import line
@@ -744,9 +746,29 @@ def train_model_track_memorization_per_training_set(
                     num_heads=n_head,
                 ).to(device)
 
+    # Automatically find the checkpoint if it exists
+    finished_epochs = -1
+    if args.ckpt_dir:
+        list_of_files = glob.glob(
+            f"{args.ckpt_dir}/*"
+        )  # * means all if need specific format then *.csv
+        latest_file = max(list_of_files, key=os.path.getctime)
+        print("latest checkpoint: ", latest_file)
+        ckpt = torch.load(latest_file)
+        model.load_state_dict(ckpt["model_state_dict"])
+        optimizer.load_state_dict(ckpt["optimizer_state_dict"])
+        finished_epochs = ckpt["epoch"]
+        train_losses = ckpt["train_losses"]
+        test_losses = ckpt["test_losses"]
+        train_accuracies = ckpt["train_accuracies"]
+        test_accuracies = ckpt["test_accuracies"]
+        percent_memorized = ckpt["percent_memorized"]
+
+    """
     # Resume from checkpoint
     finished_epochs = -1
     if args.resume_from:
+        print("latest checkpoint from resume ckpt: ", args.resume_from)
         ckpt = torch.load(args.resume_from)
         model.load_state_dict(ckpt["model_state_dict"])
         optimizer.load_state_dict(ckpt["optimizer_state_dict"])
@@ -756,6 +778,7 @@ def train_model_track_memorization_per_training_set(
         train_accuracies = ckpt["train_accuracies"]
         test_accuracies = ckpt["test_accuracies"]
         percent_memorized = ckpt["percent_memorized"]
+    """
 
     for epoch in tqdm.tqdm(range(num_epochs)):
         if epoch <= finished_epochs:
@@ -954,6 +977,7 @@ if __name__ == "__main__":
     }
 
     # Make the data
+    print("Generating data...")
 
     # generate indexes for noise vs clean data
     idxs = list(range(20000 - num_test))
