@@ -13,7 +13,6 @@ from torch.nn import CrossEntropyLoss
 import numpy as np
 from utils.dropper import LossDropper
 from utils.spectral_reg import *
-from src.data.old_data import *
 
 import tqdm
 import copy
@@ -38,8 +37,8 @@ random.seed(0)
 
 """## config"""
 
-# p = 113
-# frac_train = 0.7
+p = 113
+frac_train = 0.7
 num_test = 1000
 
 # Optimizer config
@@ -334,32 +333,7 @@ from transformers import GPT2Config, GPT2Model, GPT2LMHeadModel
 import math
 
 
-def clm_loss_fn(inputs, logits):
-    # Shift so that tokens < n predict n
-    shift_labels = inputs[..., 1:].contiguous()
-    shift_logits = logits[..., :-1, :].contiguous()
-    # Calculate per-token loss
-    loss_fct = CrossEntropyLoss(reduction="none")
-    loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
-    # Resize and average loss per sample
-    loss_per_sample = loss.view(shift_logits.size(0), shift_logits.size(1)).mean(axis=1)
-
-    return (loss_per_sample).mean()
-
-
-def accuracy(inputs, logits):
-    # Shift so that tokens < n predict n
-    shift_labels = inputs[..., 1:].contiguous()
-    shift_logits = logits[..., :-1, :].contiguous()
-
-    # converts logits to predictions
-    predictions = torch.argmax(shift_logits, axis=-1)
-
-    # Now compute accuracy
-    N = torch.numel(predictions)
-    accuracy = (shift_labels == predictions).sum() / N
-
-    return accuracy
+"""## Do inference on model"""
 
 
 def generate(model, input, max_ctx=max_ctx, print_output=True):
@@ -376,24 +350,6 @@ def generate(model, input, max_ctx=max_ctx, print_output=True):
     if print_output:
         print("output: ", detokenize(input))
     return input
-
-
-"""## Graphing Support"""
-
-import matplotlib.pyplot as plt
-
-
-def plt_line(y_vals, x_val, labels, title="Losses", x_label="losses", y_label="Epoch"):
-    for y, label in zip(y_vals, labels):
-        # label = "placeholder"
-        plt.plot(x_val, y, label=label)
-
-    plt.xlabel(x_label)
-    plt.ylabel(y_label)
-    plt.title(title)
-    plt.grid()
-    plt.legend()
-    plt.show()
 
 
 """## Refining memorization measurement"""
@@ -451,7 +407,6 @@ def refined_check_percent_memorized(
                 outputs[:, prompt_len : prompt_len + k],
                 noise_batch[:, prompt_len : prompt_len + k],
             )
-            # TODO ^^ need to make sure original batch contains noise from prompt_len:prompt_len+k
             match_rows = equals.all(dim=1)
             total_matchs = match_rows.sum()
 
@@ -554,206 +509,88 @@ def print_memorized_generations(
             return mem_training, mem_prompts_clean, mem_generations, mem_labels
 
 
-def train_model_track_memorization_per_training_set(
-    model,
-    train_datasets,
-    test_dataloaders,
-    noise_data,
-    clean_data_corresponding_to_noise,
-    num_epochs=num_epochs,
-    prompt_len=50,
-    k=50,
-    ckpt_dir="/grand/SuperBERT/mansisak/memorization/model_ckpts/",
-    n_layers=1,
-    **extra_kwargs,
-):
-    model.train()
+def get_data(data_name, num_test=1000):
+    # set random seed
+    torch.manual_seed(0)
+    random.seed(0)
 
-    data = torch.cat(
-        train_datasets, dim=0
-    )  # train_datasets has to be a tuple of datasets
-    # create dataloaders (w/ noise and clean data)
-    train_dataloader = DataLoader(data, batch_size=batch_size, shuffle=True)
+    # generate indexes for noise vs clean data
+    idxs = list(range(20000 - num_test))
+    noise_idxs = sample(idxs, 1000)
+    clean_idxs = list(set(idxs) - set(noise_idxs))
 
-    train_losses = []
-    test_losses = []
-    # train_memorized = []
-    train_accuracies = []
-    test_accuracies = []
-    percent_memorized = []
-    for i in range(len(test_dataloaders)):
-        test_losses.append([])  # add empty list to test losses for each test set
-        test_accuracies.append([])  # add empty list to test losses for each test set
-    # for i in range(len(train_datasets)):
-    #      train_memorized.append([]) #add empty list to train memorized for each subset of trianing
+    if data_name == "increment":
+        main_functions = [seven_function]
+        main_dataset_sizes = [20000]
+        # Make 4 additional sets of clean data
+        list_of_functions = [two_function, three_function, four_function, five_function]
+        list_of_dataset_sizes = [20000, 20000, 20000, 20000]
 
-    # model_checkpoints = []
-    # checkpoint_epochs = []
+    if data_name == "mult":
+        main_functions = [seven_mult]
+        main_dataset_sizes = [20000]
+        # Make 4 additional sets of clean data
+        list_of_functions = [two_mult, three_mult, four_mult, five_mult]
+        list_of_dataset_sizes = [20000, 20000, 20000, 20000]
 
-    # Init Loss Truncation if desired
-    dropper = None
-    if extra_kwargs.get("truncate_loss"):
-        dropc = extra_kwargs.get("dropc", 0.4)
-        assert dropc >= 0 and dropc <= 1, "dropc parameter must be in the range [0,1]"
-        dropper = LossDropper(dropc=dropc, verbose=False)
+    if data_name == "exp":
+        main_functions = [seven_exp]
+        main_dataset_sizes = [20000]
+        # Make 4 additional sets of clean data
+        list_of_functions = [two_exp, three_exp, four_exp, five_exp]
+        list_of_dataset_sizes = [20000, 20000, 20000, 20000]
 
-    # Init for Spectral Regularization if desired
-    if do_spectral_reg := extra_kwargs.get("spectral_reg"):
-        lam = extra_kwargs.get("lam", 0.01)
-        Us = {}
-        for name, weight in model.named_parameters():
-            if should_compute_sigma(name):
-                is_attn_weight = "attn.c_attn" in name
-                is_attn_proj = "attn.c_proj" in name
-                Us[name] = init_power_vector(
-                    weight,
-                    is_attn_weight=is_attn_weight,
-                    is_attn_proj=is_attn_proj,
-                    num_heads=n_head,
-                ).to(device)
+    clean_train_dataloader, clean_test_dataloaders = create_data_distributions(
+        main_functions,
+        main_dataset_sizes,
+        test_set_size=num_test,
+        shuffle=True,
+        noise=False,
+        noise_range=1,
+        length=100,
+    )
 
-    # Automatically find the checkpoint if it exists
-    finished_epochs = -1
-    if args.ckpt_dir:
-        list_of_files = glob.glob(
-            f"{args.ckpt_dir}/*"
-        )  # * means all if need specific format then *.csv
-        if list_of_files:
-            latest_file = max(list_of_files, key=os.path.getctime)
-            print("latest checkpoint: ", latest_file)
-            ckpt = torch.load(latest_file)
-            model.load_state_dict(ckpt["model_state_dict"])
-            optimizer.load_state_dict(ckpt["optimizer_state_dict"])
-            finished_epochs = ckpt["epoch"]
-            train_losses = ckpt["train_losses"]
-            test_losses = ckpt["test_losses"]
-            train_accuracies = ckpt["train_accuracies"]
-            test_accuracies = ckpt["test_accuracies"]
-            percent_memorized = ckpt["percent_memorized"]
+    noise_train_dataloader, noise_test_dataloaders = create_data_distributions(
+        main_functions,
+        main_dataset_sizes,
+        test_set_size=num_test,
+        shuffle=True,
+        noise=True,
+        noise_range=1,
+        length=100,
+    )
 
-    for epoch in tqdm.tqdm(range(num_epochs)):
-        if epoch <= finished_epochs:
-            print("epoch finished: ", epoch)
-            continue
+    # combine train_dataloaders
+    clean_data = clean_train_dataloader.dataset
+    noise_data = noise_train_dataloader.dataset
 
-        print("epoch starting: ", epoch)
-        avg_train_loss = 0
-        avg_train_accuracy = 0
+    # grab clean and noise data according to indexes
+    clean_data_corresponding_to_noise = clean_data[noise_idxs]
+    clean_data = clean_data[clean_idxs]
+    noise_data = noise_data[noise_idxs]
 
-        for batch in train_dataloader:
-            model_output = model(batch, labels=batch)
-            train_logits = model_output.logits
-            train_loss = model_output.loss
+    extra_train_dataloader, extra_test_dataloaders = create_data_distributions(
+        list_of_functions,
+        list_of_dataset_sizes,
+        test_set_size=num_test,
+        shuffle=True,
+        noise=False,
+        noise_range=1,
+        length=100,
+    )
 
-            # apply loss truncation
-            if dropper is not None:
-                train_loss.view(-1, batch_size)
-                train_loss = train_loss.mean(dim=0)  # aggregate by sequence
-                mask = dropper(
-                    train_loss
-                )  # The dropper returns a mask of 0s where data should be dropped.
-                train_loss *= mask  # Mask out the high losses
-                train_loss = train_loss.mean()  # Aggregate
+    # Need to grab
+    train_datasets = (noise_data, clean_data, extra_train_dataloader.dataset)
+    # train_datasets += tuple(extra_train_dataloader.dataset)
 
-            # apply spectral reg
-            if do_spectral_reg:
-                reg_loss = None
-                for name, weight in model.named_parameters():
-                    if should_compute_sigma(name):
-                        u = Us[name]
-                        is_attn_weight = "attn.c_attn" in name
-                        is_attn_proj = "attn.c_proj" in name
-                        sigmas, u_ = power_iteration(
-                            weight,
-                            u,
-                            is_attn_weight=is_attn_weight,
-                            is_attn_proj=is_attn_proj,
-                            num_heads=n_head,
-                        )
-                        Us[name] = u_
-                        sum_sigma = torch.sum(sigmas)
-                        if reg_loss is None:
-                            reg_loss = sum_sigma
-                        else:
-                            reg_loss += sum_sigma
-                # add regularization term to loss
-                train_loss += (lam / 2) * reg_loss
-
-            train_loss.backward()
-            avg_train_loss += train_loss.cpu().item()
-            avg_train_accuracy += accuracy(batch, train_logits)
-            optimizer.step()
-            optimizer.zero_grad()
-
-        train_losses.append((avg_train_loss / len(train_dataloader)))
-        train_accuracies.append((avg_train_accuracy.cpu() / len(train_dataloader)))
-        # model_alphas.append(get_alpha(model=model))
-
-        with torch.inference_mode():
-            # iteration through various train datasets to track memorization
-            # for i in range(len(train_datasets)):
-            #  dataloader = DataLoader(train_datasets[i], batch_size=batch_size, shuffle=True)
-            percent_memorized.append(
-                refined_check_percent_memorized(
-                    noise_dataset=noise_data,
-                    clean_data_set_for_noise=clean_data_corresponding_to_noise,
-                    prompt_len=prompt_len,
-                    k=k,
-                    batch_size=1000,
-                    model=model,
-                ).cpu()
-            )
-
-            # iterate through various test datasets
-            for i in range(len(test_dataloaders)):
-                avg_test_loss = 0
-                avg_test_accuracy = 0
-                for batch in test_dataloaders[i]:
-                    model_output = model(batch, labels=batch)
-                    test_logits = model_output.logits
-                    test_loss = model_output.loss
-                    avg_test_loss += test_loss.cpu().item()
-                    avg_test_accuracy += accuracy(batch, test_logits)
-                test_losses[i].append((avg_test_loss / len(test_dataloaders[i])))
-                test_accuracies[i].append(
-                    (avg_test_accuracy.cpu() / len(test_dataloaders[i]))
-                )
-
-        if ((epoch + 1) % args.checkpoint_every) == 0:
-            if not os.path.exists(ckpt_dir):
-                os.makedirs(ckpt_dir)
-            MODEL_PATH = f"{ckpt_dir}/{n_layers}_layer_{epoch+1}_epoch.pth"
-            print("Model path: ", MODEL_PATH)
-            # Add checkpointing back in
-            torch.save(
-                {
-                    "epoch": epoch,
-                    "model_state_dict": model.state_dict(),
-                    "optimizer_state_dict": optimizer.state_dict(),
-                    "train_accuracies": train_accuracies,
-                    "test_accuracies": test_accuracies,
-                    "train_losses": train_losses,
-                    "test_losses": test_losses,
-                    "percent_memorized": percent_memorized,
-                },
-                MODEL_PATH,
-            )
-            # MODEL_PATH = PATH + f"{n_layers}_layer_{epoch+1}_epoch_no_dup.pth"
-            # torch.save(model.state_dict(), "just_model.pt")
-            print(f"Epoch {epoch}")
-            print(f"Train Loss {train_loss.item()}")
-            print(" ")
-            print("% mem: ", percent_memorized[-1])
-            for test_loss in test_losses:
-                print("test loss: ", test_loss[-1])
+    # combine test dataloaders
+    clean_test_dataloaders += extra_test_dataloaders
 
     return (
-        model,
-        train_losses,
-        test_losses,
-        train_accuracies,
-        test_accuracies,
-        percent_memorized,
+        noise_data,
+        clean_data_corresponding_to_noise,
+        train_datasets,
+        clean_test_dataloaders,
     )
 
 
@@ -829,7 +666,6 @@ if __name__ == "__main__":
 
     # Make the data
     print("Generating data...")
-    """
 
     # generate indexes for noise vs clean data
     idxs = list(range(20000 - num_test))
@@ -1006,15 +842,6 @@ if __name__ == "__main__":
         # combine test dataloaders
         clean_test_dataloaders += extra_test_dataloaders
         train_datasets = (noise_data, clean_data, extra_train_dataloader.dataset)
-    """
-
-    (
-        noise_data,
-        clean_data_corresponding_to_noise,
-        train_datasets,
-        clean_test_dataloaders,
-    ) = get_data(data_name=args.data_name, num_test=1000)
-    print("COUNTING FROM GENERTED DATA")
 
     # Count how many noised sequences we have at each prompt length
     count_num_noised(noise_data, clean_data_corresponding_to_noise, k=50, prompt_len=50)
@@ -1034,54 +861,4 @@ if __name__ == "__main__":
         noise_data, clean_data_corresponding_to_noise, k=50, prompt_len=300
     )
 
-    # Need to have significantly fewer noised samples in the dataset and track accuracy and memorization on them separatly
-    # Now we are going to be more strict with how we measure memorization
-
-    # Initializing a model (with random weights) from the configuration
-    configuration = GPT2Config(
-        vocab_size=14,
-        n_layer=args.n_layers,  # 1,2,4,8,16
-        n_head=n_head,
-        n_embd=128,
-        n_positions=max_ctx,
-        bos_token_id=10,
-        eos_token_id=11,
-        use_cache=False,
-        hidden_states=False,
-        output_attentions=False,
-        activation_function="relu",
-        attn_pdrop=0,
-        resid_pdrop=0,
-        embd_pdrop=0,
-        initializer_range=0.8 / math.sqrt(128),  # 0.8 / sqrt(d_model)
-    )
-
-    model = GPT2LMHeadModel(configuration)
-    model.to(device)
-
-    # Set up optimizer
-    optimizer = torch.optim.AdamW(
-        model.parameters(), lr=lr, weight_decay=wd, betas=betas
-    )
-
-    # Train model
-    # TODO (MS): implement distributed training
-    model.train()
-    (
-        model,
-        train_losses,
-        test_losses,
-        train_accuracies,
-        test_accuracies,
-        percent_memorized,
-    ) = train_model_track_memorization_per_training_set(
-        model,
-        train_datasets,
-        clean_test_dataloaders,
-        noise_data,
-        clean_data_corresponding_to_noise,
-        num_epochs=args.epochs,
-        ckpt_dir=args.ckpt_dir,
-        n_layers=args.n_layers,
-        **extra_kwargs,
-    )
+    # TODO what we need: noise_data, clean_data_corresponding_to_noise, train_datasets, test_dataloaders
