@@ -75,7 +75,7 @@ def clm_loss_fn(inputs, logits):
     # Resize and average loss per sample
     loss_per_sample = loss.view(shift_logits.size(0), shift_logits.size(1)).mean(axis=1)
 
-    return (loss_per_sample).mean()
+    return (loss_per_sample).mean(), loss_per_sample
 
 
 def accuracy(inputs, logits):
@@ -378,8 +378,11 @@ def train_model_track_memorization_per_training_set(
 
             # apply loss truncation
             if dropper is not None:
-                train_loss.view(-1, batch_size)
-                train_loss = train_loss.mean(dim=0)  # aggregate by sequence
+                # print("Train_loss mean: ", train_loss)
+                computed_mean_loss, train_loss = clm_loss_fn(batch, train_logits)
+                # print("Computed Train_loss mean: ", train_loss)
+                # train_loss.view(-1, batch_size)
+                # train_loss = train_loss.mean(dim=0)  # aggregate by sequence
                 mask = dropper(
                     train_loss
                 )  # The dropper returns a mask of 0s where data should be dropped.
