@@ -601,6 +601,7 @@ def get_data(data_name, num_test=1000, data_path_name="inc_data.pt"):
         noise_range=1,
         length=100,
     )
+    print("made clean data distribution")
 
     noise_train_dataloader, noise_test_dataloaders = create_data_distributions(
         main_functions,
@@ -611,6 +612,7 @@ def get_data(data_name, num_test=1000, data_path_name="inc_data.pt"):
         noise_range=1,
         length=100,
     )
+    print("made noise data distribution")
 
     # combine train_dataloaders
     clean_data = clean_train_dataloader.dataset
