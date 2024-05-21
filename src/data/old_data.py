@@ -231,6 +231,30 @@ def seven_exp(starting_val):
     return 7**starting_val % 20134
 
 
+def one_exponential(starting_val):
+    return starting_val**1 % 20134
+
+
+def two_exponential(starting_val):
+    return starting_val**2 % 20134
+
+
+def three_exponential(starting_val):
+    return starting_val**3 % 20134
+
+
+def four_exponential(starting_val):
+    return starting_val**4 % 20134
+
+
+def five_exponential(starting_val):
+    return starting_val**5 % 20134
+
+
+def seven_exponential(starting_val):
+    return starting_val**7 % 20134
+
+
 def generate_seq(func, length, noise, num_examples, modulo, device, noise_range=10):
     data = []
     # noise_amt = 0
@@ -509,7 +533,23 @@ def print_memorized_generations(
             return mem_training, mem_prompts_clean, mem_generations, mem_labels
 
 
-def get_data(data_name, num_test=1000):
+def get_data(data_name, num_test=1000, data_path_name="inc_data.pt"):
+
+    if os.path.isfile(data_path_name):
+        print("loading data: ", data_path_name)
+        data = torch.load(data_path_name)
+        noise_data = data["noise_data"]
+        clean_data_corresponding_to_noise = data["clean_data_corresponding_to_noise"]
+        train_datasets = data["train_datasets"]
+        clean_test_dataloaders = data["clean_test_dataloaders"]
+
+        return (
+            noise_data,
+            clean_data_corresponding_to_noise,
+            train_datasets,
+            clean_test_dataloaders,
+        )
+
     # set random seed
     torch.manual_seed(0)
     random.seed(0)
@@ -538,6 +578,18 @@ def get_data(data_name, num_test=1000):
         main_dataset_sizes = [20000]
         # Make 4 additional sets of clean data
         list_of_functions = [two_exp, three_exp, four_exp, five_exp]
+        list_of_dataset_sizes = [20000, 20000, 20000, 20000]
+
+    if data_name == "exponential":
+        main_functions = [seven_exponential]
+        main_dataset_sizes = [20000]
+        # Make 4 additional sets of clean data
+        list_of_functions = [
+            two_exponential,
+            three_exponential,
+            four_exponential,
+            five_exponential,
+        ]
         list_of_dataset_sizes = [20000, 20000, 20000, 20000]
 
     clean_train_dataloader, clean_test_dataloaders = create_data_distributions(
@@ -586,6 +638,16 @@ def get_data(data_name, num_test=1000):
     # combine test dataloaders
     clean_test_dataloaders += extra_test_dataloaders
 
+    torch.save(
+        {
+            "noise_data": noise_data,
+            "clean_data_corresponding_to_noise": clean_data_corresponding_to_noise,
+            "train_datasets": train_datasets,
+            "clean_test_dataloaders": clean_test_dataloaders,
+        },
+        data_path_name,
+    )
+
     return (
         noise_data,
         clean_data_corresponding_to_noise,
@@ -594,271 +656,9 @@ def get_data(data_name, num_test=1000):
     )
 
 
-# Experiments
+"""
 if __name__ == "__main__":
-
-    print("DEVICE: ", device, "name: ", torch.cuda.get_device_name(device=device))
-
-    # set up arg parser
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--n_layers",
-        type=int,
-        default=1,
-        help="The number of layers you want in your toy model.",
-    )
-    parser.add_argument(
-        "--truncate_loss",
-        action="store_true",
-        help="Whether to apply loss truncation during training.",
-    )
-    parser.add_argument(
-        "--dropc",
-        type=float,
-        default=0.4,
-        help="If loss truncation is enabled, what fraction of the data to drop. Should be in [0,1].",
-    )
-    parser.add_argument(
-        "--spectral_reg",
-        action="store_true",
-        help="Whether to apply spectral regularization during training.",
-    )
-    parser.add_argument(
-        "--lam",
-        type=float,
-        default=0.01,
-        help="The regularization coefficient for the spectral regularization term in our loss function.",
-    )
-    parser.add_argument(
-        "--checkpoint_every",
-        type=int,
-        default=5,
-        help="The number of epochs between each checkpoint.",
-    )
-    parser.add_argument(
-        "--epochs", type=int, default=200, help="The number of epochs for training."
-    )
-    parser.add_argument(
-        "--ckpt_dir", type=str, default="ckpts", help="Name of the ckpts parent folder."
-    )
-    parser.add_argument(
-        "--resume_from",
-        type=str,
-        default=None,
-        help="Name of specific checkpoint that you want to resume training frome.",
-    )
-    parser.add_argument(
-        "--data_name",
-        choices=["increment", "mult", "exp"],
-        type=str,
-        default="increment",
-        help="Name of function type you want to train with.",
-    )
-
-    args = parser.parse_args()
-
-    extra_kwargs = {
-        "truncate_loss": args.truncate_loss,
-        "dropc": args.dropc,
-        "spectral_reg": args.spectral_reg,
-        "lam": args.lam,
-    }
-
-    # Make the data
-    print("Generating data...")
-
-    # generate indexes for noise vs clean data
-    idxs = list(range(20000 - num_test))
-    noise_idxs = sample(idxs, 1000)
-    clean_idxs = list(set(idxs) - set(noise_idxs))
-
-    if args.data_name == "increment":
-        # Mix clean and noise data
-        list_of_functions = [seven_function]
-        list_of_dataset_sizes = [20000]
-
-        clean_train_dataloader, clean_test_dataloaders = create_data_distributions(
-            list_of_functions,
-            list_of_dataset_sizes,
-            test_set_size=num_test,
-            shuffle=True,
-            noise=False,
-            noise_range=1,
-            length=100,
-        )
-
-        list_of_functions = [seven_function]
-        list_of_dataset_sizes = [20000]
-        noise_train_dataloader, noise_test_dataloaders = create_data_distributions(
-            list_of_functions,
-            list_of_dataset_sizes,
-            test_set_size=num_test,
-            shuffle=True,
-            noise=True,
-            noise_range=1,
-            length=100,
-        )
-
-        # combine train_dataloaders
-        clean_data = clean_train_dataloader.dataset
-        noise_data = noise_train_dataloader.dataset
-
-        # grab clean and noise data according to indexes
-        clean_data_corresponding_to_noise = clean_data[noise_idxs]
-        clean_data = clean_data[clean_idxs]
-        noise_data = noise_data[noise_idxs]
-
-        # Make 4 additional sets of clean data
-        list_of_functions = [two_function, three_function, four_function, five_function]
-        list_of_dataset_sizes = [20000, 20000, 20000, 20000]
-        extra_train_dataloader, extra_test_dataloaders = create_data_distributions(
-            list_of_functions,
-            list_of_dataset_sizes,
-            test_set_size=num_test,
-            shuffle=True,
-            noise=False,
-            noise_range=1,
-            length=100,
-        )
-
-        # Need to grab
-        train_datasets = (noise_data, clean_data, extra_train_dataloader.dataset)
-        # train_datasets += tuple(extra_train_dataloader.dataset)
-
-        # combine test dataloaders
-        clean_test_dataloaders += extra_test_dataloaders
-        train_datasets = (noise_data, clean_data, extra_train_dataloader.dataset)
-
-    if args.data_name == "mult":
-        # Mix clean and noise data
-        list_of_functions = [seven_mult]
-        list_of_dataset_sizes = [20000]
-
-        clean_train_dataloader, clean_test_dataloaders = create_data_distributions(
-            list_of_functions,
-            list_of_dataset_sizes,
-            test_set_size=num_test,
-            shuffle=True,
-            noise=False,
-            noise_range=1,
-            length=100,
-        )
-
-        list_of_functions = [seven_mult]
-        list_of_dataset_sizes = [20000]
-        noise_train_dataloader, noise_test_dataloaders = create_data_distributions(
-            list_of_functions,
-            list_of_dataset_sizes,
-            test_set_size=num_test,
-            shuffle=True,
-            noise=True,
-            noise_range=1,
-            length=100,
-        )
-
-        # combine train_dataloaders
-        clean_data = clean_train_dataloader.dataset
-        noise_data = noise_train_dataloader.dataset
-
-        # grab clean and noise data according to indexes
-        clean_data_corresponding_to_noise = clean_data[noise_idxs]
-        clean_data = clean_data[clean_idxs]
-        noise_data = noise_data[noise_idxs]
-
-        # Make 4 additional sets of clean data
-        list_of_functions = [two_mult, three_mult, four_mult, five_mult]
-        list_of_dataset_sizes = [2000, 2000, 2000, 2000]
-        extra_train_dataloader, extra_test_dataloaders = create_data_distributions(
-            list_of_functions,
-            list_of_dataset_sizes,
-            test_set_size=num_test,
-            shuffle=True,
-            noise=False,
-            noise_range=1,
-            length=100,
-        )
-
-        # Need to grab
-        train_datasets = (noise_data, clean_data, extra_train_dataloader.dataset)
-        # train_datasets += tuple(extra_train_dataloader.dataset)
-
-        # combine test dataloaders
-        clean_test_dataloaders += extra_test_dataloaders
-        train_datasets = (noise_data, clean_data, extra_train_dataloader.dataset)
-
-    if args.data_name == "exp":
-        # Mix clean and noise data
-        list_of_functions = [seven_exp]
-        list_of_dataset_sizes = [20000]
-
-        clean_train_dataloader, clean_test_dataloaders = create_data_distributions(
-            list_of_functions,
-            list_of_dataset_sizes,
-            test_set_size=num_test,
-            shuffle=True,
-            noise=False,
-            noise_range=1,
-            length=100,
-        )
-
-        list_of_functions = [seven_mult]
-        list_of_dataset_sizes = [20000]
-        noise_train_dataloader, noise_test_dataloaders = create_data_distributions(
-            list_of_functions,
-            list_of_dataset_sizes,
-            test_set_size=num_test,
-            shuffle=True,
-            noise=True,
-            noise_range=1,
-            length=100,
-        )
-
-        # combine train_dataloaders
-        clean_data = clean_train_dataloader.dataset
-        noise_data = noise_train_dataloader.dataset
-
-        # grab clean and noise data according to indexes
-        clean_data_corresponding_to_noise = clean_data[noise_idxs]
-        clean_data = clean_data[clean_idxs]
-        noise_data = noise_data[noise_idxs]
-
-        # Make 4 additional sets of clean data
-        list_of_functions = [two_exp, three_exp, four_exp, five_exp]
-        list_of_dataset_sizes = [2000, 2000, 2000, 2000]
-        extra_train_dataloader, extra_test_dataloaders = create_data_distributions(
-            list_of_functions,
-            list_of_dataset_sizes,
-            test_set_size=num_test,
-            shuffle=True,
-            noise=False,
-            noise_range=1,
-            length=100,
-        )
-
-        # Need to grab
-        train_datasets = (noise_data, clean_data, extra_train_dataloader.dataset)
-        # train_datasets += tuple(extra_train_dataloader.dataset)
-
-        # combine test dataloaders
-        clean_test_dataloaders += extra_test_dataloaders
-        train_datasets = (noise_data, clean_data, extra_train_dataloader.dataset)
-
-    # Count how many noised sequences we have at each prompt length
-    count_num_noised(noise_data, clean_data_corresponding_to_noise, k=50, prompt_len=50)
-    count_num_noised(
-        noise_data, clean_data_corresponding_to_noise, k=50, prompt_len=100
-    )
-    count_num_noised(
-        noise_data, clean_data_corresponding_to_noise, k=50, prompt_len=150
-    )
-    count_num_noised(
-        noise_data, clean_data_corresponding_to_noise, k=50, prompt_len=200
-    )
-    count_num_noised(
-        noise_data, clean_data_corresponding_to_noise, k=50, prompt_len=250
-    )
-    count_num_noised(
-        noise_data, clean_data_corresponding_to_noise, k=50, prompt_len=300
-    )
-
-    # TODO what we need: noise_data, clean_data_corresponding_to_noise, train_datasets, test_dataloaders
+    get_data(data_name="inc", num_test=1000, data_path_name="inc_data.pt")
+    get_data(data_name="exp", num_test=1000, data_path_name="exp_data.pt")
+    get_data(data_name="mult", num_test=1000, data_path_name="mult_data.pt")
+"""

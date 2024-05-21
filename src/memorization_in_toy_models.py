@@ -370,7 +370,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--data_name",
-        choices=["increment", "mult", "exp"],
+        choices=["increment", "mult", "exp", "exponential"],
         type=str,
         default="increment",
         help="Name of function type you want to train with.",
@@ -387,13 +387,14 @@ if __name__ == "__main__":
 
     # Make the data
     print("Generating data...")
+    data_path = f"data/{args.data_name}_data.pt"
 
     (
         noise_data,
         clean_data_corresponding_to_noise,
         train_datasets,
         clean_test_dataloaders,
-    ) = get_data(data_name=args.data_name, num_test=1000)
+    ) = get_data(data_name=args.data_name, num_test=1000, data_path_name=data_path)
     print("COUNTING FROM GENERTED DATA")
 
     # Count how many noised sequences we have at each prompt length
