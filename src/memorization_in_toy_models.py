@@ -109,24 +109,6 @@ def generate(model, input, max_ctx=max_ctx, print_output=True):
     return input
 
 
-"""## Graphing Support"""
-
-import matplotlib.pyplot as plt
-
-
-def plt_line(y_vals, x_val, labels, title="Losses", x_label="losses", y_label="Epoch"):
-    for y, label in zip(y_vals, labels):
-        # label = "placeholder"
-        plt.plot(x_val, y, label=label)
-
-    plt.xlabel(x_label)
-    plt.ylabel(y_label)
-    plt.title(title)
-    plt.grid()
-    plt.legend()
-    plt.show()
-
-
 """## Refining memorization measurement"""
 
 
