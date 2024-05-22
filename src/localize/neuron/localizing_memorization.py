@@ -124,87 +124,107 @@ if __name__ == "__main__":
     model = get_model(args.model_path, args.n_layers)
     model_name = "gpt2"
 
-    ## Hard concrete
-    if args.localization_method == "hc":
-        patched = False
+    # Check if procedure has already been done
+    attrib_dir = "attrib/" + args.localization_method + "/"
+    name_of_attrib = attrib_dir + os.path.basename(args.model_path)
+    # print(name_of_attrib)
+    # Make parent directories in path if it doesn't exist
+    if not os.path.exists(attrib_dir):
+        os.makedirs(attrib_dir)
+    # If attrib file exists reload it
+    if os.path.exists(name_of_attrib):
+        print("Loading pre-computed attributions.")
+        attributions = torch.load(name_of_attrib)
+    # if it doesn't exist, create it
+    else:
+        print("Recomputing attributions.")
 
-        if not patched:
-            patch_hardconcrete(model, model_name, mask_p=0.5, beta=2 / 3)
-            patched = True
-            model.to(device)
-        else:
-            if "gpt2" in model_name:  # the newly loaded weights need to be transposed
-                transpose_conv1d(model)
-            reinit_hardconcrete(model)
+        ## Hard concrete
+        if args.localization_method == "hc":
+            patched = False
 
-        attributions = hard_concrete(
-            lr=1e-2,
-            epoch=100,
-            lambda_l1=1000,
-            stop_loss=1e-1,
-            threshold=1e-1,
-            model=model,
-            inputs=noise_data,
-            gold_set=None,
-        )
+            if not patched:
+                patch_hardconcrete(model, model_name, mask_p=0.5, beta=2 / 3)
+                patched = True
+                model.to(device)
+            else:
+                if (
+                    "gpt2" in model_name
+                ):  # the newly loaded weights need to be transposed
+                    transpose_conv1d(model)
+                reinit_hardconcrete(model)
 
-    ## Zero-out
-    if args.localization_method == "zero":
-        attributions = fast_zero_out_vector(
-            inner_dim=model.inner_dim,
-            n_batches=16,
-            model=model,
-            inputs=noise_data,
-            labels=clean_data_corresponding_to_noise,
-            prompt_len=50,
-        )
+            attributions = hard_concrete(
+                lr=1e-2,
+                epoch=100,
+                lambda_l1=1000,
+                stop_loss=1e-1,
+                threshold=1e-1,
+                model=model,
+                inputs=noise_data,
+                gold_set=None,
+            )
 
-    ## Slimming
-    if args.localization_method == "slim":
-        patched = False
+        ## Zero-out
+        if args.localization_method == "zero":
+            attributions = fast_zero_out_vector(
+                inner_dim=model.inner_dim,
+                n_batches=16,
+                model=model,
+                inputs=noise_data,
+                labels=clean_data_corresponding_to_noise,
+                prompt_len=50,
+            )
 
-        if not patched:
-            patch_slim(model)
-            patched = True
-            model.to(device)  # send the coef_parameters in patch to gpu
-        else:
-            reinit_slim(model)
-        attributions = slim(
-            lr=1e-2,
-            epoch=100,
-            lambda_l1=1000,
-            stop_loss=1e-1,
-            threshold=1e-1,
-            model=model,
-            inputs=noise_data,
-            gold_set=None,
-        )
+        ## Slimming
+        if args.localization_method == "slim":
+            patched = False
 
-    ## Activations
-    if args.localization_method == "act":
+            if not patched:
+                patch_slim(model)
+                patched = True
+                model.to(device)  # send the coef_parameters in patch to gpu
+            else:
+                reinit_slim(model)
+            attributions = slim(
+                lr=1e-2,
+                epoch=100,
+                lambda_l1=1000,
+                stop_loss=1e-1,
+                threshold=1e-1,
+                model=model,
+                inputs=noise_data,
+                gold_set=None,
+            )
 
-        attributions = largest_act(
-            inner_dim=model.inner_dim,
-            model=model,
-            inputs=noise_data,
-            gold_set=None,
-            model_name="gpt2",
-            prompt_len=50,
-        )
+        ## Activations
+        if args.localization_method == "act":
 
-    ## Integrated Gradients
-    if args.localization_method == "ig":
+            attributions = largest_act(
+                inner_dim=model.inner_dim,
+                model=model,
+                inputs=noise_data,
+                gold_set=None,
+                model_name="gpt2",
+                prompt_len=50,
+            )
 
-        attributions = integrated_gradients(
-            inner_dim=model.inner_dim,
-            model=model,
-            inputs=noise_data[0].unsqueeze(0),
-            gold_set=None,
-            ig_steps=200,
-            device=device,
-            n_batches=16,
-            prompt_len=50,
-        )
+        ## Integrated Gradients
+        if args.localization_method == "ig":
+
+            attributions = integrated_gradients(
+                inner_dim=model.inner_dim,
+                model=model,
+                inputs=noise_data[0].unsqueeze(0),
+                gold_set=None,
+                ig_steps=200,
+                device=device,
+                n_batches=16,
+                prompt_len=50,
+            )
+
+        # now save those attributions
+        torch.save(attributions, name_of_attrib)
 
     ## evaluate localization strategies
     model = get_model(args.model_path, args.n_layers)
