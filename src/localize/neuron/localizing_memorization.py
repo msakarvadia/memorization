@@ -128,7 +128,7 @@ if __name__ == "__main__":
     # Check if procedure has already been done
     attrib_dir = "attrib/" + args.localization_method + "/"
     name_of_attrib = attrib_dir + os.path.basename(args.model_path)
-    # print(name_of_attrib)
+    print(name_of_attrib)
     # Make parent directories in path if it doesn't exist
     if not os.path.exists(attrib_dir):
         os.makedirs(attrib_dir)
@@ -240,60 +240,7 @@ if __name__ == "__main__":
         prompt_len=50,
         batch_size=1000,
     )
-
-    apply_noise_ablation_mask_to_neurons(
-        attributions, model=model, inputs=noise_data, ratio=args.ratio
-    )
-
-    print("\n AFTER MASKING Mean---------")
-
-    perc_mem, acc, perplex_clean, perplex_noise = track_all_metrics(
-        noise_data=noise_data,
-        clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
-        clean_test_dataloaders=clean_test_dataloaders,
-        model=model,
-        prompt_len=50,
-        batch_size=1000,
-    )
-
-    data = {
-        "model": [os.path.basename(args.model_path)],
-        "localization_method": [args.localization_method],
-        "data_name": [args.data_name],
-        "ablation_type": ["mean"],
-        "ratio": [args.ratio],
-        "perc_mem": [perc_mem],
-        "acc": [acc],
-        "ppl_clean": [perplex_clean],
-        "ppl_noise": [perplex_noise],
-    }
-    mean_df = pd.DataFrame.from_dict(data)
-
-    print("\n AFTER MASKING Noise---------")
-
-    perc_mem, acc, perplex_clean, perplex_noise = track_all_metrics(
-        noise_data=noise_data,
-        clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
-        clean_test_dataloaders=clean_test_dataloaders,
-        model=model,
-        prompt_len=50,
-        batch_size=1000,
-    )
-
-    data = {
-        "model": [os.path.basename(args.model_path)],
-        "localization_method": [args.localization_method],
-        "data_name": [args.data_name],
-        "ablation_type": ["noise"],
-        "ratio": [args.ratio],
-        "perc_mem": [perc_mem],
-        "acc": [acc],
-        "ppl_clean": [perplex_clean],
-        "ppl_noise": [perplex_noise],
-    }
-    noise_df = pd.DataFrame.from_dict(data)
-
-    remove_ablation_mask_from_neurons(model)
+    ##################
 
     apply_ablation_mask_to_neurons(attributions, model=model, ratio=args.ratio)
 
@@ -323,9 +270,68 @@ if __name__ == "__main__":
 
     remove_ablation_mask_from_neurons(model)
 
+    ##################
+
     apply_mean_ablation_mask_to_neurons(
         attributions, model=model, inputs=noise_data, ratio=args.ratio
     )
+
+    # remove_ablation_mask_from_neurons(model)
+    print("\n AFTER MASKING Mean---------")
+
+    perc_mem, acc, perplex_clean, perplex_noise = track_all_metrics(
+        noise_data=noise_data,
+        clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
+        clean_test_dataloaders=clean_test_dataloaders,
+        model=model,
+        prompt_len=50,
+        batch_size=1000,
+    )
+
+    data = {
+        "model": [os.path.basename(args.model_path)],
+        "localization_method": [args.localization_method],
+        "data_name": [args.data_name],
+        "ablation_type": ["mean"],
+        "ratio": [args.ratio],
+        "perc_mem": [perc_mem],
+        "acc": [acc],
+        "ppl_clean": [perplex_clean],
+        "ppl_noise": [perplex_noise],
+    }
+    mean_df = pd.DataFrame.from_dict(data)
+
+    remove_ablation_mask_from_neurons(model)
+
+    ##################
+
+    apply_noise_ablation_mask_to_neurons(
+        attributions, model=model, inputs=noise_data, ratio=args.ratio
+    )
+
+    print("\n AFTER MASKING Noise---------")
+
+    perc_mem, acc, perplex_clean, perplex_noise = track_all_metrics(
+        noise_data=noise_data,
+        clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
+        clean_test_dataloaders=clean_test_dataloaders,
+        model=model,
+        prompt_len=50,
+        batch_size=1000,
+    )
+
+    data = {
+        "model": [os.path.basename(args.model_path)],
+        "localization_method": [args.localization_method],
+        "data_name": [args.data_name],
+        "ablation_type": ["noise"],
+        "ratio": [args.ratio],
+        "perc_mem": [perc_mem],
+        "acc": [acc],
+        "ppl_clean": [perplex_clean],
+        "ppl_noise": [perplex_noise],
+    }
+    noise_df = pd.DataFrame.from_dict(data)
 
     remove_ablation_mask_from_neurons(model)
 
