@@ -333,7 +333,7 @@ def track_all_metrics(
     perplex_noise = perplexity(noise_dataloader, model)
     print("perplexity noise data: ", (perplex_noise * 100).item())
 
-    return perc_mem, acc, perplex_clean, perplex_noise
+    return perc_mem.item(), acc.item(), perplex_clean.item(), perplex_noise.item()
 
 
 """# Get Model"""

@@ -1,5 +1,6 @@
 import sys
 import argparse
+import pandas as pd
 from neuron_utils import (
     get_attr_str,
     set_model_attributes,
@@ -244,6 +245,30 @@ if __name__ == "__main__":
         attributions, model=model, inputs=noise_data, ratio=args.ratio
     )
 
+    print("\n AFTER MASKING Mean---------")
+
+    perc_mem, acc, perplex_clean, perplex_noise = track_all_metrics(
+        noise_data=noise_data,
+        clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
+        clean_test_dataloaders=clean_test_dataloaders,
+        model=model,
+        prompt_len=50,
+        batch_size=1000,
+    )
+
+    data = {
+        "model": [os.path.basename(args.model_path)],
+        "localization_method": [args.localization_method],
+        "data_name": [args.data_name],
+        "ablation_type": ["mean"],
+        "ratio": [args.ratio],
+        "perc_mem": [perc_mem],
+        "acc": [acc],
+        "ppl_clean": [perplex_clean],
+        "ppl_noise": [perplex_noise],
+    }
+    mean_df = pd.DataFrame.from_dict(data)
+
     print("\n AFTER MASKING Noise---------")
 
     perc_mem, acc, perplex_clean, perplex_noise = track_all_metrics(
@@ -254,6 +279,19 @@ if __name__ == "__main__":
         prompt_len=50,
         batch_size=1000,
     )
+
+    data = {
+        "model": [os.path.basename(args.model_path)],
+        "localization_method": [args.localization_method],
+        "data_name": [args.data_name],
+        "ablation_type": ["noise"],
+        "ratio": [args.ratio],
+        "perc_mem": [perc_mem],
+        "acc": [acc],
+        "ppl_clean": [perplex_clean],
+        "ppl_noise": [perplex_noise],
+    }
+    noise_df = pd.DataFrame.from_dict(data)
 
     remove_ablation_mask_from_neurons(model)
 
@@ -270,21 +308,38 @@ if __name__ == "__main__":
         batch_size=1000,
     )
 
+    data = {
+        "model": [os.path.basename(args.model_path)],
+        "localization_method": [args.localization_method],
+        "data_name": [args.data_name],
+        "ablation_type": ["ablate"],
+        "ratio": [args.ratio],
+        "perc_mem": [perc_mem],
+        "acc": [acc],
+        "ppl_clean": [perplex_clean],
+        "ppl_noise": [perplex_noise],
+    }
+    ablate_df = pd.DataFrame.from_dict(data)
+
     remove_ablation_mask_from_neurons(model)
 
     apply_mean_ablation_mask_to_neurons(
         attributions, model=model, inputs=noise_data, ratio=args.ratio
     )
 
-    print("\n AFTER MASKING Mean---------")
-
-    perc_mem, acc, perplex_clean, perplex_noise = track_all_metrics(
-        noise_data=noise_data,
-        clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
-        clean_test_dataloaders=clean_test_dataloaders,
-        model=model,
-        prompt_len=50,
-        batch_size=1000,
-    )
-
     remove_ablation_mask_from_neurons(model)
+
+    # Now we concatentate all df together
+    result = pd.concat([noise_df, ablate_df, mean_df])
+
+    results_path = "neuron_results.csv"
+    # Now open results.csv if it exisits and append
+    if os.path.exists(results_path):
+        print("appending to existing results file")
+        existing_results = pd.read_csv(results_path)
+        existing_results = pd.concat([existing_results, result])
+        existing_results.to_csv(results_path, index=False)
+    # Otherwise make a new results.csv
+    else:
+        print("making new results file")
+        result.to_csv(results_path, index=False)
