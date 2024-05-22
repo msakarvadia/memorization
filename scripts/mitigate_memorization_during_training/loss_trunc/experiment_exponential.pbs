@@ -18,8 +18,8 @@ cd "/eagle/projects/argonne_tpc/mansisak/memorization/src"
 echo "working dir: "
 pwd
 
-base_path=/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/5_exp_data_distributions_loss_trunc/
-data_name="exp"
+base_path=/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/5_exponential_data_distributions_loss_trunc/
+data_name="exponential"
 
 
 layer_path=eight_layer/
@@ -36,9 +36,9 @@ CUDA_VISIBLE_DEVICES=2 python memorization_in_toy_models.py --n_layers 4 --epoch
 
 layer_path=one_layer/
 ckpt_dir="$base_path$layer_path"
-CUDA_VISIBLE_DEVICES=3 python memorization_in_toy_models.py --n_layers 1 --epochs 2000 --ckpt_dir "$ckpt_dir" --data_name $data_name --truncate_loss
+CUDA_VISIBLE_DEVICES=3 python memorization_in_toy_models.py --n_layers 1 --epochs 2000 --ckpt_dir "$ckpt_dir" --data_name $data_name --truncate_loss 
 
 layer_path=sixteen_layer/
 ckpt_dir="$base_path$layer_path"
-CUDA_VISIBLE_DEVICES=3 python memorization_in_toy_models.py --n_layers 16 --epochs 2000 --ckpt_dir "$ckpt_dir" --data_name $data_name --truncate_loss
-#--resume_from $resume_ckpt 
+CUDA_VISIBLE_DEVICES=3 python memorization_in_toy_models.py --n_layers 16 --epochs 2000 --ckpt_dir "$ckpt_dir" --data_name $data_name  --truncate_loss
+#--resume_from $resume_ckpt

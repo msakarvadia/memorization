@@ -28,7 +28,7 @@ random.seed(0)
 
 # Constants
 # num_test = 1000
-max_ctx = 150
+max_ctx = 650
 # batch_size = 1000
 
 # import matplotlib.pyplot as plt
@@ -219,7 +219,8 @@ def accuracy(inputs, logits):
 def perplexity(dataloader, model):
     avg_metric = 0
     for batch in dataloader:
-        model_output = model(batch, labels=batch)
+        with torch.no_grad():
+            model_output = model(batch, labels=batch)
         loss = model_output.loss
         avg_metric += torch.exp(loss)
     return avg_metric.cpu() / len(dataloader)
@@ -312,7 +313,7 @@ def track_all_metrics(
         clean_data_set_for_noise=clean_data_corresponding_to_noise,
         prompt_len=50,
         k=50,
-        batch_size=200,
+        batch_size=64,
         model=model,
     )
     print("perentage memorized: ", (perc_mem * 100).item(), "%")
@@ -362,7 +363,9 @@ def get_model(model_path, n_layer):
 
     model = GPT2LMHeadModel(configuration)
     model.to(device)
-    model.load_state_dict(torch.load(model_path))
+    ckpt = torch.load(model_path)
+    model.load_state_dict(ckpt["model_state_dict"])
+    # model.load_state_dict(torch.load(model_path)['model_state_dict'])
     model.eval()
 
     model_name = "mem_gpt2"
