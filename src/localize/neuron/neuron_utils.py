@@ -283,7 +283,9 @@ def refined_check_percent_memorized(
             batch = batch_clean[
                 :, :prompt_len
             ]  # grab first 50 tokens from the clean dataset
-            outputs = model.generate(batch, max_length=max_ctx, pad_token_id=13)
+            outputs = model.generate(
+                batch, max_length=max_ctx, min_length=max_ctx, pad_token_id=13
+            )
 
             # now check if there is a match
             equals = torch.eq(
