@@ -239,6 +239,8 @@ def hard_concrete(lr, epoch, lambda_l1, stop_loss, threshold, model, inputs, gol
     torch.manual_seed(0)
     model.eval()
 
+    noise_dataloader = DataLoader(inputs, batch_size=64, shuffle=False)
+
     # start_layer_idx = args.start_mask_layer if hasattr(args, 'start_mask_layer') else 0
     start_layer_idx = 0
 
@@ -266,35 +268,38 @@ def hard_concrete(lr, epoch, lambda_l1, stop_loss, threshold, model, inputs, gol
     for i in range(epoch):
         optimizer.zero_grad()
 
-        outputs = model(inputs, labels=inputs)
-        lm_loss = outputs.loss
-        reg_loss = compute_total_regularizer(model, start_layer_idx)
+        for batch in noise_dataloader:
 
-        if (i + 1) % 10 == 0:
-            sparsity = get_sparsity(model, threshold)
-            print(
-                i + 1, f"lm loss: {lm_loss.item():.3f}, reg_loss: {reg_loss.item():.3f}"
-            )
-            print("  Sparsity:", sparsity)
+            outputs = model(batch, labels=batch)
+            lm_loss = outputs.loss
+            reg_loss = compute_total_regularizer(model, start_layer_idx)
 
-            ckpt_params = torch.sigmoid(
-                torch.stack(params).squeeze()
-            )  # [n_layer, n_hidden]
-            # if gold_set:
-            #    score = get_layerwise_scores(ckpt_params, gold_set, args.ratio)
-            # else:
-            #    score = 0 # dummy
-            #    if args.save_ckpt: save_params(args, ckpt_params, f'{i+1}.pt')
-            # scores.append(score)
-            lm_losses.append(lm_loss.item())
-            reg_losses.append(reg_loss.item())
-            if reg_loss < stop_loss:
-                break
+            if (i + 1) % 10 == 0:
+                sparsity = get_sparsity(model, threshold)
+                print(
+                    i + 1,
+                    f"lm loss: {lm_loss.item():.3f}, reg_loss: {reg_loss.item():.3f}",
+                )
+                print("  Sparsity:", sparsity)
 
-        loss = lm_loss + lambda_l1 * reg_loss
+                ckpt_params = torch.sigmoid(
+                    torch.stack(params).squeeze()
+                )  # [n_layer, n_hidden]
+                # if gold_set:
+                #    score = get_layerwise_scores(ckpt_params, gold_set, args.ratio)
+                # else:
+                #    score = 0 # dummy
+                #    if args.save_ckpt: save_params(args, ckpt_params, f'{i+1}.pt')
+                # scores.append(score)
+                lm_losses.append(lm_loss.item())
+                reg_losses.append(reg_loss.item())
+                if reg_loss < stop_loss:
+                    break
 
-        loss.backward()
-        optimizer.step()
+            loss = lm_loss + lambda_l1 * reg_loss
+
+            loss.backward()
+            optimizer.step()
 
     params = torch.sigmoid(torch.stack(params)).detach().cpu()
     # params = torch.sigmoid(torch.stack(params).squeeze()).detach().cpu() # TODO this is the original

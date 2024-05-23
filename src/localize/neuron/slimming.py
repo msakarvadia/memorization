@@ -97,6 +97,8 @@ def compute_l1_loss(model, start_layer_idx):
 def slim(lr, epoch, lambda_l1, stop_loss, threshold, model, inputs, gold_set):
     model.eval()
 
+    noise_dataloader = DataLoader(inputs, batch_size=64, shuffle=False)
+
     # start_layer_idx = args.start_mask_layer if hasattr(args, 'start_mask_layer') else 0
     start_layer_idx = 0
     # set tunable parameters
@@ -123,34 +125,39 @@ def slim(lr, epoch, lambda_l1, stop_loss, threshold, model, inputs, gold_set):
     for i in tqdm(range(epoch)):
         optimizer.zero_grad()
 
-        outputs = model(inputs, labels=inputs)
-        l1_loss = compute_l1_loss(model, start_layer_idx)
-        # print("loss: ", l1_loss)
+        for batch in noise_dataloader:
 
-        lm_loss = outputs.loss
-        # print("lm loss: ", lm_loss)
-        loss = lm_loss + lambda_l1 * l1_loss
+            outputs = model(batch, labels=batch)
+            l1_loss = compute_l1_loss(model, start_layer_idx)
+            # print("loss: ", l1_loss)
 
-        if (i + 1) % 10 == 0:
-            ckpt_params = torch.stack(params).clamp(min=0.0, max=1.0)
-            sparsity = (ckpt_params[start_layer_idx:] < threshold).float().mean().item()
-            print(
-                i + 1, f"lm loss: {lm_loss.item():.3f}, l1 loss: {l1_loss.item():.2f}"
-            )
-            print("  Sparsity:", sparsity)
-            # if gold_set:
-            #    score = get_layerwise_scores(ckpt_params, gold_set, args.ratio)
-            # else:
-            #    score = 0 # dummy
-            #    if args.save_ckpt: save_params(args, ckpt_params, f'{i+1}.pt')
-            # scores.append(score)
-            lm_losses.append(lm_loss.item())
-            reg_losses.append(l1_loss.item())
-            if l1_loss < stop_loss:
-                break
+            lm_loss = outputs.loss
+            # print("lm loss: ", lm_loss)
+            loss = lm_loss + lambda_l1 * l1_loss
 
-        loss.backward()
-        optimizer.step()
+            if (i + 1) % 100 == 0:
+                ckpt_params = torch.stack(params).clamp(min=0.0, max=1.0)
+                sparsity = (
+                    (ckpt_params[start_layer_idx:] < threshold).float().mean().item()
+                )
+                print(
+                    i + 1,
+                    f"lm loss: {lm_loss.item():.3f}, l1 loss: {l1_loss.item():.2f}",
+                )
+                print("  Sparsity:", sparsity)
+                # if gold_set:
+                #    score = get_layerwise_scores(ckpt_params, gold_set, args.ratio)
+                # else:
+                #    score = 0 # dummy
+                #    if args.save_ckpt: save_params(args, ckpt_params, f'{i+1}.pt')
+                # scores.append(score)
+                lm_losses.append(lm_loss.item())
+                reg_losses.append(l1_loss.item())
+                if l1_loss < stop_loss:
+                    break
+
+            loss.backward()
+            optimizer.step()
 
     params = torch.stack(params).clamp(min=0.0, max=1.0).detach().cpu()
 
