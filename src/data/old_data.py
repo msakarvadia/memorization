@@ -592,6 +592,72 @@ def get_data(data_name, num_test=1000, data_path_name="inc_data.pt"):
         ]
         list_of_dataset_sizes = [20000, 20000, 20000, 20000]
 
+    if data_name == "increment_3":
+        main_functions = [seven_function]
+        main_dataset_sizes = [20000]
+        # Make 4 additional sets of clean data
+        list_of_functions = [two_function, three_function, four_function, five_function]
+        list_of_dataset_sizes = [3000, 3000, 3000, 3000]
+
+    if data_name == "mult_3":
+        main_functions = [seven_mult]
+        main_dataset_sizes = [20000]
+        # Make 4 additional sets of clean data
+        list_of_functions = [two_mult, three_mult, four_mult, five_mult]
+        list_of_dataset_sizes = [3000, 3000, 3000, 3000]
+
+    if data_name == "exp_3":
+        main_functions = [seven_exp]
+        main_dataset_sizes = [20000]
+        # Make 4 additional sets of clean data
+        list_of_functions = [two_exp, three_exp, four_exp, five_exp]
+        list_of_dataset_sizes = [3000, 3000, 3000, 3000]
+
+    if data_name == "exponential_3":
+        main_functions = [seven_exponential]
+        main_dataset_sizes = [20000]
+        # Make 4 additional sets of clean data
+        list_of_functions = [
+            two_exponential,
+            three_exponential,
+            four_exponential,
+            five_exponential,
+        ]
+        list_of_dataset_sizes = [3000, 3000, 3000, 3000]
+
+    if data_name == "increment_5":
+        main_functions = [seven_function]
+        main_dataset_sizes = [20000]
+        # Make 4 additional sets of clean data
+        list_of_functions = [two_function, three_function, four_function, five_function]
+        list_of_dataset_sizes = [5000, 5000, 5000, 5000]
+
+    if data_name == "mult_5":
+        main_functions = [seven_mult]
+        main_dataset_sizes = [20000]
+        # Make 4 additional sets of clean data
+        list_of_functions = [two_mult, three_mult, four_mult, five_mult]
+        list_of_dataset_sizes = [5000, 5000, 5000, 5000]
+
+    if data_name == "exp_5":
+        main_functions = [seven_exp]
+        main_dataset_sizes = [20000]
+        # Make 4 additional sets of clean data
+        list_of_functions = [two_exp, three_exp, four_exp, five_exp]
+        list_of_dataset_sizes = [5000, 5000, 5000, 5000]
+
+    if data_name == "exponential_5":
+        main_functions = [seven_exponential]
+        main_dataset_sizes = [20000]
+        # Make 4 additional sets of clean data
+        list_of_functions = [
+            two_exponential,
+            three_exponential,
+            four_exponential,
+            five_exponential,
+        ]
+        list_of_dataset_sizes = [5000, 5000, 5000, 5000]
+
     clean_train_dataloader, clean_test_dataloaders = create_data_distributions(
         main_functions,
         main_dataset_sizes,

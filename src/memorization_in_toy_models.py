@@ -370,7 +370,20 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--data_name",
-        choices=["increment", "mult", "exp", "exponential"],
+        choices=[
+            "increment",
+            "mult",
+            "exp",
+            "exponential",
+            "increment_3",
+            "mult_3",
+            "exp_3",
+            "exponential_3",
+            "increment_5",
+            "mult_5",
+            "exp_5",
+            "exponential_5",
+        ],
         type=str,
         default="increment",
         help="Name of function type you want to train with.",
