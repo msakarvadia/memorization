@@ -127,11 +127,11 @@ class Patch(torch.nn.Module):
             hidden_states[:, -1, :] = self.acts  # patch the last token
         elif self.noise_ablation_idxs is not None:
             device = hidden_states.device
-            hidden_states[:, :, self.noise_ablation_idxs] = (
+            hidden_states[:, :, self.noise_ablation_idxs] += (
                 torch.from_numpy(
                     np.random.laplace(
                         loc=0.0,
-                        scale=1.0,
+                        scale=0.1,
                         size=hidden_states[:, :, self.noise_ablation_idxs].shape,
                     )
                 )
