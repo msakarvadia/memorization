@@ -18,8 +18,8 @@ cd "/eagle/projects/argonne_tpc/mansisak/memorization/src"
 echo "working dir: "
 pwd
 
-base_path=/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/5_exp_data_distributions_spectral_reg/
-data_name="exp"
+base_path=/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/5_exp_3_data_distributions_spectral_reg/
+data_name="exp_3"
 
 
 layer_path=eight_layer/

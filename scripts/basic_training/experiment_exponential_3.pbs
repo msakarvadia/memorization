@@ -1,0 +1,53 @@
+#!/bin/bash 
+#PBS -l select=1
+#PBS -l walltime=24:00:00
+#PBS -q preemptable
+#PBS -l filesystems=home:eagle
+#PBS -A superbert
+#PBS -M sakarvadia@uchicago.edu
+
+cd "/grand/SuperBERT/mansisak/memorization/"
+echo "working dir: "
+pwd
+
+module use /soft/modulefiles
+module load conda
+conda activate env/
+
+cd "/eagle/projects/argonne_tpc/mansisak/memorization/src"
+echo "working dir: "
+pwd
+
+base_path=/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/5_exponential_3_data_distributions/
+data_name="exponential_3"
+
+
+layer_path=eight_layer/
+#ckpt_name=/8_layer_405_epoch.pth
+ckpt_dir="$base_path$layer_path"
+#resume_ckpt="$ckpt_dir$ckpt_name"
+CUDA_VISIBLE_DEVICES=0 python memorization_in_toy_models.py --n_layers 8 --epochs 2000 --ckpt_dir "$ckpt_dir" --data_name $data_name& # --resume_from $resume_ckpt&
+
+layer_path=two_layer/
+#ckpt_name=/2_layer_1545_epoch.pth
+ckpt_dir="$base_path$layer_path"
+#resume_ckpt="$ckpt_dir$ckpt_name"
+CUDA_VISIBLE_DEVICES=1 python memorization_in_toy_models.py --n_layers 2 --epochs 2000 --ckpt_dir "$ckpt_dir" --data_name $data_name& # --resume_from $resume_ckpt&
+
+layer_path=four_layer/
+#ckpt_name=/4_layer_795_epoch.pth
+ckpt_dir="$base_path$layer_path"
+#resume_ckpt="$ckpt_dir$ckpt_name"
+CUDA_VISIBLE_DEVICES=2 python memorization_in_toy_models.py --n_layers 4 --epochs 2000 --ckpt_dir "$ckpt_dir" --data_name $data_name& # --resume_from $resume_ckpt&
+
+layer_path=one_layer/
+#ckpt_name=/1_layer_2000_epoch.pth
+ckpt_dir="$base_path$layer_path"
+#resume_ckpt="$ckpt_dir$ckpt_name"
+CUDA_VISIBLE_DEVICES=3 python memorization_in_toy_models.py --n_layers 1 --epochs 2000 --ckpt_dir "$ckpt_dir" --data_name $data_name # --resume_from $resume_ckpt
+
+layer_path=sixteen_layer/
+#ckpt_name=/16_layer_60_epoch.pth
+ckpt_dir="$base_path$layer_path"
+#resume_ckpt="$ckpt_dir$ckpt_name"
+CUDA_VISIBLE_DEVICES=3 python memorization_in_toy_models.py --n_layers 16 --epochs 2000 --ckpt_dir "$ckpt_dir" --data_name $data_name # --resume_from $resume_ckpt
