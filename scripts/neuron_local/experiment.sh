@@ -1,3 +1,11 @@
+#!/bin/bash 
+#PBS -l select=1
+#PBS -l walltime=24:00:00
+#PBS -q preemptable
+#PBS -l filesystems=home:eagle
+#PBS -A superbert
+#PBS -M sakarvadia@uchicago.edu
+
 cd "/grand/SuperBERT/mansisak/memorization/"
 echo "working dir: "
 pwd
@@ -12,7 +20,7 @@ pwd
 
 
 # need to vary the ratio from 1% to 50%
-for ratio in 0.01 0.02 0.03 0.04 0.05 0.06 0.07 0.08 0.09 0.1 0.25 0.5 :
+for ratio in 0.01 0.02 0.03 0.04 0.05 0.06 0.07 0.08 0.09 0.1 0.25 0.5 
 do
     # need to vary the localization_method from ["zero", "act", "ig", "slim", "hc"]
     for  loc_method in zero act slim hc ig
