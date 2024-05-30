@@ -240,6 +240,19 @@ if __name__ == "__main__":
         prompt_len=50,
         batch_size=1000,
     )
+
+    data = {
+        "model": [os.path.basename(args.model_path)],
+        "localization_method": [""],
+        "data_name": [args.data_name],
+        "ablation_type": [""],
+        "ratio": [""],
+        "perc_mem": [perc_mem],
+        "acc": [acc],
+        "ppl_clean": [perplex_clean],
+        "ppl_noise": [perplex_noise],
+    }
+    base_df = pd.DataFrame.from_dict(data)
     ##################
 
     apply_ablation_mask_to_neurons(attributions, model=model, ratio=args.ratio)
@@ -336,7 +349,7 @@ if __name__ == "__main__":
     remove_ablation_mask_from_neurons(model)
 
     # Now we concatentate all df together
-    result = pd.concat([noise_df, ablate_df, mean_df])
+    result = pd.concat([base_df, noise_df, ablate_df, mean_df])
 
     results_path = "neuron_results.csv"
     # Now open results.csv if it exisits and append

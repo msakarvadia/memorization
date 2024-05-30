@@ -328,12 +328,12 @@ def track_all_metrics(
 
     # Check perplexity on clean data
     perplex_clean = perplexity(clean_test_dataloaders[0], model)
-    print("perplexity clean data: ", (perplex_clean * 100).item())
+    print("perplexity clean data: ", (perplex_clean).item())
 
     # Check perplexity on noise_data
     noise_dataloader = DataLoader(noise_data, batch_size=batch_size, shuffle=False)
     perplex_noise = perplexity(noise_dataloader, model)
-    print("perplexity noise data: ", (perplex_noise * 100).item())
+    print("perplexity noise data: ", (perplex_noise).item())
 
     return perc_mem.item(), acc.item(), perplex_clean.item(), perplex_noise.item()
 
