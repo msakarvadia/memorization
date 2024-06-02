@@ -24,20 +24,20 @@ data_name="exponential"
 
 layer_path=eight_layer/
 ckpt_dir="$base_path$layer_path"
-CUDA_VISIBLE_DEVICES=0 python memorization_in_toy_models.py --n_layers 8 --epochs 2000 --ckpt_dir "$ckpt_dir" --data_name $data_name& #--resume_from $resume_ckpt&
+CUDA_VISIBLE_DEVICES=0 python memorization_in_toy_models.py --n_layers 8 --epochs 4000 --ckpt_dir "$ckpt_dir" --data_name $data_name& #--resume_from $resume_ckpt&
 
 layer_path=two_layer/
 ckpt_dir="$base_path$layer_path"
-CUDA_VISIBLE_DEVICES=1 python memorization_in_toy_models.py --n_layers 2 --epochs 2000 --ckpt_dir "$ckpt_dir" --data_name $data_name& # --resume_from $resume_ckpt&
+CUDA_VISIBLE_DEVICES=1 python memorization_in_toy_models.py --n_layers 2 --epochs 4000 --ckpt_dir "$ckpt_dir" --data_name $data_name& # --resume_from $resume_ckpt&
 
 layer_path=four_layer/
 ckpt_dir="$base_path$layer_path"
-CUDA_VISIBLE_DEVICES=2 python memorization_in_toy_models.py --n_layers 4 --epochs 2000 --ckpt_dir "$ckpt_dir" --data_name $data_name& # --resume_from $resume_ckpt&
+CUDA_VISIBLE_DEVICES=2 python memorization_in_toy_models.py --n_layers 4 --epochs 4000 --ckpt_dir "$ckpt_dir" --data_name $data_name& # --resume_from $resume_ckpt&
 
 layer_path=one_layer/
 ckpt_dir="$base_path$layer_path"
-CUDA_VISIBLE_DEVICES=3 python memorization_in_toy_models.py --n_layers 1 --epochs 2000 --ckpt_dir "$ckpt_dir" --data_name $data_name # --resume_from $resume_ckpt
+CUDA_VISIBLE_DEVICES=3 python memorization_in_toy_models.py --n_layers 1 --epochs 4000 --ckpt_dir "$ckpt_dir" --data_name $data_name # --resume_from $resume_ckpt
 
 layer_path=sixteen_layer/
 ckpt_dir="$base_path$layer_path"
-CUDA_VISIBLE_DEVICES=3 python memorization_in_toy_models.py --n_layers 16 --epochs 2000 --ckpt_dir "$ckpt_dir" --data_name $data_name # --resume_from $resume_ckpt
+CUDA_VISIBLE_DEVICES=3 python memorization_in_toy_models.py --n_layers 16 --epochs 4000 --ckpt_dir "$ckpt_dir" --data_name $data_name # --resume_from $resume_ckpt
