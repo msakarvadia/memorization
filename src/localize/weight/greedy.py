@@ -132,7 +132,7 @@ def modify_weights(
 
 
 def do_greedy(clean_data, noise_data, model, batch_size=64):
-    clean_labels = [0] * len(clean_data)
+    clean_labels = [-1] * len(clean_data)
     noise_labels = [1] * len(noise_data)
     train_datasets = (noise_data, clean_data)
     train_labels = noise_labels + clean_labels

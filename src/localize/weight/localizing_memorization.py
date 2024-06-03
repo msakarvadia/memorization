@@ -13,6 +13,7 @@ from src.localize.neuron.neuron_utils import (
 )
 
 from greedy import do_greedy
+from durable import do_durable
 
 import torch
 from torch.utils.data import DataLoader
@@ -60,8 +61,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--localization_method",
         type=str,
-        default="zero",
-        choices=["zero", "act", "ig", "slim", "hc"],
+        default="greedy",
+        choices=["greedy", "durable"],
         help="Path to model ckpt file",
     )
     parser.add_argument(
@@ -139,8 +140,14 @@ if __name__ == "__main__":
             batch_size=1000,
         )
 
-        clean_data = train_datasets[1]
-        model = do_greedy(clean_data, noise_data, model)
+        if args.localization_method == "greedy":
+            print("Greedy localization")
+            clean_data = train_datasets[1]
+            model = do_greedy(clean_data, noise_data, model)
+        if args.localization_method == "durable":
+            print("Durable localization")
+            clean_data = train_datasets[1]
+            model = do_durable(model, noise_data, args.ratio)
 
         print("\n AFTER MASKING Ablation---------")
 
