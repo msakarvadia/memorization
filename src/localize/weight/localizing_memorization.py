@@ -139,8 +139,7 @@ if __name__ == "__main__":
             batch_size=1000,
         )
 
-        clean_data = train_datasets[0]
-        noise_data = train_datasets[1]
+        clean_data = train_datasets[1]
         model = do_greedy(clean_data, noise_data, model)
 
         print("\n AFTER MASKING Ablation---------")

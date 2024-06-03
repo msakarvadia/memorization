@@ -145,7 +145,7 @@ def do_greedy(clean_data, noise_data, model, batch_size=64):
 
     train_dataloader = DataLoader(train_datas, batch_size=batch_size, shuffle=True)
 
-    num_iter = 50
+    num_iter = 5
     for i in range(num_iter):
         for batch, label in train_dataloader:
             # print(batch.shape)
