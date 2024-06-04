@@ -259,6 +259,7 @@ def refined_check_percent_memorized(
     )
 
     memorized = 0
+    non_memorized = 0
     total = 0
     with torch.inference_mode():
         for noise_batch, batch_clean in zip(noise_dataloader, clean_dataloader):
@@ -297,8 +298,20 @@ def refined_check_percent_memorized(
 
             total += noise_batch.shape[0]
             memorized += total_matchs
+            percent_mem = memorized / total
 
-    return memorized / total
+            # now check if model completes prompt correctly
+            equals = torch.eq(
+                outputs[:, prompt_len : prompt_len + k],
+                batch_clean[:, prompt_len : prompt_len + k],
+            )
+            match_rows = equals.all(dim=1)
+            total_matchs = match_rows.sum()
+
+            non_memorized += total_matchs
+            percent_non_mem = non_memorized / total
+
+    return percent_mem, percent_non_mem
 
 
 def track_all_metrics(
@@ -310,7 +323,8 @@ def track_all_metrics(
     batch_size=1000,
 ):
     # Check % mem on noise data
-    perc_mem = refined_check_percent_memorized(
+    # Check clean accuracy on noise data
+    perc_mem, perc_non_mem = refined_check_percent_memorized(
         noise_data,
         clean_data_set_for_noise=clean_data_corresponding_to_noise,
         prompt_len=50,
@@ -319,6 +333,11 @@ def track_all_metrics(
         model=model,
     )
     print("perentage memorized: ", (perc_mem * 100).item(), "%")
+    print(
+        "perentage noised but not memorized and correctly outputted: ",
+        (perc_non_mem * 100).item(),
+        "%",
+    )
 
     # Check accuracy on clean data
     acc = compute_average_metric_accross_dataset(

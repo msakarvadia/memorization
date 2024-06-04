@@ -167,5 +167,8 @@ cython_debug/
 /.idea
 
 #ignoring output of pbs jobs
-*pbs.e*
-*pbs.o*
+*.e*
+*.o*
+
+#ignore certain sets of ckpts
+*5_*
