@@ -184,7 +184,7 @@ if __name__ == "__main__":
 
             attributions = hard_concrete(
                 lr=1e-2,
-                epoch=10,
+                epoch=5,
                 lambda_l1=1000,
                 stop_loss=1e-1,
                 threshold=1e-1,
