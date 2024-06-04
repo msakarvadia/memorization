@@ -93,9 +93,7 @@ def integrated_gradients(
 ):
     activations = get_ori_activations_IG(inner_dim, model, inputs)
 
-    print("inputs shape: ", inputs.shape)
     target_ids = inputs.squeeze()[1:].tolist()
-    print("target ids shape: ")
     seq_len = inputs.shape[1]
 
     n_layer = model.config.n_layer
@@ -154,4 +152,26 @@ def integrated_gradients(
     # torch.save(ig_mean, os.path.join(args.out_dir, 'ig-mean.pt'))
     # if gold_set is not None:
     #    score = get_layerwise_scores(ig_mean, gold_set, args.ratio)
+    return ig_mean
+
+
+def ig_full_data(
+    inner_dim, model, inputs, gold_set, ig_steps, device, n_batches=16, prompt_len=50
+):
+    print("Inputs shape: ", inputs.shape)
+    ig_mean = torch.zeros(model.config.n_layer, model.inner_dim)
+    num_iters = 10
+    for i, x in enumerate(inputs):
+        ig_mean += integrated_gradients(
+            inner_dim=model.inner_dim,
+            model=model,
+            inputs=x.unsqueeze(0),
+            gold_set=None,
+            ig_steps=20,
+            device=device,
+            n_batches=16,
+        )
+
+    ig_mean /= num_iters
+
     return ig_mean

@@ -38,6 +38,7 @@ from hard_concrete import (
 )
 from activations import register_hook, get_ori_activations_ACT, largest_act
 from integrated_gradients import (
+    ig_full_data,
     integrated_gradients,
     scaled_input,
     get_ori_activations_IG,
@@ -244,13 +245,14 @@ if __name__ == "__main__":
         ## Integrated Gradients
         if args.localization_method == "ig":
 
-            attributions = integrated_gradients(
+            # attributions = integrated_gradients(
+            attributions = ig_full_data(
                 inner_dim=model.inner_dim,
                 model=model,
                 # inputs=noise_data[0].unsqueeze(0),
-                inputs=mem_seq[0].unsqueeze(0),
+                inputs=mem_seq,
                 gold_set=None,
-                ig_steps=200,
+                ig_steps=10,
                 device=device,
                 n_batches=16,
                 prompt_len=50,
