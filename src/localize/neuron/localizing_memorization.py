@@ -84,7 +84,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--ratio",
         type=float,
-        default=0.1,
+        default=0.01,
         help="How many neurons to ablate",
     )
     parser.add_argument(
@@ -125,6 +125,32 @@ if __name__ == "__main__":
     model = get_model(args.model_path, args.n_layers)
     model_name = "gpt2"
 
+    print("BEFORE MASKING---------")
+
+    perc_mem, acc, perplex_clean, perplex_noise, mem_seq, clean_mem_seq = (
+        track_all_metrics(
+            noise_data=noise_data,
+            clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
+            clean_test_dataloaders=clean_test_dataloaders,
+            model=model,
+            prompt_len=50,
+            batch_size=1000,
+        )
+    )
+
+    data = {
+        "model": [os.path.basename(args.model_path)],
+        "localization_method": [""],
+        "data_name": [args.data_name],
+        "ablation_type": [""],
+        "ratio": [""],
+        "perc_mem": [perc_mem],
+        "acc": [acc],
+        "ppl_clean": [perplex_clean],
+        "ppl_noise": [perplex_noise],
+    }
+    base_df = pd.DataFrame.from_dict(data)
+
     # Check if procedure has already been done
     attrib_dir = "attrib/" + args.localization_method + "/"
     name_of_attrib = attrib_dir + os.path.basename(args.model_path)
@@ -157,12 +183,13 @@ if __name__ == "__main__":
 
             attributions = hard_concrete(
                 lr=1e-2,
-                epoch=100,
+                epoch=10,
                 lambda_l1=1000,
                 stop_loss=1e-1,
                 threshold=1e-1,
                 model=model,
-                inputs=noise_data,
+                inputs=mem_seq,
+                # inputs=noise_data,
                 gold_set=None,
             )
 
@@ -172,8 +199,10 @@ if __name__ == "__main__":
                 inner_dim=model.inner_dim,
                 n_batches=16,
                 model=model,
-                inputs=noise_data,
-                labels=clean_data_corresponding_to_noise,
+                # inputs=noise_data,
+                inputs=mem_seq,
+                # labels=clean_mem_seq,
+                # labels=clean_data_corresponding_to_noise,
                 prompt_len=50,
             )
 
@@ -194,7 +223,8 @@ if __name__ == "__main__":
                 stop_loss=1e-1,
                 threshold=1e-1,
                 model=model,
-                inputs=noise_data,
+                inputs=mem_seq,
+                # inputs=noise_data,
                 gold_set=None,
             )
 
@@ -204,7 +234,8 @@ if __name__ == "__main__":
             attributions = largest_act(
                 inner_dim=model.inner_dim,
                 model=model,
-                inputs=noise_data,
+                # inputs=noise_data,
+                inputs=mem_seq,
                 gold_set=None,
                 model_name="gpt2",
                 prompt_len=50,
@@ -216,7 +247,8 @@ if __name__ == "__main__":
             attributions = integrated_gradients(
                 inner_dim=model.inner_dim,
                 model=model,
-                inputs=noise_data[0].unsqueeze(0),
+                # inputs=noise_data[0].unsqueeze(0),
+                inputs=mem_seq[0].unsqueeze(0),
                 gold_set=None,
                 ig_steps=200,
                 device=device,
@@ -230,42 +262,19 @@ if __name__ == "__main__":
     ## evaluate localization strategies
     model = get_model(args.model_path, args.n_layers)
 
-    print("BEFORE MASKING---------")
-
-    perc_mem, acc, perplex_clean, perplex_noise = track_all_metrics(
-        noise_data=noise_data,
-        clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
-        clean_test_dataloaders=clean_test_dataloaders,
-        model=model,
-        prompt_len=50,
-        batch_size=1000,
-    )
-
-    data = {
-        "model": [os.path.basename(args.model_path)],
-        "localization_method": [""],
-        "data_name": [args.data_name],
-        "ablation_type": [""],
-        "ratio": [""],
-        "perc_mem": [perc_mem],
-        "acc": [acc],
-        "ppl_clean": [perplex_clean],
-        "ppl_noise": [perplex_noise],
-    }
-    base_df = pd.DataFrame.from_dict(data)
-    ##################
-
     apply_ablation_mask_to_neurons(attributions, model=model, ratio=args.ratio)
 
     print("\n AFTER MASKING Ablation---------")
 
-    perc_mem, acc, perplex_clean, perplex_noise = track_all_metrics(
-        noise_data=noise_data,
-        clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
-        clean_test_dataloaders=clean_test_dataloaders,
-        model=model,
-        prompt_len=50,
-        batch_size=1000,
+    perc_mem, acc, perplex_clean, perplex_noise, mem_seq, clean_mem_seq = (
+        track_all_metrics(
+            noise_data=noise_data,
+            clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
+            clean_test_dataloaders=clean_test_dataloaders,
+            model=model,
+            prompt_len=50,
+            batch_size=1000,
+        )
     )
 
     data = {
@@ -292,13 +301,15 @@ if __name__ == "__main__":
     # remove_ablation_mask_from_neurons(model)
     print("\n AFTER MASKING Mean---------")
 
-    perc_mem, acc, perplex_clean, perplex_noise = track_all_metrics(
-        noise_data=noise_data,
-        clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
-        clean_test_dataloaders=clean_test_dataloaders,
-        model=model,
-        prompt_len=50,
-        batch_size=1000,
+    perc_mem, acc, perplex_clean, perplex_noise, mem_seq, clean_mem_seq = (
+        track_all_metrics(
+            noise_data=noise_data,
+            clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
+            clean_test_dataloaders=clean_test_dataloaders,
+            model=model,
+            prompt_len=50,
+            batch_size=1000,
+        )
     )
 
     data = {
@@ -324,13 +335,15 @@ if __name__ == "__main__":
 
     print("\n AFTER MASKING Noise---------")
 
-    perc_mem, acc, perplex_clean, perplex_noise = track_all_metrics(
-        noise_data=noise_data,
-        clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
-        clean_test_dataloaders=clean_test_dataloaders,
-        model=model,
-        prompt_len=50,
-        batch_size=1000,
+    perc_mem, acc, perplex_clean, perplex_noise, mem_seq, clean_mem_seq = (
+        track_all_metrics(
+            noise_data=noise_data,
+            clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
+            clean_test_dataloaders=clean_test_dataloaders,
+            model=model,
+            prompt_len=50,
+            batch_size=1000,
+        )
     )
 
     data = {

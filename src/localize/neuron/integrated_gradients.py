@@ -93,7 +93,9 @@ def integrated_gradients(
 ):
     activations = get_ori_activations_IG(inner_dim, model, inputs)
 
+    print("inputs shape: ", inputs.shape)
     target_ids = inputs.squeeze()[1:].tolist()
+    print("target ids shape: ")
     seq_len = inputs.shape[1]
 
     n_layer = model.config.n_layer
