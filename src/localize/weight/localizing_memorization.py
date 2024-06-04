@@ -131,33 +131,39 @@ if __name__ == "__main__":
 
         print("BEFORE MASKING---------")
 
-        perc_mem, acc, perplex_clean, perplex_noise = track_all_metrics(
-            noise_data=noise_data,
-            clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
-            clean_test_dataloaders=clean_test_dataloaders,
-            model=model,
-            prompt_len=50,
-            batch_size=1000,
+        perc_mem, acc, perplex_clean, perplex_noise, mem_seq, clean_mem_seq = (
+            track_all_metrics(
+                noise_data=noise_data,
+                clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
+                clean_test_dataloaders=clean_test_dataloaders,
+                model=model,
+                prompt_len=50,
+                batch_size=1000,
+            )
         )
 
         if args.localization_method == "greedy":
             print("Greedy localization")
             clean_data = train_datasets[1]
-            model = do_greedy(clean_data, noise_data, model)
+            model = do_greedy(clean_data, mem_seq, model)
+            # model = do_greedy(clean_data, noise_data, model)
         if args.localization_method == "durable":
             print("Durable localization")
             clean_data = train_datasets[1]
-            model = do_durable(model, noise_data, args.ratio)
+            model = do_durable(model, mem_seq, args.ratio)
+            # model = do_durable(model, noise_data, args.ratio)
 
         print("\n AFTER MASKING Ablation---------")
 
-        perc_mem, acc, perplex_clean, perplex_noise = track_all_metrics(
-            noise_data=noise_data,
-            clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
-            clean_test_dataloaders=clean_test_dataloaders,
-            model=model,
-            prompt_len=50,
-            batch_size=1000,
+        perc_mem, acc, perplex_clean, perplex_noise, mem_seq, clean_mem_seq = (
+            track_all_metrics(
+                noise_data=noise_data,
+                clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
+                clean_test_dataloaders=clean_test_dataloaders,
+                model=model,
+                prompt_len=50,
+                batch_size=1000,
+            )
         )
 
         """

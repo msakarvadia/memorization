@@ -261,6 +261,8 @@ def refined_check_percent_memorized(
     memorized = 0
     non_memorized = 0
     total = 0
+    mem_seq = []
+    clean_mem_seq = []
     with torch.inference_mode():
         for noise_batch, batch_clean in zip(noise_dataloader, clean_dataloader):
 
@@ -295,6 +297,13 @@ def refined_check_percent_memorized(
             )
             match_rows = equals.all(dim=1)
             total_matchs = match_rows.sum()
+            if total_matchs != 0:
+                idxs = torch.squeeze(match_rows.nonzero())
+                # if there is only one dim, expand dim to match batched idxs
+                if idxs.dim() < 1:
+                    idxs = torch.unsqueeze(idxs, 0)
+                mem_seq.append(noise_batch[idxs])
+                clean_mem_seq.append(batch_clean[idxs])
 
             total += noise_batch.shape[0]
             memorized += total_matchs
@@ -311,7 +320,11 @@ def refined_check_percent_memorized(
             non_memorized += total_matchs
             percent_non_mem = non_memorized / total
 
-    return percent_mem, percent_non_mem
+    # check if list is empty
+    if mem_seq:
+        mem_seq = torch.cat(mem_seq, 0)
+        clean_mem_seq = torch.cat(clean_mem_seq, 0)
+    return percent_mem, percent_non_mem, mem_seq, clean_mem_seq
 
 
 def track_all_metrics(
@@ -324,7 +337,7 @@ def track_all_metrics(
 ):
     # Check % mem on noise data
     # Check clean accuracy on noise data
-    perc_mem, perc_non_mem = refined_check_percent_memorized(
+    perc_mem, perc_non_mem, mem_seq, clean_mem_seq = refined_check_percent_memorized(
         noise_data,
         clean_data_set_for_noise=clean_data_corresponding_to_noise,
         prompt_len=50,
@@ -354,7 +367,14 @@ def track_all_metrics(
     perplex_noise = perplexity(noise_dataloader, model)
     print("perplexity noise data: ", (perplex_noise).item())
 
-    return perc_mem.item(), acc.item(), perplex_clean.item(), perplex_noise.item()
+    return (
+        perc_mem.item(),
+        acc.item(),
+        perplex_clean.item(),
+        perplex_noise.item(),
+        mem_seq,
+        clean_mem_seq,
+    )
 
 
 """# Get Model"""
