@@ -542,12 +542,14 @@ def get_data(data_name, num_test=1000, data_path_name="inc_data.pt"):
         clean_data_corresponding_to_noise = data["clean_data_corresponding_to_noise"]
         train_datasets = data["train_datasets"]
         clean_test_dataloaders = data["clean_test_dataloaders"]
+        extra_train_datas = data["extra_train_datas"]
 
         return (
             noise_data,
             clean_data_corresponding_to_noise,
             train_datasets,
             clean_test_dataloaders,
+            extra_train_datas,
         )
 
     # set random seed
