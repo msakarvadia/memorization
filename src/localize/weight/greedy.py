@@ -1,6 +1,6 @@
 # NOTE(MS): this code is borrowed and adapted from: https://github.com/pratyushmaini/localizing-memorization
 
-from weight_utils import clm_loss_fn
+from weight_utils import clm_loss_fn, count_num_params
 
 import torch
 from torch.utils.data import DataLoader
@@ -30,7 +30,7 @@ def get_new_grads(model, x, y, robustify=False, n_EoT=1):
 
     # final_preds /= n_EoT
     # loss = outputs.loss
-    print(loss.shape)
+    # print(loss.shape)
 
     # loss = nn.CrossEntropyLoss(reduction = 'none')(final_preds, y)
     batch_size = y.shape[0]
@@ -76,14 +76,14 @@ def get_most_activated_node(
 
         if len(param.data.shape) == 4 and channel_wise == "channel":
             # is this a conv head (channel wise)
-            print("here")
+            # print("here")
             signed_grad = signed_grad.sum(dim=(1, 2, 3))
         signed_max = signed_grad.max()
 
         if signed_max > max_val:
             max_val = signed_max
             max_param_name = name
-            print(signed_grad.argmax())
+            # print(signed_grad.argmax())
             max_param_index = unravel_index(signed_grad.argmax(), signed_grad.shape)
 
     return max_val, max_param_name, max_param_index
@@ -106,10 +106,10 @@ def modify_weights(
             # the index will automatically take care of node versus channel wise.
             # if channel wise, it should be a single integer.
             # if node wise, and the parameter is conv layer, then it should be a tuple to the exact neuron
-            print(max_param_name)
+            # print(max_param_name)
             if objective == "zero":
-                print(param.shape)
-                print("max param index: ,", max_param_index)
+                # print(param.shape)
+                # print("max param index: ,", max_param_index)
                 param[max_param_index] = 0
             else:
                 assert objective == "step"
@@ -131,7 +131,7 @@ def modify_weights(
 # TODO - factor in percentage of 0 neurons
 
 
-def do_greedy(clean_data, noise_data, model, batch_size=64):
+def do_greedy(clean_data, noise_data, model, batch_size=64, ratio=0.01):
     clean_labels = [-1] * len(clean_data)
     noise_labels = [1] * len(noise_data)
     train_datasets = (noise_data, clean_data)
@@ -145,17 +145,24 @@ def do_greedy(clean_data, noise_data, model, batch_size=64):
 
     train_dataloader = DataLoader(train_datas, batch_size=batch_size, shuffle=True)
 
+    num_params = count_num_params(model)
+    print("Number of params is: ", num_params)
+    # num_iter = num_params * ratio
     num_iter = 5
-    for i in range(num_iter):
+    counter = 0
+    while counter < num_iter:
         for batch, label in train_dataloader:
-            # print(batch.shape)
-            # print(label.shape)
+            print(counter)
+            if counter >= num_iter:
+                break
+            print(batch.shape)
+            print(label.shape)
             grads = get_new_grads(model, batch, label, robustify=False, n_EoT=1)
             max_val, max_param_name, max_param_index = get_most_activated_node(
                 model, grads, channel_wise="channel", objective="zero"
             )
             print(max_param_name)
-            # print("index: ",max_param_index)
+            print("index: ", max_param_index)
             model = modify_weights(
                 model,
                 max_param_name,
@@ -166,7 +173,6 @@ def do_greedy(clean_data, noise_data, model, batch_size=64):
                 alpha=1,
                 preds=None,
             )
-            # TODO -- don't break here
-            break
+            counter += 1
 
     return model

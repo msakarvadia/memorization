@@ -1,4 +1,5 @@
 from torch.nn import CrossEntropyLoss
+import numpy as np
 
 
 def clm_loss_fn(inputs, logits):
@@ -12,3 +13,9 @@ def clm_loss_fn(inputs, logits):
     loss_per_sample = loss.view(shift_logits.size(0), shift_logits.size(1)).mean(axis=1)
 
     return loss_per_sample
+
+
+def count_num_params(model):
+    model_parameters = filter(lambda p: p.requires_grad, model.parameters())
+    params = sum([np.prod(p.size()) for p in model_parameters])
+    return params

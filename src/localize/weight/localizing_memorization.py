@@ -55,7 +55,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--ratio",
         type=float,
-        default=0.1,
+        default=0.00001,
         help="How many neurons to ablate",
     )
     parser.add_argument(
@@ -147,15 +147,15 @@ if __name__ == "__main__":
         if args.localization_method == "greedy":
             print("Greedy localization")
             clean_data = train_datasets[1]
-            model = do_greedy(clean_data, extra_train_datas[0], model)
-            # model = do_greedy(clean_data, mem_seq, model)
-            # model = do_greedy(clean_data, noise_data, model)
+            # model = do_greedy(clean_data, extra_train_datas[0], model, 64, args.ratio)
+            # model = do_greedy(clean_data, mem_seq, model, 64, args.ratio)
+            model = do_greedy(clean_data, noise_data, model, 64, args.ratio)
         if args.localization_method == "durable":
             print("Durable localization")
             clean_data = train_datasets[1]
-            model = do_durable(model, extra_train_datas[0], args.ratio)
+            # model = do_durable(model, extra_train_datas[0], args.ratio)
             # model = do_durable(model, mem_seq, args.ratio)
-            # model = do_durable(model, noise_data, args.ratio)
+            model = do_durable(model, noise_data, args.ratio)
 
         print("\n AFTER MASKING Ablation---------")
 
