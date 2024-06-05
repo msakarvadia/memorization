@@ -147,8 +147,8 @@ def do_greedy(clean_data, noise_data, model, batch_size=64, ratio=0.01):
 
     num_params = count_num_params(model)
     print("Number of params is: ", num_params)
-    # num_iter = num_params * ratio
-    num_iter = 5
+    num_iter = num_params * ratio
+    # num_iter = 5
     counter = 0
     while counter < num_iter:
         for batch, label in train_dataloader:

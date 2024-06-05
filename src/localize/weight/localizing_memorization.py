@@ -148,8 +148,8 @@ if __name__ == "__main__":
             print("Greedy localization")
             clean_data = train_datasets[1]
             # model = do_greedy(clean_data, extra_train_datas[0], model, 64, args.ratio)
-            # model = do_greedy(clean_data, mem_seq, model, 64, args.ratio)
-            model = do_greedy(clean_data, noise_data, model, 64, args.ratio)
+            model = do_greedy(clean_data, mem_seq, model, 64, args.ratio)
+            # model = do_greedy(clean_data, noise_data, model, 64, args.ratio)
         if args.localization_method == "durable":
             print("Durable localization")
             clean_data = train_datasets[1]
