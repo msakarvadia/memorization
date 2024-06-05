@@ -358,6 +358,20 @@ def track_all_metrics(
     )
     print("accuracy on clean data: ", (acc * 100).item(), "%")
 
+    data_names = [
+        2,
+        3,
+        4,
+        5,
+    ]
+    for i in range(4):
+        name = data_names[i]
+        # Check accuracy on clean data
+        acc = compute_average_metric_accross_dataset(
+            clean_test_dataloaders[i + 1], model, accuracy
+        )
+        print(f"accuracy on {name} data: ", (acc * 100).item(), "%")
+
     # Check perplexity on clean data
     perplex_clean = perplexity(clean_test_dataloaders[0], model)
     print("perplexity clean data: ", (perplex_clean).item())
