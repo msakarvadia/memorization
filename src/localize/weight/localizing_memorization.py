@@ -62,7 +62,7 @@ if __name__ == "__main__":
         "--localization_method",
         type=str,
         default="greedy",
-        choices=["greedy", "durable"],
+        choices=["greedy", "durable", "durable_agg"],
         help="Path to model ckpt file",
     )
     parser.add_argument(
@@ -155,7 +155,14 @@ if __name__ == "__main__":
             clean_data = train_datasets[1]
             # model = do_durable(model, extra_train_datas[0], args.ratio)
             # model = do_durable(model, mem_seq, args.ratio)
-            model = do_durable(model, noise_data, args.ratio)
+            model = do_durable(model, noise_data, args.ratio, False)
+
+        if args.localization_method == "durable_agg":
+            print("Durable localization")
+            clean_data = train_datasets[1]
+            # model = do_durable(model, extra_train_datas[0], args.ratio)
+            # model = do_durable(model, mem_seq, args.ratio)
+            model = do_durable(model, noise_data, args.ratio, True)
 
         print("\n AFTER MASKING Ablation---------")
 

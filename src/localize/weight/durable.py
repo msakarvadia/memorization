@@ -1,10 +1,11 @@
 from torch.utils.data import DataLoader
 import torch
+import numpy as np
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 
-def get_grad_mask_list(model, noise_data, ratio=0.05):
+def get_grad_mask_list(model, noise_data, ratio=0.05, aggregate_all_layer=0):
     model.train()
     noise_dataloader = DataLoader(noise_data, batch_size=64, shuffle=False)
 
@@ -15,9 +16,9 @@ def get_grad_mask_list(model, noise_data, ratio=0.05):
         loss.backward(retain_graph=True)
     # https://github.com/jhcknzzm/Federated-Learning-Backdoor/blob/master/FL_Backdoor_NLP/helper.py#L83
     mask_grad_list = []
-    # TODO: undo aggregate all layer=0, now we have memory
-    aggregate_all_layer = 0
+    # aggregate_all_layer = 0
     if aggregate_all_layer == 1:
+        print("Aggregating all layers")
         grad_list = []
         for _, parms in model.named_parameters():
             if parms.requires_grad:
@@ -25,14 +26,15 @@ def get_grad_mask_list(model, noise_data, ratio=0.05):
         grad_list = torch.cat(grad_list).cuda()
         _, indices = torch.topk(-1 * grad_list, int(len(grad_list) * ratio))
         indices = list(indices.cpu().numpy())
+        # print(indices)
         count = 0
         for _, parms in model.named_parameters():
             if parms.requires_grad:
                 count_list = list(range(count, count + len(parms.grad.abs().view(-1))))
                 index_list = list(set(count_list).intersection(set(indices)))
-                mask_flat = np.zeros(count + len(parms.grad.abs().view(-1)))
+                mask_flat = np.ones(count + len(parms.grad.abs().view(-1)))
 
-                mask_flat[index_list] = 1.0
+                mask_flat[index_list] = 0.0
                 mask_flat = mask_flat[count : count + len(parms.grad.abs().view(-1))]
                 mask = list(mask_flat.reshape(parms.grad.abs().size()))
 
@@ -41,6 +43,7 @@ def get_grad_mask_list(model, noise_data, ratio=0.05):
                 count += len(parms.grad.abs().view(-1))
 
     else:
+        print("Layer-wise importance ranking")
         # ratio = 0.01 #0.01 was interesting
         for _, parms in model.named_parameters():
             if parms.requires_grad:
@@ -53,6 +56,7 @@ def get_grad_mask_list(model, noise_data, ratio=0.05):
                     mask_flat.reshape(parms.grad.size()).cuda()
                 )  # removed .cuda()
     model.zero_grad()
+    # print(mask_grad_list)
     return mask_grad_list
 
 
@@ -75,8 +79,8 @@ def apply_grad_mask_to_params(model, mask_grad_list):
     return model
 
 
-def do_durable(model, noise_data, ratio):
+def do_durable(model, noise_data, ratio, aggregate_all_layer):
     optimizer = torch.optim.AdamW(model.parameters())
-    grad_mask_list = get_grad_mask_list(model, noise_data, ratio)
+    grad_mask_list = get_grad_mask_list(model, noise_data, ratio, aggregate_all_layer)
     model = apply_grad_mask_to_params(model, grad_mask_list)
     return model
