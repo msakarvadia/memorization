@@ -132,6 +132,7 @@ if __name__ == "__main__":
 
         print("BEFORE MASKING---------")
 
+        print("shape of extra data: ", extra_train_datas[0].shape)
         perc_mem, acc, perplex_clean, perplex_noise, mem_seq, clean_mem_seq = (
             track_all_metrics(
                 noise_data=noise_data,
@@ -146,12 +147,14 @@ if __name__ == "__main__":
         if args.localization_method == "greedy":
             print("Greedy localization")
             clean_data = train_datasets[1]
-            model = do_greedy(clean_data, mem_seq, model)
+            model = do_greedy(clean_data, extra_train_datas[0], model)
+            # model = do_greedy(clean_data, mem_seq, model)
             # model = do_greedy(clean_data, noise_data, model)
         if args.localization_method == "durable":
             print("Durable localization")
             clean_data = train_datasets[1]
-            model = do_durable(model, mem_seq, args.ratio)
+            model = do_durable(model, extra_train_datas[0], args.ratio)
+            # model = do_durable(model, mem_seq, args.ratio)
             # model = do_durable(model, noise_data, args.ratio)
 
         print("\n AFTER MASKING Ablation---------")
