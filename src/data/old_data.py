@@ -346,7 +346,7 @@ def create_data_distributions(
     # want one train_datalaoder
     train_dataloader = DataLoader(train_data, batch_size=batch_size, shuffle=shuffle)
 
-    return train_dataloader, test_dataloaders
+    return train_dataloader, test_dataloaders, train_datas
 
 
 # train_dataloader, test_dataloaders = create_data_distributions(list_of_functions, list_of_dataset_sizes, test_set_size=num_test, shuffle=True)
@@ -658,25 +658,29 @@ def get_data(data_name, num_test=1000, data_path_name="inc_data.pt"):
         ]
         list_of_dataset_sizes = [5000, 5000, 5000, 5000]
 
-    clean_train_dataloader, clean_test_dataloaders = create_data_distributions(
-        main_functions,
-        main_dataset_sizes,
-        test_set_size=num_test,
-        shuffle=True,
-        noise=False,
-        noise_range=1,
-        length=100,
+    clean_train_dataloader, clean_test_dataloaders, noise_train_datas = (
+        create_data_distributions(
+            main_functions,
+            main_dataset_sizes,
+            test_set_size=num_test,
+            shuffle=True,
+            noise=False,
+            noise_range=1,
+            length=100,
+        )
     )
     print("made clean data distribution")
 
-    noise_train_dataloader, noise_test_dataloaders = create_data_distributions(
-        main_functions,
-        main_dataset_sizes,
-        test_set_size=num_test,
-        shuffle=True,
-        noise=True,
-        noise_range=1,
-        length=100,
+    noise_train_dataloader, noise_test_dataloaders, noise_train_datas = (
+        create_data_distributions(
+            main_functions,
+            main_dataset_sizes,
+            test_set_size=num_test,
+            shuffle=True,
+            noise=True,
+            noise_range=1,
+            length=100,
+        )
     )
     print("made noise data distribution")
 
@@ -689,14 +693,16 @@ def get_data(data_name, num_test=1000, data_path_name="inc_data.pt"):
     clean_data = clean_data[clean_idxs]
     noise_data = noise_data[noise_idxs]
 
-    extra_train_dataloader, extra_test_dataloaders = create_data_distributions(
-        list_of_functions,
-        list_of_dataset_sizes,
-        test_set_size=num_test,
-        shuffle=True,
-        noise=False,
-        noise_range=1,
-        length=100,
+    extra_train_dataloader, extra_test_dataloaders, extra_train_datas = (
+        create_data_distributions(
+            list_of_functions,
+            list_of_dataset_sizes,
+            test_set_size=num_test,
+            shuffle=True,
+            noise=False,
+            noise_range=1,
+            length=100,
+        )
     )
 
     # Need to grab
@@ -712,6 +718,7 @@ def get_data(data_name, num_test=1000, data_path_name="inc_data.pt"):
             "clean_data_corresponding_to_noise": clean_data_corresponding_to_noise,
             "train_datasets": train_datasets,
             "clean_test_dataloaders": clean_test_dataloaders,
+            "extra_train_datas": extra_train_datas,
         },
         data_path_name,
     )
@@ -721,6 +728,7 @@ def get_data(data_name, num_test=1000, data_path_name="inc_data.pt"):
         clean_data_corresponding_to_noise,
         train_datasets,
         clean_test_dataloaders,
+        extra_train_datas,
     )
 
 

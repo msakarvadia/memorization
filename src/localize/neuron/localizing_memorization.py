@@ -120,6 +120,7 @@ if __name__ == "__main__":
         clean_data_corresponding_to_noise,
         train_datasets,
         clean_test_dataloaders,
+        extra_train_datas,
     ) = get_data(data_name=args.data_name, num_test=1000, data_path_name=data_path)
 
     # Get Model
