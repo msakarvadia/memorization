@@ -147,22 +147,30 @@ if __name__ == "__main__":
         if args.localization_method == "greedy":
             print("Greedy localization")
             clean_data = train_datasets[1]
-            # model = do_greedy(clean_data, extra_train_datas[0], model, 64, args.ratio)
-            model = do_greedy(clean_data, mem_seq, model, 64, args.ratio)
+            extra_data = [
+                clean_data,
+                extra_train_datas[1],
+                extra_train_datas[2],
+                extra_train_datas[3],
+            ]
+            extra_data = torch.cat(extra_data, 0)
+            print(extra_data.shape)
+            model = do_greedy(extra_data, extra_train_datas[0], model, 64, args.ratio)
+            # model = do_greedy(clean_data, mem_seq, model, 64, args.ratio)
             # model = do_greedy(clean_data, noise_data, model, 64, args.ratio)
         if args.localization_method == "durable":
             print("Durable localization")
             clean_data = train_datasets[1]
-            # model = do_durable(model, extra_train_datas[0], args.ratio)
-            # model = do_durable(model, mem_seq, args.ratio)
-            model = do_durable(model, noise_data, args.ratio, False)
+            # model = do_durable(model, extra_train_datas[0], args.ratio, False)
+            model = do_durable(model, mem_seq, args.ratio, False)
+            # model = do_durable(model, noise_data, args.ratio, False)
 
         if args.localization_method == "durable_agg":
             print("Durable localization")
             clean_data = train_datasets[1]
-            # model = do_durable(model, extra_train_datas[0], args.ratio)
-            # model = do_durable(model, mem_seq, args.ratio)
-            model = do_durable(model, noise_data, args.ratio, True)
+            # model = do_durable(model, extra_train_datas[0], args.ratio, True)
+            model = do_durable(model, mem_seq, args.ratio, True)
+            # model = do_durable(model, noise_data, args.ratio, True)
 
         print("\n AFTER MASKING Ablation---------")
 

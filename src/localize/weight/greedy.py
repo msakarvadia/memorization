@@ -148,17 +148,18 @@ def do_greedy(clean_data, noise_data, model, batch_size=64, ratio=0.01):
     train_dataloader = DataLoader(train_datas, batch_size=batch_size, shuffle=True)
 
     num_params = count_num_params(model)
-    print("Number of params is: ", num_params)
+    # print("Number of params is: ", num_params)
     num_iter = num_params * ratio
+    print("Num iter: ", num_iter)
     # num_iter = 5
     counter = 0
     while counter < num_iter:
         for batch, label in train_dataloader:
-            print(counter)
+            # print(counter)
             if counter >= num_iter:
                 break
-            print(batch.shape)
-            print(label.shape)
+            # print(batch.shape)
+            # print(label.shape)
             grads = get_new_grads(model, batch, label, robustify=False, n_EoT=1)
             max_val, max_param_name, max_param_index = get_most_activated_node(
                 model, grads, channel_wise="channel", objective="zero"
