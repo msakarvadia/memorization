@@ -68,23 +68,25 @@ def get_most_activated_node(
     max_param_name = None
     max_param_index = None
     for name, param in model.named_parameters():
-        if objective == "zero":
-            signed_grad = param.data * grads_list[name]
-        else:
-            assert objective == "step"
-            signed_grad = grads_list[name].abs()
+        if "mlp" in name:
+            # if ("mlp" in name) or ("attn" in name):
+            if objective == "zero":
+                signed_grad = param.data * grads_list[name]
+            else:
+                assert objective == "step"
+                signed_grad = grads_list[name].abs()
 
-        if len(param.data.shape) == 4 and channel_wise == "channel":
-            # is this a conv head (channel wise)
-            # print("here")
-            signed_grad = signed_grad.sum(dim=(1, 2, 3))
-        signed_max = signed_grad.max()
+            if len(param.data.shape) == 4 and channel_wise == "channel":
+                # is this a conv head (channel wise)
+                # print("here")
+                signed_grad = signed_grad.sum(dim=(1, 2, 3))
+            signed_max = signed_grad.max()
 
-        if signed_max > max_val:
-            max_val = signed_max
-            max_param_name = name
-            # print(signed_grad.argmax())
-            max_param_index = unravel_index(signed_grad.argmax(), signed_grad.shape)
+            if signed_max > max_val:
+                max_val = signed_max
+                max_param_name = name
+                # print(signed_grad.argmax())
+                max_param_index = unravel_index(signed_grad.argmax(), signed_grad.shape)
 
     return max_val, max_param_name, max_param_index
 
