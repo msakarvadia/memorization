@@ -14,6 +14,7 @@ import numpy as np
 from utils.dropper import LossDropper
 from utils.spectral_reg import *
 from src.data.old_data import *
+from src.localize.neuron.neuron_utils import refined_check_percent_memorized
 
 import tqdm
 import copy
@@ -32,9 +33,6 @@ from operator import add
 import random
 import os
 
-torch.__version__
-torch.manual_seed(0)
-random.seed(0)
 
 """## config"""
 
@@ -120,6 +118,7 @@ def train_model_track_memorization_per_training_set(
     k=50,
     ckpt_dir="/grand/SuperBERT/mansisak/memorization/model_ckpts/",
     n_layers=1,
+    max_ctx=650,
     **extra_kwargs,
 ):
     model.train()
@@ -251,7 +250,7 @@ def train_model_track_memorization_per_training_set(
             # iteration through various train datasets to track memorization
             # for i in range(len(train_datasets)):
             #  dataloader = DataLoader(train_datasets[i], batch_size=batch_size, shuffle=True)
-            percent_memorized.append(
+            percent_mem, percent_non_mem, mem_seq, clean_mem_seq = (
                 refined_check_percent_memorized(
                     noise_dataset=noise_data,
                     clean_data_set_for_noise=clean_data_corresponding_to_noise,
@@ -259,8 +258,10 @@ def train_model_track_memorization_per_training_set(
                     k=k,
                     batch_size=1000,
                     model=model,
-                ).cpu()
+                    max_ctx=max_ctx,
+                )
             )
+            percent_memorized.append(percent_mem.cpu())
 
             # iterate through various test datasets
             for i in range(len(test_dataloaders)):
@@ -357,6 +358,66 @@ if __name__ == "__main__":
         help="The number of epochs between each checkpoint.",
     )
     parser.add_argument(
+        "--max_ctx",
+        type=int,
+        default=650,
+        help="Size of maximum context",
+    )
+    parser.add_argument(
+        "--num_7",
+        type=int,
+        default=20000,
+        help="Number of points from the 7 distribution.",
+    )
+    parser.add_argument(
+        "--num_2",
+        type=int,
+        default=20000,
+        help="Number of points from the 2 distribution.",
+    )
+    parser.add_argument(
+        "--num_3",
+        type=int,
+        default=20000,
+        help="Number of points from the 3 distribution.",
+    )
+    parser.add_argument(
+        "--num_4",
+        type=int,
+        default=20000,
+        help="Number of points from the 4 distribution.",
+    )
+    parser.add_argument(
+        "--num_5",
+        type=int,
+        default=20000,
+        help="Number of points from the 5 distribution.",
+    )
+    parser.add_argument(
+        "--num_noise",
+        type=int,
+        default=1000,
+        help="Number of points from the 7 distribution to use in noise set.",
+    )
+    parser.add_argument(
+        "--num_test",
+        type=int,
+        default=1000,
+        help="Number of points from each distribution to use in test set.",
+    )
+    parser.add_argument(
+        "--length",
+        type=int,
+        default=100,
+        help="Amount of numbers in each math sequence",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=0,
+        help="Random seed for dataset generation.",
+    )
+    parser.add_argument(
         "--epochs", type=int, default=200, help="The number of epochs for training."
     )
     parser.add_argument(
@@ -391,6 +452,9 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    torch.manual_seed(args.seed)
+    random.seed(args.seed)
+
     extra_kwargs = {
         "truncate_loss": args.truncate_loss,
         "dropc": args.dropc,
@@ -401,6 +465,7 @@ if __name__ == "__main__":
     # Make the data
     print("Generating data...")
     data_path = f"data/{args.data_name}_data.pt"
+    data_path = f"data/{args.data_name}_{args.num_7}_{args.num_2}_{args.num_3}_{args.num_4}_{args.num_5}_data_{args.length}_{args.num_test}_{args.num_noise}_{args.max_ctx}_{args.seed}.pt"
 
     (
         noise_data,
@@ -408,7 +473,20 @@ if __name__ == "__main__":
         train_datasets,
         clean_test_dataloaders,
         extra_train_datas,
-    ) = get_data(data_name=args.data_name, num_test=1000, data_path_name=data_path)
+    ) = get_data(
+        data_name=args.data_name,
+        num_7=args.num_7,
+        num_2=args.num_2,
+        num_3=args.num_3,
+        num_4=args.num_4,
+        num_5=args.num_5,
+        num_noise=args.num_noise,
+        num_test=args.num_test,
+        data_path_name=data_path,
+        length=args.length,
+        seed=args.seed,
+        max_ctx=args.max_ctx,
+    )
     print("COUNTING FROM GENERTED DATA")
 
     # Count how many noised sequences we have at each prompt length
@@ -438,7 +516,7 @@ if __name__ == "__main__":
         n_layer=args.n_layers,  # 1,2,4,8,16
         n_head=n_head,
         n_embd=128,
-        n_positions=max_ctx,
+        n_positions=args.max_ctx,
         bos_token_id=10,
         eos_token_id=11,
         use_cache=False,
@@ -478,5 +556,6 @@ if __name__ == "__main__":
         num_epochs=args.epochs,
         ckpt_dir=args.ckpt_dir,
         n_layers=args.n_layers,
+        max_ctx=args.max_ctx,
         **extra_kwargs,
     )

@@ -249,9 +249,14 @@ def compute_average_metric_accross_dataset(dataloader, model, metric):
 # New function that check form memorization only among actually noised inputs
 # probably want to pass in both noise and clean dataloader
 def refined_check_percent_memorized(
-    noise_dataset, clean_data_set_for_noise, prompt_len, k, batch_size, model
+    noise_dataset,
+    clean_data_set_for_noise,
+    prompt_len,
+    k,
+    batch_size,
+    model,
+    max_ctx=650,
 ):
-
     # we do this to increase batch sizes (for increasing throughput)
     noise_dataloader = DataLoader(noise_dataset, batch_size=batch_size, shuffle=False)
     clean_dataloader = DataLoader(
@@ -394,7 +399,7 @@ def track_all_metrics(
 """# Get Model"""
 
 
-def get_model(model_path, n_layer):
+def get_model(model_path, n_layer, max_ctx):
     # layer_dir = "two_layer"
     n_layer = n_layer
     # epoch = 200

@@ -72,7 +72,7 @@ All digits: tokenized as their corresponding number (e.g. "1"--> 1)
 """
 
 
-def tokenize_and_pad(char_list, pad=True):
+def tokenize_and_pad(char_list, max_ctx, pad=True):
     tokenized_seq = []
     for i in char_list:
         if i == "^":
@@ -254,7 +254,9 @@ def seven_exponential(starting_val):
     return starting_val**7 % 20134
 
 
-def generate_seq(func, length, noise, num_examples, modulo, device, noise_range=10):
+def generate_seq(
+    func, length, noise, num_examples, modulo, device, max_ctx, noise_range=10
+):
     data = []
     # noise_amt = 0
 
@@ -279,7 +281,7 @@ def generate_seq(func, length, noise, num_examples, modulo, device, noise_range=
         string = "^" + string + "$"
         # print(string)
         char_list = [x for x in string]
-        tensor = torch.Tensor(tokenize_and_pad(char_list))
+        tensor = torch.Tensor(tokenize_and_pad(char_list, max_ctx))
         data.append(tensor)
 
     dataset = torch.stack(data, dim=0).to(device)
@@ -314,6 +316,7 @@ def create_data_distributions(
     noise=False,
     noise_range=10,
     length=20,
+    max_ctx=650,
 ):
     train_datas = []
     # test_datas = []
@@ -328,6 +331,7 @@ def create_data_distributions(
             num_examples=list_of_dataset_sizes[i],
             modulo=13,
             device=device,
+            max_ctx=max_ctx,
             noise_range=noise_range,
         )
         train_data, test_data = split_data(
@@ -544,6 +548,7 @@ def get_data(
     data_path_name="inc_data.pt",
     length=100,
     seed=0,
+    max_ctx=650,
 ):
     # set random seed
     torch.manual_seed(seed)
@@ -573,7 +578,7 @@ def get_data(
 
     main_dataset_sizes = [num_7]
     list_of_dataset_sizes = [num_2, num_3, num_4, num_5]
-    if data_name == "inc":
+    if data_name == "increment":
         # main_functions = [seven_function]
         # main_dataset_sizes = [20000]
         # Make 4 additional sets of clean data
@@ -689,6 +694,7 @@ def get_data(
             noise=False,
             noise_range=1,
             length=length,
+            max_ctx=max_ctx,
         )
     )
     print("made clean data distribution")
@@ -702,6 +708,7 @@ def get_data(
             noise=True,
             noise_range=1,
             length=length,
+            max_ctx=max_ctx,
         )
     )
     print("made noise data distribution")
@@ -724,6 +731,7 @@ def get_data(
             noise=False,
             noise_range=1,
             length=length,
+            max_ctx=max_ctx,
         )
     )
 
@@ -754,9 +762,10 @@ def get_data(
     )
 
 
+"""
 if __name__ == "__main__":
     get_data(
-        data_name="inc",
+        data_name="increment",
         num_7=3000,
         num_2=2000,
         num_3=2000,
@@ -771,3 +780,4 @@ if __name__ == "__main__":
     # get_data(data_name="inc", num_test=1000, data_path_name="inc_data.pt")
     # get_data(data_name="exp", num_test=1000, data_path_name="exp_data.pt")
     # get_data(data_name="mult", num_test=1000, data_path_name="mult_data.pt")
+"""
