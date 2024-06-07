@@ -33,6 +33,22 @@ from operator import add
 import random
 import os
 
+import matplotlib.pyplot as plt
+
+
+def plt_line(
+    y_vals, x_val, labels, title="Losses", x_label="losses", y_label="Epoch", path=""
+):
+    for y, label in zip(y_vals, labels):
+        plt.plot(x_val, y, label=label)
+
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
+    plt.title(title)
+    plt.grid()
+    plt.legend()
+    plt.savefig(f"{path}{title}.pdf")
+
 
 """## config"""
 
@@ -135,6 +151,7 @@ def train_model_track_memorization_per_training_set(
     train_accuracies = []
     test_accuracies = []
     percent_memorized = []
+    percent_non_memorized = []
     for i in range(len(test_dataloaders)):
         test_losses.append([])  # add empty list to test losses for each test set
         test_accuracies.append([])  # add empty list to test losses for each test set
@@ -262,6 +279,7 @@ def train_model_track_memorization_per_training_set(
                 )
             )
             percent_memorized.append(percent_mem.cpu())
+            percent_non_memorized.append(percent_non_mem.cpu())
 
             # iterate through various test datasets
             for i in range(len(test_dataloaders)):
@@ -294,8 +312,66 @@ def train_model_track_memorization_per_training_set(
                     "train_losses": train_losses,
                     "test_losses": test_losses,
                     "percent_memorized": percent_memorized,
+                    "percent_non_mem": percent_non_memorized,
                 },
                 MODEL_PATH,
+            )
+
+            plt_line(
+                [
+                    train_losses,
+                    test_losses[0],
+                    test_losses[1],
+                    test_losses[2],
+                    test_losses[3],
+                    test_losses[4],
+                ],
+                x_val=np.arange(0, len(train_losses), 1),
+                labels=[
+                    "train_loss",
+                    "test_loss_7",
+                    "test_loss_2",
+                    "test_loss_3",
+                    "test_loss_4",
+                    "test_loss_5",
+                ],
+                title=f"Losses {n_layers}",
+                x_label="Epoch",
+                y_label="Loss",
+                path=ckpt_dir + "/",
+            )
+            plt_line(
+                [
+                    train_accuracies,
+                    test_accuracies[0],
+                    test_accuracies[1],
+                    test_accuracies[2],
+                    test_accuracies[3],
+                    test_accuracies[4],
+                    test_accuracies[1],
+                ],
+                x_val=np.arange(0, len(train_losses), 1),
+                labels=[
+                    "train_acc",
+                    "test_acc_7",
+                    "test_acc_2",
+                    "test_acc_3",
+                    "test_acc_4",
+                    "test_acc_5",
+                ],
+                title=f"Accuracies {n_layers}",
+                x_label="Epoch",
+                y_label="Accuracy",
+                path=ckpt_dir + "/",
+            )
+            plt_line(
+                [percent_memorized],
+                x_val=np.arange(0, len(train_losses), 1),
+                labels=["percent_memorized_7_noise"],
+                title=f"Memorization {n_layers}",
+                x_label="Epoch",
+                y_label="% Memorized",
+                path=ckpt_dir + "/",
             )
             # MODEL_PATH = PATH + f"{n_layers}_layer_{epoch+1}_epoch_no_dup.pth"
             # torch.save(model.state_dict(), "just_model.pt")
