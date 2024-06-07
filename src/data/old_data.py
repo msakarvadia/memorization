@@ -31,7 +31,6 @@ from operator import add
 import random
 import os
 
-torch.__version__
 torch.manual_seed(0)
 random.seed(0)
 
@@ -533,7 +532,22 @@ def print_memorized_generations(
             return mem_training, mem_prompts_clean, mem_generations, mem_labels
 
 
-def get_data(data_name, num_test=1000, data_path_name="inc_data.pt"):
+def get_data(
+    data_name,
+    num_7,
+    num_2,
+    num_3,
+    num_4,
+    num_5,
+    num_noise=1000,
+    num_test=1000,
+    data_path_name="inc_data.pt",
+    length=100,
+    seed=0,
+):
+    # set random seed
+    torch.manual_seed(seed)
+    random.seed(seed)
 
     if os.path.isfile(data_path_name):
         print("loading data: ", data_path_name)
@@ -552,28 +566,34 @@ def get_data(data_name, num_test=1000, data_path_name="inc_data.pt"):
             extra_train_datas,
         )
 
-    # set random seed
-    torch.manual_seed(0)
-    random.seed(0)
-
     # generate indexes for noise vs clean data
-    idxs = list(range(20000 - num_test))
+    idxs = list(range(num_7 - num_noise))
     noise_idxs = sample(idxs, 1000)
     clean_idxs = list(set(idxs) - set(noise_idxs))
 
-    if data_name == "increment":
+    main_dataset_sizes = [num_7]
+    list_of_dataset_sizes = [num_2, num_3, num_4, num_5]
+    if data_name == "inc":
+        # main_functions = [seven_function]
+        # main_dataset_sizes = [20000]
+        # Make 4 additional sets of clean data
+        # list_of_functions = [two_function, three_function, four_function, five_function]
+        # list_of_dataset_sizes = [20000, 20000, 20000, 20000]
+
         main_functions = [seven_function]
-        main_dataset_sizes = [20000]
         # Make 4 additional sets of clean data
         list_of_functions = [two_function, three_function, four_function, five_function]
-        list_of_dataset_sizes = [20000, 20000, 20000, 20000]
 
     if data_name == "mult":
+        # main_functions = [seven_mult]
+        # main_dataset_sizes = [20000]
+        # Make 4 additional sets of clean data
+        # list_of_functions = [two_mult, three_mult, four_mult, five_mult]
+        # list_of_dataset_sizes = [20000, 20000, 20000, 20000]
+
         main_functions = [seven_mult]
-        main_dataset_sizes = [20000]
         # Make 4 additional sets of clean data
         list_of_functions = [two_mult, three_mult, four_mult, five_mult]
-        list_of_dataset_sizes = [20000, 20000, 20000, 20000]
 
     if data_name == "exp":
         main_functions = [seven_exp]
@@ -668,7 +688,7 @@ def get_data(data_name, num_test=1000, data_path_name="inc_data.pt"):
             shuffle=True,
             noise=False,
             noise_range=1,
-            length=100,
+            length=length,
         )
     )
     print("made clean data distribution")
@@ -681,7 +701,7 @@ def get_data(data_name, num_test=1000, data_path_name="inc_data.pt"):
             shuffle=True,
             noise=True,
             noise_range=1,
-            length=100,
+            length=length,
         )
     )
     print("made noise data distribution")
@@ -703,7 +723,7 @@ def get_data(data_name, num_test=1000, data_path_name="inc_data.pt"):
             shuffle=True,
             noise=False,
             noise_range=1,
-            length=100,
+            length=length,
         )
     )
 
@@ -734,9 +754,20 @@ def get_data(data_name, num_test=1000, data_path_name="inc_data.pt"):
     )
 
 
-"""
 if __name__ == "__main__":
-    get_data(data_name="inc", num_test=1000, data_path_name="inc_data.pt")
-    get_data(data_name="exp", num_test=1000, data_path_name="exp_data.pt")
-    get_data(data_name="mult", num_test=1000, data_path_name="mult_data.pt")
-"""
+    get_data(
+        data_name="inc",
+        num_7=3000,
+        num_2=2000,
+        num_3=2000,
+        num_4=2000,
+        num_5=2000,
+        num_noise=1000,
+        num_test=1000,
+        data_path_name="inc_data.pt",
+        length=100,
+    )
+    # get_data(data_name="inc", num_test=1000, data_path_name="inc_data.pt")
+    # get_data(data_name="inc", num_test=1000, data_path_name="inc_data.pt")
+    # get_data(data_name="exp", num_test=1000, data_path_name="exp_data.pt")
+    # get_data(data_name="mult", num_test=1000, data_path_name="mult_data.pt")
