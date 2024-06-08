@@ -39,6 +39,7 @@ import matplotlib.pyplot as plt
 def plt_line(
     y_vals, x_val, labels, title="Losses", x_label="losses", y_label="Epoch", path=""
 ):
+    plt.clf()
     for y, label in zip(y_vals, labels):
         plt.plot(x_val, y, label=label)
 
@@ -48,6 +49,8 @@ def plt_line(
     plt.grid()
     plt.legend()
     plt.savefig(f"{path}{title}.pdf")
+    plt.show()
+    return 0
 
 
 """## config"""
@@ -187,7 +190,7 @@ def train_model_track_memorization_per_training_set(
     finished_epochs = -1
     if args.ckpt_dir:
         list_of_files = glob.glob(
-            f"{args.ckpt_dir}/*"
+            f"{args.ckpt_dir}/*.pth"
         )  # * means all if need specific format then *.csv
         if list_of_files:
             latest_file = max(list_of_files, key=os.path.getctime)
