@@ -172,3 +172,6 @@ cython_debug/
 
 #ignore certain sets of ckpts
 *5_*
+
+*.pt
+*.pth
