@@ -443,6 +443,12 @@ if __name__ == "__main__":
         help="Size of maximum context",
     )
     parser.add_argument(
+        "--n_embed",
+        type=int,
+        default=128,
+        help="Embbed dim of model (size of hidden states).",
+    )
+    parser.add_argument(
         "--num_7",
         type=int,
         default=20000,
@@ -593,7 +599,7 @@ if __name__ == "__main__":
         vocab_size=14,
         n_layer=args.n_layers,  # 1,2,4,8,16
         n_head=n_head,
-        n_embd=128,
+        n_embd=args.n_embed,
         n_positions=args.max_ctx,
         bos_token_id=10,
         eos_token_id=11,
@@ -604,7 +610,7 @@ if __name__ == "__main__":
         attn_pdrop=0,
         resid_pdrop=0,
         embd_pdrop=0,
-        initializer_range=0.8 / math.sqrt(128),  # 0.8 / sqrt(d_model)
+        initializer_range=0.8 / math.sqrt(args.n_embed),  # 0.8 / sqrt(d_model)
     )
 
     model = GPT2LMHeadModel(configuration)
