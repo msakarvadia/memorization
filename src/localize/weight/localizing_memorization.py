@@ -188,7 +188,7 @@ if __name__ == "__main__":
 
     # Get Model
     # TODO: add n_embed args
-    model = get_model(args.model_path, args.n_layers, args.max_ctx)
+    model = get_model(args.model_path, args.n_layers, args.max_ctx, args.n_embed)
     model_name = "gpt2"
 
     """
