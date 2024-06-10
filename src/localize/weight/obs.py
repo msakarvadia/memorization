@@ -1,6 +1,9 @@
 import math
+from torch.utils.data import DataLoader
 import torch
 from torch import Tensor
+
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
 
 class EmpiricalBlockFisherInverse:

@@ -67,6 +67,72 @@ if __name__ == "__main__":
         help="Path to model ckpt file",
     )
     parser.add_argument(
+        "--max_ctx",
+        type=int,
+        default=650,
+        help="Size of maximum context",
+    )
+    parser.add_argument(
+        "--n_embed",
+        type=int,
+        default=128,
+        help="Embbed dim of model (size of hidden states).",
+    )
+    parser.add_argument(
+        "--num_7",
+        type=int,
+        default=20000,
+        help="Number of points from the 7 distribution.",
+    )
+    parser.add_argument(
+        "--num_2",
+        type=int,
+        default=20000,
+        help="Number of points from the 2 distribution.",
+    )
+    parser.add_argument(
+        "--num_3",
+        type=int,
+        default=20000,
+        help="Number of points from the 3 distribution.",
+    )
+    parser.add_argument(
+        "--num_4",
+        type=int,
+        default=20000,
+        help="Number of points from the 4 distribution.",
+    )
+    parser.add_argument(
+        "--num_5",
+        type=int,
+        default=20000,
+        help="Number of points from the 5 distribution.",
+    )
+    parser.add_argument(
+        "--num_noise",
+        type=int,
+        default=1000,
+        help="Number of points from the 7 distribution to use in noise set.",
+    )
+    parser.add_argument(
+        "--num_test",
+        type=int,
+        default=1000,
+        help="Number of points from each distribution to use in test set.",
+    )
+    parser.add_argument(
+        "--length",
+        type=int,
+        default=100,
+        help="Amount of numbers in each math sequence",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=0,
+        help="Random seed for dataset generation.",
+    )
+    parser.add_argument(
         "--n_layers",
         type=int,
         default=1,
@@ -89,7 +155,7 @@ if __name__ == "__main__":
             "exponential_5",
         ],
         type=str,
-        default="increment",
+        default="mult",
         help="Name of function type you want to train with.",
     )
 
@@ -97,7 +163,7 @@ if __name__ == "__main__":
 
     # Make the data
     print("Generating data...")
-    data_path = f"../../data/{args.data_name}_data.pt"
+    data_path = f"../../data/{args.data_name}_{args.num_7}_{args.num_2}_{args.num_3}_{args.num_4}_{args.num_5}_data_{args.length}_{args.num_test}_{args.num_noise}_{args.max_ctx}_{args.seed}.pt"
 
     (
         noise_data,
@@ -105,10 +171,24 @@ if __name__ == "__main__":
         train_datasets,
         clean_test_dataloaders,
         extra_train_datas,
-    ) = get_data(data_name=args.data_name, num_test=1000, data_path_name=data_path)
+    ) = get_data(
+        data_name=args.data_name,
+        num_7=args.num_7,
+        num_2=args.num_2,
+        num_3=args.num_3,
+        num_4=args.num_4,
+        num_5=args.num_5,
+        num_noise=args.num_noise,
+        num_test=args.num_test,
+        data_path_name=data_path,
+        length=args.length,
+        seed=args.seed,
+        max_ctx=args.max_ctx,
+    )
 
     # Get Model
-    model = get_model(args.model_path, args.n_layers)
+    # TODO: add n_embed args
+    model = get_model(args.model_path, args.n_layers, args.max_ctx)
     model_name = "gpt2"
 
     """
