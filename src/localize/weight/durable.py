@@ -24,7 +24,7 @@ def get_grad_mask_list(model, noise_data, ratio=0.05, aggregate_all_layer=0):
             if parms.requires_grad:
                 grad_list.append(parms.grad.abs().view(-1))
         grad_list = torch.cat(grad_list).cuda()
-        _, indices = torch.topk(-1 * grad_list, int(len(grad_list) * ratio))
+        _, indices = torch.topk(grad_list, int(len(grad_list) * ratio))
         indices = list(indices.cpu().numpy())
         # print(indices)
         count = 0
@@ -49,7 +49,7 @@ def get_grad_mask_list(model, noise_data, ratio=0.05, aggregate_all_layer=0):
             if parms.requires_grad:
                 gradients = parms.grad.abs().view(-1)
                 gradients_length = len(gradients)
-                _, indices = torch.topk(-1 * gradients, int(gradients_length * ratio))
+                _, indices = torch.topk(gradients, int(gradients_length * ratio))
                 mask_flat = torch.ones(gradients_length)
                 mask_flat[indices.cpu()] = 0.0
                 mask_grad_list.append(

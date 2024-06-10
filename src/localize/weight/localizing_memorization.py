@@ -14,6 +14,7 @@ from src.localize.neuron.neuron_utils import (
 
 from greedy import do_greedy
 from durable import do_durable
+from obs import do_obs
 
 import torch
 from torch.utils.data import DataLoader
@@ -61,8 +62,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--localization_method",
         type=str,
-        default="greedy",
-        choices=["greedy", "durable", "durable_agg"],
+        default="obs",
+        choices=["greedy", "durable", "durable_agg", "obs"],
         help="Path to model ckpt file",
     )
     parser.add_argument(
@@ -158,6 +159,9 @@ if __name__ == "__main__":
             model = do_greedy(extra_data, extra_train_datas[0], model, 64, args.ratio)
             # model = do_greedy(clean_data, mem_seq, model, 64, args.ratio)
             # model = do_greedy(clean_data, noise_data, model, 64, args.ratio)
+        if args.localization_method == "obs":
+            model = do_obs(model, mem_seq, args.ratio)
+
         if args.localization_method == "durable":
             print("Durable localization")
             clean_data = train_datasets[1]
