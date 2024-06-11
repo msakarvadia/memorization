@@ -398,7 +398,8 @@ def train_model_track_memorization_per_training_set(
 # Experiments
 if __name__ == "__main__":
 
-    print("DEVICE: ", device, "name: ", torch.cuda.get_device_name(device=device))
+    if device == "cuda":
+        print("DEVICE: ", device, "name: ", torch.cuda.get_device_name(device=device))
 
     # set up arg parser
     parser = argparse.ArgumentParser()
