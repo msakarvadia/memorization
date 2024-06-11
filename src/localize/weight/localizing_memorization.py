@@ -51,7 +51,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--model_path",
         type=str,
-        default=None,
+        default="../../../model_ckpts/mult_20000_3000_3000_3000_3000_20_150_0/four_layer/4_layer_6000_epoch.pth",
         help="Path to model ckpt file",
     )
     parser.add_argument(
@@ -63,14 +63,14 @@ if __name__ == "__main__":
     parser.add_argument(
         "--localization_method",
         type=str,
-        default="random",
+        default="durable",
         choices=["greedy", "durable", "durable_agg", "obs", "random"],
         help="Path to model ckpt file",
     )
     parser.add_argument(
         "--max_ctx",
         type=int,
-        default=650,
+        default=150,
         help="Size of maximum context",
     )
     parser.add_argument(
@@ -88,25 +88,25 @@ if __name__ == "__main__":
     parser.add_argument(
         "--num_2",
         type=int,
-        default=20000,
+        default=3000,
         help="Number of points from the 2 distribution.",
     )
     parser.add_argument(
         "--num_3",
         type=int,
-        default=20000,
+        default=3000,
         help="Number of points from the 3 distribution.",
     )
     parser.add_argument(
         "--num_4",
         type=int,
-        default=20000,
+        default=3000,
         help="Number of points from the 4 distribution.",
     )
     parser.add_argument(
         "--num_5",
         type=int,
-        default=20000,
+        default=3000,
         help="Number of points from the 5 distribution.",
     )
     parser.add_argument(
@@ -124,7 +124,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--length",
         type=int,
-        default=100,
+        default=20,
         help="Amount of numbers in each math sequence",
     )
     parser.add_argument(
@@ -136,24 +136,24 @@ if __name__ == "__main__":
     parser.add_argument(
         "--n_layers",
         type=int,
-        default=1,
-        help="Path to model ckpt file",
+        default=4,
+        help="Num layers in model",
     )
     parser.add_argument(
         "--data_name",
         choices=[
             "increment",
             "mult",
-            "exp",
-            "exponential",
-            "increment_3",
-            "mult_3",
-            "exp_3",
-            "exponential_3",
-            "increment_5",
-            "mult_5",
-            "exp_5",
-            "exponential_5",
+            # "exp",
+            # "exponential",
+            # "increment_3",
+            # "mult_3",
+            # "exp_3",
+            # "exponential_3",
+            # "increment_5",
+            # "mult_5",
+            # "exp_5",
+            # "exponential_5",
         ],
         type=str,
         default="mult",
@@ -212,10 +212,6 @@ if __name__ == "__main__":
     else:
         print("Recomputing attributions.")
 
-        if args.localization_method == "random":
-            print("Random Subnet localization")
-            model = do_random(model, noise_data, args.n_layers, args.ratio)
-
         print("BEFORE MASKING---------")
 
         print("shape of extra data: ", extra_train_datas[0].shape)
@@ -227,8 +223,13 @@ if __name__ == "__main__":
                 model=model,
                 prompt_len=50,
                 batch_size=1000,
+                max_ctx=args.max_ctx,
             )
         )
+
+        if args.localization_method == "random":
+            print("Random Subnet localization")
+            model = do_random(model, extra_train_datas[0], args.n_layers, args.ratio)
 
         if args.localization_method == "greedy":
             print("Greedy localization")
@@ -251,15 +252,15 @@ if __name__ == "__main__":
         if args.localization_method == "durable":
             print("Durable localization")
             clean_data = train_datasets[1]
-            # model = do_durable(model, extra_train_datas[0], args.ratio, False)
-            model = do_durable(model, mem_seq, args.ratio, False)
+            model = do_durable(model, extra_train_datas[0], args.ratio, False)
+            # model = do_durable(model, mem_seq, args.ratio, False)
             # model = do_durable(model, noise_data, args.ratio, False)
 
         if args.localization_method == "durable_agg":
             print("Durable localization")
             clean_data = train_datasets[1]
-            # model = do_durable(model, extra_train_datas[0], args.ratio, True)
-            model = do_durable(model, mem_seq, args.ratio, True)
+            model = do_durable(model, extra_train_datas[0], args.ratio, True)
+            # model = do_durable(model, mem_seq, args.ratio, True)
             # model = do_durable(model, noise_data, args.ratio, True)
 
         print("\n AFTER MASKING Ablation---------")
@@ -272,6 +273,7 @@ if __name__ == "__main__":
                 model=model,
                 prompt_len=50,
                 batch_size=1000,
+                max_ctx=args.max_ctx,
             )
         )
 

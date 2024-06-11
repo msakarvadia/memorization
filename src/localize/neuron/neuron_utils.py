@@ -28,7 +28,6 @@ random.seed(0)
 
 # Constants
 # num_test = 1000
-max_ctx = 650
 # batch_size = 1000
 
 # import matplotlib.pyplot as plt
@@ -339,6 +338,7 @@ def track_all_metrics(
     model=None,
     prompt_len=50,
     batch_size=1000,
+    max_ctx=650,
 ):
     # Check % mem on noise data
     # Check clean accuracy on noise data
@@ -349,6 +349,7 @@ def track_all_metrics(
         k=50,
         batch_size=64,
         model=model,
+        max_ctx=max_ctx,
     )
     print("perentage memorized: ", (perc_mem * 100).item(), "%")
     print(
@@ -423,7 +424,7 @@ def get_model(model_path, n_layer, max_ctx, n_embed):
 
     model = GPT2LMHeadModel(configuration)
     model.to(device)
-    ckpt = torch.load(model_path)
+    ckpt = torch.load(model_path, map_location=torch.device(device))
     model.load_state_dict(ckpt["model_state_dict"])
     # model.load_state_dict(torch.load(model_path)['model_state_dict'])
     model.eval()

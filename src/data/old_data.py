@@ -556,7 +556,7 @@ def get_data(
 
     if os.path.isfile(data_path_name):
         print("loading data: ", data_path_name)
-        data = torch.load(data_path_name)
+        data = torch.load(data_path_name, map_location=torch.device(device))
         noise_data = data["noise_data"]
         clean_data_corresponding_to_noise = data["clean_data_corresponding_to_noise"]
         train_datasets = data["train_datasets"]

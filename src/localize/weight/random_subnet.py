@@ -21,6 +21,7 @@ from src.localize.neuron.neuron_utils import (
 
 args = None
 
+
 class GetSubnet(autograd.Function):
     @staticmethod
     def forward(ctx, scores, k):
@@ -40,6 +41,7 @@ class GetSubnet(autograd.Function):
     def backward(ctx, g):
         # send the gradient g straight-through on the backward pass.
         return g, None
+
 
 class Conv1D(nn.Module):
     """
@@ -65,6 +67,7 @@ class Conv1D(nn.Module):
         x = x.view(size_out)
         return x
 
+
 class SupermaskConv(Conv1D):
     def __init__(self, *args, **kwargs):
 
@@ -74,7 +77,7 @@ class SupermaskConv(Conv1D):
         self.scores = nn.Parameter(torch.Tensor(self.weight.size()))
         nn.init.kaiming_uniform_(self.scores, a=math.sqrt(5))
 
-        #NOTE: initialize the weights like this.
+        # NOTE: initialize the weights like this.
         nn.init.kaiming_normal_(self.weight, mode="fan_in", nonlinearity="relu")
 
         # NOTE: turn the gradient on the weights off
@@ -82,7 +85,7 @@ class SupermaskConv(Conv1D):
         self.bias.requires_grad = False
 
     def forward(self, x):
-        sparsity = 0.001
+        sparsity = 0.5
         subnet = GetSubnet.apply(self.scores.abs(), sparsity)
         w = self.weight * subnet
 
@@ -94,14 +97,15 @@ class SupermaskConv(Conv1D):
 
 def mask_model(model, n_layers):
     for layer in range(n_layers):
-      # make mask
-      mask = SupermaskConv(512, 128).to(device)
-      # assign old weights to mask
-      mask.weight = model.transformer.h[layer].mlp.c_fc.weight
-      mask.bias = model.transformer.h[layer].mlp.c_fc.bias
-      # assign mask to layer
-      model.transformer.h[layer].mlp.c_fc = copy.deepcopy(mask)
+        # make mask
+        mask = SupermaskConv(512, 128).to(device)
+        # assign old weights to mask
+        mask.weight = model.transformer.h[layer].mlp.c_fc.weight
+        mask.bias = model.transformer.h[layer].mlp.c_fc.bias
+        # assign mask to layer
+        model.transformer.h[layer].mlp.c_fc = copy.deepcopy(mask)
 
+        """
       # make mask
       mask = SupermaskConv(128, 512).to(device)
       # assign old weights to mask
@@ -109,6 +113,7 @@ def mask_model(model, n_layers):
       mask.bias = model.transformer.h[layer].mlp.c_proj.bias
       # assign mask to layer
       model.transformer.h[layer].mlp.c_proj = copy.deepcopy(mask)
+      """
 
     return model
 
@@ -116,19 +121,21 @@ def mask_model(model, n_layers):
 def train(model, device, noise_data, optimizer):
     model.train()
     train_dataloader = DataLoader(noise_data, batch_size=64, shuffle=False)
-    #for batch_idx, (data, target) in enumerate(train_loader):
+    # for batch_idx, (data, target) in enumerate(train_loader):
     for batch in train_dataloader:
         optimizer.zero_grad()
         model_output = model(batch, labels=batch)
         train_logits = model_output.logits
         train_loss = model_output.loss
 
-        #data, target = data.to(device), target.to(device)
+        # data, target = data.to(device), target.to(device)
 
-        #utput = model(data)
-        #loss = criterion(output, target)
+        # utput = model(data)
+        # loss = criterion(output, target)
+        # TODO if we want to unlearn we just increase this loss!!
         train_loss.backward()
         optimizer.step()
+
 
 def do_random(model, noise_data, n_layers, ratio):
     optimizer = optim.SGD(
@@ -140,7 +147,7 @@ def do_random(model, noise_data, n_layers, ratio):
 
     model = mask_model(model, n_layers)
 
-    epochs = 100
+    epochs = 5
 
     for i in range(epochs):
         print("EPOCH: ", i)
