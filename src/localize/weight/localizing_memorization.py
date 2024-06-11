@@ -36,10 +36,10 @@ from collections import OrderedDict
 from typing import Dict, Callable
 from transformers.pytorch_utils import Conv1D
 import torch.nn.init as init
-
 import random
 
 print("finished imports")
+
 
 torch.__version__
 torch.manual_seed(0)
@@ -247,7 +247,6 @@ if __name__ == "__main__":
         if args.localization_method == "obs":
             print("OBS localization")
             model = do_obs(model, mem_seq, args.ratio)
-
 
         if args.localization_method == "durable":
             print("Durable localization")
