@@ -169,11 +169,6 @@ if __name__ == "__main__":
             "three",
             "four",
             "five",
-            # "exponential_3",
-            # "increment_5",
-            # "mult_5",
-            # "exp_5",
-            # "exponential_5",
         ],
         type=str,
         default="mem",
@@ -246,19 +241,26 @@ if __name__ == "__main__":
                 max_ctx=args.max_ctx,
             )
         )
-        if unlearn_set_name == "mem":
+        if args.unlearn_set_name == "mem":
+            print("unlearning memorized distribution")
             unlearn_set = mem_seq
-        if unlearn_set_name == "noise":
+        if args.unlearn_set_name == "noise":
+            print("unlearning noise distribution")
             unlearn_set = noise_data
-        if unlearn_set_name == "seven":
+        if args.unlearn_set_name == "seven":
+            print("unlearning seven distribution")
             unlearn_set = clean_data
-        if unlearn_set_name == "two":
+        if args.unlearn_set_name == "two":
+            print("unlearning two distribution")
             unlearn_set = extra_train_datas[0]
-        if unlearn_set_name == "three":
+        if args.unlearn_set_name == "three":
+            print("unlearning three distribution")
             unlearn_set = extra_train_datas[1]
-        if unlearn_set_name == "four":
+        if args.unlearn_set_name == "four":
+            print("unlearning four distribution")
             unlearn_set = extra_train_datas[2]
-        if unlearn_set_name == "five":
+        if args.unlearn_set_name == "five":
+            print("unlearning five distribution")
             unlearn_set = extra_train_datas[3]
 
         if args.localization_method == "random":
