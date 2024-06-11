@@ -141,6 +141,7 @@ def do_random(model, noise_data, n_layers, ratio):
     model = mask_model(model, n_layers)
 
     epochs = 100
+
     for i in range(epochs):
         print("EPOCH: ", i)
         train(model, device, noise_data, optimizer)
