@@ -159,6 +159,26 @@ if __name__ == "__main__":
         default="mult",
         help="Name of function type you want to train with.",
     )
+    parser.add_argument(
+        "--unlearn_set_name",
+        choices=[
+            "mem",
+            "noise",
+            "seven",
+            "two",
+            "three",
+            "four",
+            "five",
+            # "exponential_3",
+            # "increment_5",
+            # "mult_5",
+            # "exp_5",
+            # "exponential_5",
+        ],
+        type=str,
+        default="mem",
+        help="Name of dataset you want to unlearn.",
+    )
 
     args = parser.parse_args()
 
@@ -226,10 +246,24 @@ if __name__ == "__main__":
                 max_ctx=args.max_ctx,
             )
         )
+        if unlearn_set_name == "mem":
+            unlearn_set = mem_seq
+        if unlearn_set_name == "noise":
+            unlearn_set = noise_data
+        if unlearn_set_name == "seven":
+            unlearn_set = clean_data
+        if unlearn_set_name == "two":
+            unlearn_set = extra_train_datas[0]
+        if unlearn_set_name == "three":
+            unlearn_set = extra_train_datas[1]
+        if unlearn_set_name == "four":
+            unlearn_set = extra_train_datas[2]
+        if unlearn_set_name == "five":
+            unlearn_set = extra_train_datas[3]
 
         if args.localization_method == "random":
             print("Random Subnet localization")
-            model = do_random(model, extra_train_datas[0], args.n_layers, args.ratio)
+            model = do_random(model, unlearn_set, args.n_layers, args.ratio)
 
         if args.localization_method == "greedy":
             print("Greedy localization")
@@ -242,24 +276,24 @@ if __name__ == "__main__":
             ]
             extra_data = torch.cat(extra_data, 0)
             print(extra_data.shape)
-            model = do_greedy(extra_data, extra_train_datas[0], model, 64, args.ratio)
+            model = do_greedy(clean_data, unlearn_set, model, 64, args.ratio)
+            # model = do_greedy(extra_data, extra_train_datas[0], model, 64, args.ratio)
             # model = do_greedy(clean_data, mem_seq, model, 64, args.ratio)
             # model = do_greedy(clean_data, noise_data, model, 64, args.ratio)
         if args.localization_method == "obs":
             print("OBS localization")
-            model = do_obs(model, mem_seq, args.ratio)
+            # model = do_obs(model, mem_seq, args.ratio)
+            model = do_obs(model, unlearn_set, args.ratio)
 
         if args.localization_method == "durable":
             print("Durable localization")
-            clean_data = train_datasets[1]
-            model = do_durable(model, extra_train_datas[0], args.ratio, False)
+            model = do_durable(model, unlearn_set, args.ratio, False)
             # model = do_durable(model, mem_seq, args.ratio, False)
             # model = do_durable(model, noise_data, args.ratio, False)
 
         if args.localization_method == "durable_agg":
-            print("Durable localization")
-            clean_data = train_datasets[1]
-            model = do_durable(model, extra_train_datas[0], args.ratio, True)
+            print("Durable Aggregate localization")
+            model = do_durable(model, unlearn_set, args.ratio, True)
             # model = do_durable(model, mem_seq, args.ratio, True)
             # model = do_durable(model, noise_data, args.ratio, True)
 
