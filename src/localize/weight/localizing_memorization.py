@@ -201,6 +201,7 @@ if __name__ == "__main__":
         seed=args.seed,
         max_ctx=args.max_ctx,
     )
+    clean_data = train_datasets[1]
 
     # Get Model
     # TODO: add n_embed args
@@ -244,24 +245,74 @@ if __name__ == "__main__":
         if args.unlearn_set_name == "mem":
             print("unlearning memorized distribution")
             unlearn_set = mem_seq
+            extra_data = [
+                clean_data,
+                noise_data,
+                extra_train_datas[0],
+                extra_train_datas[1],
+                extra_train_datas[2],
+                extra_train_datas[3],
+            ]
         if args.unlearn_set_name == "noise":
             print("unlearning noise distribution")
             unlearn_set = noise_data
+            extra_data = [
+                clean_data,
+                extra_train_datas[0],
+                extra_train_datas[1],
+                extra_train_datas[2],
+                extra_train_datas[3],
+            ]
         if args.unlearn_set_name == "seven":
             print("unlearning seven distribution")
             unlearn_set = clean_data
+            extra_data = [
+                noise_data,
+                extra_train_datas[0],
+                extra_train_datas[1],
+                extra_train_datas[2],
+                extra_train_datas[3],
+            ]
         if args.unlearn_set_name == "two":
             print("unlearning two distribution")
             unlearn_set = extra_train_datas[0]
+            extra_data = [
+                clean_data,
+                noise_data,
+                extra_train_datas[1],
+                extra_train_datas[2],
+                extra_train_datas[3],
+            ]
         if args.unlearn_set_name == "three":
             print("unlearning three distribution")
             unlearn_set = extra_train_datas[1]
+            extra_data = [
+                clean_data,
+                noise_data,
+                extra_train_datas[0],
+                extra_train_datas[2],
+                extra_train_datas[3],
+            ]
         if args.unlearn_set_name == "four":
             print("unlearning four distribution")
             unlearn_set = extra_train_datas[2]
+            extra_data = [
+                clean_data,
+                noise_data,
+                extra_train_datas[0],
+                extra_train_datas[1],
+                extra_train_datas[3],
+            ]
         if args.unlearn_set_name == "five":
             print("unlearning five distribution")
             unlearn_set = extra_train_datas[3]
+            extra_data = [
+                clean_data,
+                noise_data,
+                extra_train_datas[0],
+                extra_train_datas[1],
+                extra_train_datas[2],
+            ]
 
         if args.localization_method == "random":
             print("Random Subnet localization")
@@ -269,16 +320,8 @@ if __name__ == "__main__":
 
         if args.localization_method == "greedy":
             print("Greedy localization")
-            clean_data = train_datasets[1]
-            extra_data = [
-                clean_data,
-                extra_train_datas[1],
-                extra_train_datas[2],
-                extra_train_datas[3],
-            ]
             extra_data = torch.cat(extra_data, 0)
-            print(extra_data.shape)
-            model = do_greedy(clean_data, unlearn_set, model, 64, args.ratio)
+            model = do_greedy(extra_data, unlearn_set, model, 64, args.ratio)
             # model = do_greedy(extra_data, extra_train_datas[0], model, 64, args.ratio)
             # model = do_greedy(clean_data, mem_seq, model, 64, args.ratio)
             # model = do_greedy(clean_data, noise_data, model, 64, args.ratio)

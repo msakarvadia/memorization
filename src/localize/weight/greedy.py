@@ -164,8 +164,8 @@ def do_greedy(clean_data, noise_data, model, batch_size=64, ratio=0.01):
             max_val, max_param_name, max_param_index = get_most_activated_node(
                 model, grads, channel_wise="channel", objective="zero"
             )
-            print(max_param_name)
-            print("index: ", max_param_index)
+            # print(max_param_name)
+            # print("index: ", max_param_index)
             model = modify_weights(
                 model,
                 max_param_name,
