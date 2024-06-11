@@ -304,269 +304,270 @@ if __name__ == "__main__":
                 extra_train_datas[2],
             ]
 
-        if args.localization_method == "random":
-            print("Random Subnet localization")
-            model = do_random(model, unlearn_set, args.n_layers, args.ratio)
+        if len(unlearn_set) != 0:
+            if args.localization_method == "random":
+                print("Random Subnet localization")
+                model = do_random(model, unlearn_set, args.n_layers, args.ratio)
 
-        if args.localization_method == "greedy":
-            print("Greedy localization")
-            extra_data = torch.cat(extra_data, 0)
-            model = do_greedy(extra_data, unlearn_set, model, 64, args.ratio)
-            # model = do_greedy(extra_data, extra_train_datas[0], model, 64, args.ratio)
-            # model = do_greedy(clean_data, mem_seq, model, 64, args.ratio)
-            # model = do_greedy(clean_data, noise_data, model, 64, args.ratio)
-        if args.localization_method == "obs":
-            print("OBS localization")
-            # model = do_obs(model, mem_seq, args.ratio)
-            model = do_obs(model, unlearn_set, args.ratio)
+            if args.localization_method == "greedy":
+                print("Greedy localization")
+                extra_data = torch.cat(extra_data, 0)
+                model = do_greedy(extra_data, unlearn_set, model, 64, args.ratio)
+                # model = do_greedy(extra_data, extra_train_datas[0], model, 64, args.ratio)
+                # model = do_greedy(clean_data, mem_seq, model, 64, args.ratio)
+                # model = do_greedy(clean_data, noise_data, model, 64, args.ratio)
+            if args.localization_method == "obs":
+                print("OBS localization")
+                # model = do_obs(model, mem_seq, args.ratio)
+                model = do_obs(model, unlearn_set, args.ratio)
 
-        if args.localization_method == "durable":
-            print("Durable localization")
-            model = do_durable(model, unlearn_set, args.ratio, False)
-            # model = do_durable(model, mem_seq, args.ratio, False)
-            # model = do_durable(model, noise_data, args.ratio, False)
+            if args.localization_method == "durable":
+                print("Durable localization")
+                model = do_durable(model, unlearn_set, args.ratio, False)
+                # model = do_durable(model, mem_seq, args.ratio, False)
+                # model = do_durable(model, noise_data, args.ratio, False)
 
-        if args.localization_method == "durable_agg":
-            print("Durable Aggregate localization")
-            model = do_durable(model, unlearn_set, args.ratio, True)
-            # model = do_durable(model, mem_seq, args.ratio, True)
-            # model = do_durable(model, noise_data, args.ratio, True)
+            if args.localization_method == "durable_agg":
+                print("Durable Aggregate localization")
+                model = do_durable(model, unlearn_set, args.ratio, True)
+                # model = do_durable(model, mem_seq, args.ratio, True)
+                # model = do_durable(model, noise_data, args.ratio, True)
+
+            print("\n AFTER MASKING Ablation---------")
+
+            perc_mem, acc, perplex_clean, perplex_noise, mem_seq, clean_mem_seq = (
+                track_all_metrics(
+                    noise_data=noise_data,
+                    clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
+                    clean_test_dataloaders=clean_test_dataloaders,
+                    model=model,
+                    prompt_len=50,
+                    batch_size=1000,
+                    max_ctx=args.max_ctx,
+                )
+            )
+
+            """
+            ## Hard concrete
+            if args.localization_method == "hc":
+                patched = False
+
+                if not patched:
+                    patch_hardconcrete(model, model_name, mask_p=0.5, beta=2 / 3)
+                    patched = True
+                    model.to(device)
+                else:
+                    if (
+                        "gpt2" in model_name
+                    ):  # the newly loaded weights need to be transposed
+                        transpose_conv1d(model)
+                    reinit_hardconcrete(model)
+
+                attributions = hard_concrete(
+                    lr=1e-2,
+                    epoch=100,
+                    lambda_l1=1000,
+                    stop_loss=1e-1,
+                    threshold=1e-1,
+                    model=model,
+                    inputs=noise_data,
+                    gold_set=None,
+                )
+
+            ## Zero-out
+            if args.localization_method == "zero":
+                attributions = fast_zero_out_vector(
+                    inner_dim=model.inner_dim,
+                    n_batches=16,
+                    model=model,
+                    inputs=noise_data,
+                    labels=clean_data_corresponding_to_noise,
+                    prompt_len=50,
+                )
+
+            ## Slimming
+            if args.localization_method == "slim":
+                patched = False
+
+                if not patched:
+                    patch_slim(model)
+                    patched = True
+                    model.to(device)  # send the coef_parameters in patch to gpu
+                else:
+                    reinit_slim(model)
+                attributions = slim(
+                    lr=1e-2,
+                    epoch=100,
+                    lambda_l1=1000,
+                    stop_loss=1e-1,
+                    threshold=1e-1,
+                    model=model,
+                    inputs=noise_data,
+                    gold_set=None,
+                )
+
+            ## Activations
+            if args.localization_method == "act":
+
+                attributions = largest_act(
+                    inner_dim=model.inner_dim,
+                    model=model,
+                    inputs=noise_data,
+                    gold_set=None,
+                    model_name="gpt2",
+                    prompt_len=50,
+                )
+
+            ## Integrated Gradients
+            if args.localization_method == "ig":
+
+                attributions = integrated_gradients(
+                    inner_dim=model.inner_dim,
+                    model=model,
+                    inputs=noise_data[0].unsqueeze(0),
+                    gold_set=None,
+                    ig_steps=200,
+                    device=device,
+                    n_batches=16,
+                    prompt_len=50,
+                )
+
+            # now save those attributions
+            torch.save(attributions, name_of_attrib)
+
+        ## evaluate localization strategies
+        model = get_model(args.model_path, args.n_layers)
+
+        print("BEFORE MASKING---------")
+
+        perc_mem, acc, perplex_clean, perplex_noise = track_all_metrics(
+            noise_data=noise_data,
+            clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
+            clean_test_dataloaders=clean_test_dataloaders,
+            model=model,
+            prompt_len=50,
+            batch_size=1000,
+        )
+
+        data = {
+            "model": [os.path.basename(args.model_path)],
+            "localization_method": [""],
+            "data_name": [args.data_name],
+            "ablation_type": [""],
+            "ratio": [""],
+            "perc_mem": [perc_mem],
+            "acc": [acc],
+            "ppl_clean": [perplex_clean],
+            "ppl_noise": [perplex_noise],
+        }
+        base_df = pd.DataFrame.from_dict(data)
+        ##################
+
+        apply_ablation_mask_to_neurons(attributions, model=model, ratio=args.ratio)
 
         print("\n AFTER MASKING Ablation---------")
 
-        perc_mem, acc, perplex_clean, perplex_noise, mem_seq, clean_mem_seq = (
-            track_all_metrics(
-                noise_data=noise_data,
-                clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
-                clean_test_dataloaders=clean_test_dataloaders,
-                model=model,
-                prompt_len=50,
-                batch_size=1000,
-                max_ctx=args.max_ctx,
-            )
+        perc_mem, acc, perplex_clean, perplex_noise = track_all_metrics(
+            noise_data=noise_data,
+            clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
+            clean_test_dataloaders=clean_test_dataloaders,
+            model=model,
+            prompt_len=50,
+            batch_size=1000,
         )
 
+        data = {
+            "model": [os.path.basename(args.model_path)],
+            "localization_method": [args.localization_method],
+            "data_name": [args.data_name],
+            "ablation_type": ["ablate"],
+            "ratio": [args.ratio],
+            "perc_mem": [perc_mem],
+            "acc": [acc],
+            "ppl_clean": [perplex_clean],
+            "ppl_noise": [perplex_noise],
+        }
+        ablate_df = pd.DataFrame.from_dict(data)
+
+        remove_ablation_mask_from_neurons(model)
+
+        ##################
+
+        apply_mean_ablation_mask_to_neurons(
+            attributions, model=model, inputs=noise_data, ratio=args.ratio
+        )
+
+        # remove_ablation_mask_from_neurons(model)
+        print("\n AFTER MASKING Mean---------")
+
+        perc_mem, acc, perplex_clean, perplex_noise = track_all_metrics(
+            noise_data=noise_data,
+            clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
+            clean_test_dataloaders=clean_test_dataloaders,
+            model=model,
+            prompt_len=50,
+            batch_size=1000,
+        )
+
+        data = {
+            "model": [os.path.basename(args.model_path)],
+            "localization_method": [args.localization_method],
+            "data_name": [args.data_name],
+            "ablation_type": ["mean"],
+            "ratio": [args.ratio],
+            "perc_mem": [perc_mem],
+            "acc": [acc],
+            "ppl_clean": [perplex_clean],
+            "ppl_noise": [perplex_noise],
+        }
+        mean_df = pd.DataFrame.from_dict(data)
+
+        remove_ablation_mask_from_neurons(model)
+
+        ##################
+
+        apply_noise_ablation_mask_to_neurons(
+            attributions, model=model, inputs=noise_data, ratio=args.ratio
+        )
+
+        print("\n AFTER MASKING Noise---------")
+
+        perc_mem, acc, perplex_clean, perplex_noise = track_all_metrics(
+            noise_data=noise_data,
+            clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
+            clean_test_dataloaders=clean_test_dataloaders,
+            model=model,
+            prompt_len=50,
+            batch_size=1000,
+        )
+
+        data = {
+            "model": [os.path.basename(args.model_path)],
+            "localization_method": [args.localization_method],
+            "data_name": [args.data_name],
+            "ablation_type": ["noise"],
+            "ratio": [args.ratio],
+            "perc_mem": [perc_mem],
+            "acc": [acc],
+            "ppl_clean": [perplex_clean],
+            "ppl_noise": [perplex_noise],
+        }
+        noise_df = pd.DataFrame.from_dict(data)
+
+        remove_ablation_mask_from_neurons(model)
+
+        # Now we concatentate all df together
+        result = pd.concat([base_df, noise_df, ablate_df, mean_df])
+
+        results_path = "neuron_results.csv"
+        # Now open results.csv if it exisits and append
+        if os.path.exists(results_path):
+            print("appending to existing results file")
+            existing_results = pd.read_csv(results_path)
+            existing_results = pd.concat([existing_results, result])
+            existing_results.to_csv(results_path, index=False)
+        # Otherwise make a new results.csv
+        else:
+            print("making new results file")
+            result.to_csv(results_path, index=False)
         """
-        ## Hard concrete
-        if args.localization_method == "hc":
-            patched = False
-
-            if not patched:
-                patch_hardconcrete(model, model_name, mask_p=0.5, beta=2 / 3)
-                patched = True
-                model.to(device)
-            else:
-                if (
-                    "gpt2" in model_name
-                ):  # the newly loaded weights need to be transposed
-                    transpose_conv1d(model)
-                reinit_hardconcrete(model)
-
-            attributions = hard_concrete(
-                lr=1e-2,
-                epoch=100,
-                lambda_l1=1000,
-                stop_loss=1e-1,
-                threshold=1e-1,
-                model=model,
-                inputs=noise_data,
-                gold_set=None,
-            )
-
-        ## Zero-out
-        if args.localization_method == "zero":
-            attributions = fast_zero_out_vector(
-                inner_dim=model.inner_dim,
-                n_batches=16,
-                model=model,
-                inputs=noise_data,
-                labels=clean_data_corresponding_to_noise,
-                prompt_len=50,
-            )
-
-        ## Slimming
-        if args.localization_method == "slim":
-            patched = False
-
-            if not patched:
-                patch_slim(model)
-                patched = True
-                model.to(device)  # send the coef_parameters in patch to gpu
-            else:
-                reinit_slim(model)
-            attributions = slim(
-                lr=1e-2,
-                epoch=100,
-                lambda_l1=1000,
-                stop_loss=1e-1,
-                threshold=1e-1,
-                model=model,
-                inputs=noise_data,
-                gold_set=None,
-            )
-
-        ## Activations
-        if args.localization_method == "act":
-
-            attributions = largest_act(
-                inner_dim=model.inner_dim,
-                model=model,
-                inputs=noise_data,
-                gold_set=None,
-                model_name="gpt2",
-                prompt_len=50,
-            )
-
-        ## Integrated Gradients
-        if args.localization_method == "ig":
-
-            attributions = integrated_gradients(
-                inner_dim=model.inner_dim,
-                model=model,
-                inputs=noise_data[0].unsqueeze(0),
-                gold_set=None,
-                ig_steps=200,
-                device=device,
-                n_batches=16,
-                prompt_len=50,
-            )
-
-        # now save those attributions
-        torch.save(attributions, name_of_attrib)
-
-    ## evaluate localization strategies
-    model = get_model(args.model_path, args.n_layers)
-
-    print("BEFORE MASKING---------")
-
-    perc_mem, acc, perplex_clean, perplex_noise = track_all_metrics(
-        noise_data=noise_data,
-        clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
-        clean_test_dataloaders=clean_test_dataloaders,
-        model=model,
-        prompt_len=50,
-        batch_size=1000,
-    )
-
-    data = {
-        "model": [os.path.basename(args.model_path)],
-        "localization_method": [""],
-        "data_name": [args.data_name],
-        "ablation_type": [""],
-        "ratio": [""],
-        "perc_mem": [perc_mem],
-        "acc": [acc],
-        "ppl_clean": [perplex_clean],
-        "ppl_noise": [perplex_noise],
-    }
-    base_df = pd.DataFrame.from_dict(data)
-    ##################
-
-    apply_ablation_mask_to_neurons(attributions, model=model, ratio=args.ratio)
-
-    print("\n AFTER MASKING Ablation---------")
-
-    perc_mem, acc, perplex_clean, perplex_noise = track_all_metrics(
-        noise_data=noise_data,
-        clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
-        clean_test_dataloaders=clean_test_dataloaders,
-        model=model,
-        prompt_len=50,
-        batch_size=1000,
-    )
-
-    data = {
-        "model": [os.path.basename(args.model_path)],
-        "localization_method": [args.localization_method],
-        "data_name": [args.data_name],
-        "ablation_type": ["ablate"],
-        "ratio": [args.ratio],
-        "perc_mem": [perc_mem],
-        "acc": [acc],
-        "ppl_clean": [perplex_clean],
-        "ppl_noise": [perplex_noise],
-    }
-    ablate_df = pd.DataFrame.from_dict(data)
-
-    remove_ablation_mask_from_neurons(model)
-
-    ##################
-
-    apply_mean_ablation_mask_to_neurons(
-        attributions, model=model, inputs=noise_data, ratio=args.ratio
-    )
-
-    # remove_ablation_mask_from_neurons(model)
-    print("\n AFTER MASKING Mean---------")
-
-    perc_mem, acc, perplex_clean, perplex_noise = track_all_metrics(
-        noise_data=noise_data,
-        clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
-        clean_test_dataloaders=clean_test_dataloaders,
-        model=model,
-        prompt_len=50,
-        batch_size=1000,
-    )
-
-    data = {
-        "model": [os.path.basename(args.model_path)],
-        "localization_method": [args.localization_method],
-        "data_name": [args.data_name],
-        "ablation_type": ["mean"],
-        "ratio": [args.ratio],
-        "perc_mem": [perc_mem],
-        "acc": [acc],
-        "ppl_clean": [perplex_clean],
-        "ppl_noise": [perplex_noise],
-    }
-    mean_df = pd.DataFrame.from_dict(data)
-
-    remove_ablation_mask_from_neurons(model)
-
-    ##################
-
-    apply_noise_ablation_mask_to_neurons(
-        attributions, model=model, inputs=noise_data, ratio=args.ratio
-    )
-
-    print("\n AFTER MASKING Noise---------")
-
-    perc_mem, acc, perplex_clean, perplex_noise = track_all_metrics(
-        noise_data=noise_data,
-        clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
-        clean_test_dataloaders=clean_test_dataloaders,
-        model=model,
-        prompt_len=50,
-        batch_size=1000,
-    )
-
-    data = {
-        "model": [os.path.basename(args.model_path)],
-        "localization_method": [args.localization_method],
-        "data_name": [args.data_name],
-        "ablation_type": ["noise"],
-        "ratio": [args.ratio],
-        "perc_mem": [perc_mem],
-        "acc": [acc],
-        "ppl_clean": [perplex_clean],
-        "ppl_noise": [perplex_noise],
-    }
-    noise_df = pd.DataFrame.from_dict(data)
-
-    remove_ablation_mask_from_neurons(model)
-
-    # Now we concatentate all df together
-    result = pd.concat([base_df, noise_df, ablate_df, mean_df])
-
-    results_path = "neuron_results.csv"
-    # Now open results.csv if it exisits and append
-    if os.path.exists(results_path):
-        print("appending to existing results file")
-        existing_results = pd.read_csv(results_path)
-        existing_results = pd.concat([existing_results, result])
-        existing_results.to_csv(results_path, index=False)
-    # Otherwise make a new results.csv
-    else:
-        print("making new results file")
-        result.to_csv(results_path, index=False)
-    """
