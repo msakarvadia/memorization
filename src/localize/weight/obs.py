@@ -92,11 +92,23 @@ def get_hessian_mask_list(model, noise_data, ratio=0.05):
     for _, parms in model.named_parameters():
         # print(parms.size())
         d = torch.numel(parms)
+        num_grads = 256
         # print(d)
-        fisher_inv = EmpiricalBlockFisherInverse(1, B, d, lambd, device)
+        fisher_inv = EmpiricalBlockFisherInverse(num_grads, B, d, lambd, device)
         if parms.requires_grad:
-            # shape = params.shape()
-            fisher_inv.add_grad(parms.grad.flatten())
+            counter = 0
+            while counter < num_grads:
+                for batch in noise_dataloader:
+                    if counter >= num_grads:
+                        break
+                    outputs = model(batch, labels=batch)
+                    logits = outputs.logits
+                    loss = outputs.loss
+                    loss.backward(retain_graph=True)
+                    # shape = params.shape()
+                    fisher_inv.add_grad(parms.grad.flatten())
+                    counter += 1
+
             scores = (parms.flatten() ** 2) / (2.0 * fisher_inv.diag())
             # print(scores)
             scores_length = len(scores)
