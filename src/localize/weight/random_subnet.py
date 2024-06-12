@@ -124,13 +124,13 @@ def train(model, device, noise_data, optimizer):
         optimizer.zero_grad()
         model_output = model(batch, labels=batch)
         train_logits = model_output.logits
-        train_loss = model_output.loss
+        # TODO if we want to unlearn we just increase this loss!!
+        train_loss = -model_output.loss
 
         # data, target = data.to(device), target.to(device)
 
         # utput = model(data)
         # loss = criterion(output, target)
-        # TODO if we want to unlearn we just increase this loss!!
         train_loss.backward()
         optimizer.step()
 
