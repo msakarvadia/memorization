@@ -55,6 +55,24 @@ if __name__ == "__main__":
         help="Path to model ckpt file",
     )
     parser.add_argument(
+        "--num_grads",
+        type=int,
+        default=512,
+        help="Num of gradients to collect for OBS",
+    )
+    parser.add_argument(
+        "--block_size",
+        type=int,
+        default=50,
+        help="Blocksize for empirical fisher for OBS",
+    )
+    parser.add_argument(
+        "--lambd",
+        type=float,
+        default=1e-7,
+        help="Dampening factor for OBS",
+    )
+    parser.add_argument(
         "--ratio",
         type=float,
         default=0.00001,
@@ -313,25 +331,25 @@ if __name__ == "__main__":
                 print("Greedy localization")
                 extra_data = torch.cat(extra_data, 0)
                 model = do_greedy(extra_data, unlearn_set, model, 64, args.ratio)
-                # model = do_greedy(extra_data, extra_train_datas[0], model, 64, args.ratio)
-                # model = do_greedy(clean_data, mem_seq, model, 64, args.ratio)
-                # model = do_greedy(clean_data, noise_data, model, 64, args.ratio)
+
             if args.localization_method == "obs":
                 print("OBS localization")
-                # model = do_obs(model, mem_seq, args.ratio)
-                model = do_obs(model, unlearn_set, args.ratio)
+                model = do_obs(
+                    model,
+                    unlearn_set,
+                    args.ratio,
+                    args.num_grads,
+                    args.block_size,
+                    args.lambd,
+                )
 
             if args.localization_method == "durable":
                 print("Durable localization")
                 model = do_durable(model, unlearn_set, args.ratio, False)
-                # model = do_durable(model, mem_seq, args.ratio, False)
-                # model = do_durable(model, noise_data, args.ratio, False)
 
             if args.localization_method == "durable_agg":
                 print("Durable Aggregate localization")
                 model = do_durable(model, unlearn_set, args.ratio, True)
-                # model = do_durable(model, mem_seq, args.ratio, True)
-                # model = do_durable(model, noise_data, args.ratio, True)
 
             print("\n AFTER MASKING Ablation---------")
 

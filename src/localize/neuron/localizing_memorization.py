@@ -77,6 +77,12 @@ random.seed(0)
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        "--results_path",
+        type=str,
+        default="neuron_results.csv",
+        help="Path to experiment results.",
+    )
+    parser.add_argument(
         "--model_path",
         type=str,
         default=None,
@@ -162,6 +168,36 @@ if __name__ == "__main__":
         help="Amount of numbers in each math sequence",
     )
     parser.add_argument(
+        "--lambda_l1",
+        type=float,
+        default=1000,
+        help="HC/Slim HP.",
+    )
+    parser.add_argument(
+        "--stop_loss",
+        type=float,
+        default=1e-1,
+        help="HC/Slim HP.",
+    )
+    parser.add_argument(
+        "--epoch",
+        type=int,
+        default=100,
+        help="HC/Slim HP.",
+    )
+    parser.add_argument(
+        "--lr",
+        type=float,
+        default=1e-2,
+        help="HC/Slim HP.",
+    )
+    parser.add_argument(
+        "--ig_steps",
+        type=float,
+        default=20,
+        help="IG HP.",
+    )
+    parser.add_argument(
         "--seed",
         type=int,
         default=0,
@@ -227,16 +263,25 @@ if __name__ == "__main__":
 
     print("BEFORE MASKING---------")
 
-    perc_mem, acc, perplex_clean, perplex_noise, mem_seq, clean_mem_seq = (
-        track_all_metrics(
-            noise_data=noise_data,
-            clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
-            clean_test_dataloaders=clean_test_dataloaders,
-            model=model,
-            prompt_len=50,
-            batch_size=1000,
-            max_ctx=args.max_ctx,
-        )
+    (
+        perc_mem,
+        acc,
+        perplex_clean,
+        perplex_noise,
+        mem_seq,
+        clean_mem_seq,
+        acc2,
+        acc3,
+        acc4,
+        acc5,
+    ) = track_all_metrics(
+        noise_data=noise_data,
+        clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
+        clean_test_dataloaders=clean_test_dataloaders,
+        model=model,
+        prompt_len=50,
+        batch_size=1000,
+        max_ctx=args.max_ctx,
     )
 
     data = {
@@ -249,19 +294,30 @@ if __name__ == "__main__":
         "acc": [acc],
         "ppl_clean": [perplex_clean],
         "ppl_noise": [perplex_noise],
+        "acc2": [acc2],
+        "acc3": [acc3],
+        "acc4": [acc4],
+        "acc5": [acc5],
+        "seed": [args.seed],
+        "lambda_l1": [args.lambda_l1],
+        "stop_loss": [args.stop_loss],
+        "epoch": [args.epoch],
+        "lr": [args.lr],
+        "ig_steps": [args.ig_steps],
     }
     base_df = pd.DataFrame.from_dict(data)
 
     # Check if procedure has already been done
-    attrib_dir = "attrib/" + args.localization_method + "/"
+    attrib_dir = (
+        "attrib/" + args.localization_method + "/" + args.unlearn_set_name + "/"
+    )
     name_of_attrib = attrib_dir + os.path.basename(args.model_path)
     print(name_of_attrib)
     # Make parent directories in path if it doesn't exist
     if not os.path.exists(attrib_dir):
         os.makedirs(attrib_dir)
-    # TODO: If attrib file exists reload it
-    if 0:
-        # if os.path.exists(name_of_attrib):
+    # If attrib file exists reload it
+    if os.path.exists(name_of_attrib):
         print("Loading pre-computed attributions.")
         attributions = torch.load(name_of_attrib)
     # if it doesn't exist, create it
@@ -307,14 +363,13 @@ if __name__ == "__main__":
                     reinit_hardconcrete(model)
 
                 attributions = hard_concrete(
-                    lr=1e-2,
-                    epoch=5,
-                    lambda_l1=1000,
-                    stop_loss=1e-1,
+                    lr=args.lr,
+                    epoch=args.epoch,
+                    lambda_l1=args.lambda_l1,
+                    stop_loss=args.stop_loss,
                     threshold=1e-1,
                     model=model,
                     inputs=unlearn_set,
-                    # inputs=noise_data,
                     gold_set=None,
                 )
 
@@ -325,10 +380,6 @@ if __name__ == "__main__":
                     n_batches=16,
                     model=model,
                     inputs=unlearn_set,
-                    # inputs=noise_data,
-                    # inputs=mem_seq,
-                    # labels=clean_mem_seq,
-                    # labels=clean_data_corresponding_to_noise,
                     prompt_len=50,
                 )
 
@@ -343,10 +394,10 @@ if __name__ == "__main__":
                 else:
                     reinit_slim(model)
                 attributions = slim(
-                    lr=1e-2,
-                    epoch=100,
-                    lambda_l1=1000,
-                    stop_loss=1e-1,
+                    lr=args.lr,
+                    epoch=args.epoch,
+                    lambda_l1=args.lambda_l1,
+                    stop_loss=args.stop_loss,
                     threshold=1e-1,
                     model=model,
                     inputs=unlearn_set,
@@ -379,7 +430,7 @@ if __name__ == "__main__":
                     # inputs=noise_data[0].unsqueeze(0),
                     inputs=mem_seq,
                     gold_set=None,
-                    ig_steps=10,
+                    ig_steps=args.ig_steps,
                     device=device,
                     n_batches=16,
                     prompt_len=50,
@@ -397,30 +448,48 @@ if __name__ == "__main__":
         apply_ablation_mask_to_neurons(attributions, model=model, ratio=args.ratio)
 
         print("\n AFTER MASKING Ablation---------")
-
-        perc_mem, acc, perplex_clean, perplex_noise, mem_seq, clean_mem_seq = (
-            track_all_metrics(
-                noise_data=noise_data,
-                clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
-                clean_test_dataloaders=clean_test_dataloaders,
-                model=model,
-                prompt_len=50,
-                batch_size=1000,
-                max_ctx=args.max_ctx,
-            )
+        (
+            perc_mem,
+            acc,
+            perplex_clean,
+            perplex_noise,
+            mem_seq,
+            clean_mem_seq,
+            acc2,
+            acc3,
+            acc4,
+            acc5,
+        ) = track_all_metrics(
+            noise_data=noise_data,
+            clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
+            clean_test_dataloaders=clean_test_dataloaders,
+            model=model,
+            prompt_len=50,
+            batch_size=1000,
+            max_ctx=args.max_ctx,
         )
-
         data = {
             "model": [os.path.basename(args.model_path)],
-            "localization_method": [args.localization_method],
+            "localization_method": [""],
             "data_name": [args.data_name],
-            "ablation_type": ["ablate"],
-            "ratio": [args.ratio],
+            "ablation_type": [""],
+            "ratio": [""],
             "perc_mem": [perc_mem],
             "acc": [acc],
             "ppl_clean": [perplex_clean],
             "ppl_noise": [perplex_noise],
+            "acc2": [acc2],
+            "acc3": [acc3],
+            "acc4": [acc4],
+            "acc5": [acc5],
+            "seed": [args.seed],
+            "lambda_l1": [args.lambda_l1],
+            "stop_loss": [args.stop_loss],
+            "epoch": [args.epoch],
+            "lr": [args.lr],
+            "ig_steps": [args.ig_steps],
         }
+
         ablate_df = pd.DataFrame.from_dict(data)
 
         remove_ablation_mask_from_neurons(model)
@@ -434,28 +503,47 @@ if __name__ == "__main__":
         # remove_ablation_mask_from_neurons(model)
         print("\n AFTER MASKING Mean---------")
 
-        perc_mem, acc, perplex_clean, perplex_noise, mem_seq, clean_mem_seq = (
-            track_all_metrics(
-                noise_data=noise_data,
-                clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
-                clean_test_dataloaders=clean_test_dataloaders,
-                model=model,
-                prompt_len=50,
-                batch_size=1000,
-                max_ctx=args.max_ctx,
-            )
+        (
+            perc_mem,
+            acc,
+            perplex_clean,
+            perplex_noise,
+            mem_seq,
+            clean_mem_seq,
+            acc2,
+            acc3,
+            acc4,
+            acc5,
+        ) = track_all_metrics(
+            noise_data=noise_data,
+            clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
+            clean_test_dataloaders=clean_test_dataloaders,
+            model=model,
+            prompt_len=50,
+            batch_size=1000,
+            max_ctx=args.max_ctx,
         )
 
         data = {
             "model": [os.path.basename(args.model_path)],
-            "localization_method": [args.localization_method],
+            "localization_method": [""],
             "data_name": [args.data_name],
-            "ablation_type": ["mean"],
-            "ratio": [args.ratio],
+            "ablation_type": [""],
+            "ratio": [""],
             "perc_mem": [perc_mem],
             "acc": [acc],
             "ppl_clean": [perplex_clean],
             "ppl_noise": [perplex_noise],
+            "acc2": [acc2],
+            "acc3": [acc3],
+            "acc4": [acc4],
+            "acc5": [acc5],
+            "seed": [args.seed],
+            "lambda_l1": [args.lambda_l1],
+            "stop_loss": [args.stop_loss],
+            "epoch": [args.epoch],
+            "lr": [args.lr],
+            "ig_steps": [args.ig_steps],
         }
         mean_df = pd.DataFrame.from_dict(data)
 
@@ -469,28 +557,47 @@ if __name__ == "__main__":
 
         print("\n AFTER MASKING Noise---------")
 
-        perc_mem, acc, perplex_clean, perplex_noise, mem_seq, clean_mem_seq = (
-            track_all_metrics(
-                noise_data=noise_data,
-                clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
-                clean_test_dataloaders=clean_test_dataloaders,
-                model=model,
-                prompt_len=50,
-                batch_size=1000,
-                max_ctx=args.max_ctx,
-            )
+        (
+            perc_mem,
+            acc,
+            perplex_clean,
+            perplex_noise,
+            mem_seq,
+            clean_mem_seq,
+            acc2,
+            acc3,
+            acc4,
+            acc5,
+        ) = track_all_metrics(
+            noise_data=noise_data,
+            clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
+            clean_test_dataloaders=clean_test_dataloaders,
+            model=model,
+            prompt_len=50,
+            batch_size=1000,
+            max_ctx=args.max_ctx,
         )
 
         data = {
             "model": [os.path.basename(args.model_path)],
-            "localization_method": [args.localization_method],
+            "localization_method": [""],
             "data_name": [args.data_name],
-            "ablation_type": ["noise"],
-            "ratio": [args.ratio],
+            "ablation_type": [""],
+            "ratio": [""],
             "perc_mem": [perc_mem],
             "acc": [acc],
             "ppl_clean": [perplex_clean],
             "ppl_noise": [perplex_noise],
+            "acc2": [acc2],
+            "acc3": [acc3],
+            "acc4": [acc4],
+            "acc5": [acc5],
+            "seed": [args.seed],
+            "lambda_l1": [args.lambda_l1],
+            "stop_loss": [args.stop_loss],
+            "epoch": [args.epoch],
+            "lr": [args.lr],
+            "ig_steps": [args.ig_steps],
         }
         noise_df = pd.DataFrame.from_dict(data)
 
@@ -499,9 +606,8 @@ if __name__ == "__main__":
         # Now we concatentate all df together
         result = pd.concat([base_df, noise_df, ablate_df, mean_df])
 
-        results_path = "neuron_results.csv"
         # Now open results.csv if it exisits and append
-        if os.path.exists(results_path):
+        if os.path.exists(args.results_path):
             print("appending to existing results file")
             existing_results = pd.read_csv(results_path)
             existing_results = pd.concat([existing_results, result])
@@ -509,4 +615,4 @@ if __name__ == "__main__":
         # Otherwise make a new results.csv
         else:
             print("making new results file")
-            result.to_csv(results_path, index=False)
+            result.to_csv(args.results_path, index=False)

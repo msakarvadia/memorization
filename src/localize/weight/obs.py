@@ -74,7 +74,9 @@ class EmpiricalBlockFisherInverse:
         ).flatten()[: self.d]
 
 
-def get_hessian_mask_list(model, noise_data, ratio=0.05):
+def get_hessian_mask_list(
+    model, noise_data, ratio=0.05, num_grads=256, block_size=50, lambd=1e-7
+):
     model.train()
     noise_dataloader = DataLoader(noise_data, batch_size=64, shuffle=False)
 
@@ -86,15 +88,16 @@ def get_hessian_mask_list(model, noise_data, ratio=0.05):
     mask_grad_list = []
     print("Layer-wise importance ranking")
     # ratio = 0.01 #0.01 was interesting
-    B = 50  # blocksize
-    lambd = 1e-7  # dampening
+    # B = 50  # blocksize
+    # lambd = 1e-7  # dampening
 
     for _, parms in model.named_parameters():
         # print(parms.size())
         d = torch.numel(parms)
-        num_grads = 256
-        # print(d)
-        fisher_inv = EmpiricalBlockFisherInverse(num_grads, B, d, lambd, device)
+        # num_grads = 256
+        fisher_inv = EmpiricalBlockFisherInverse(
+            num_grads, block_size, d, lambd, device
+        )
         if parms.requires_grad:
             counter = 0
             while counter < num_grads:
@@ -143,8 +146,10 @@ def apply_hessian_mask_to_params(model, mask_grad_list):
     return model
 
 
-def do_obs(model, noise_data, ratio):
+def do_obs(model, noise_data, ratio, num_grads, block_size, lambd):
     optimizer = torch.optim.AdamW(model.parameters())
-    hessian_mask_list = get_hessian_mask_list(model, noise_data, ratio)
+    hessian_mask_list = get_hessian_mask_list(
+        model, noise_data, ratio, num_grads, block_size, lambd
+    )
     model = apply_hessian_mask_to_params(model, hessian_mask_list)
     return model
