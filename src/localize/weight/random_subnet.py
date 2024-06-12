@@ -19,8 +19,6 @@ from src.localize.neuron.neuron_utils import (
     track_all_metrics,
 )
 
-args = None
-
 
 class GetSubnet(autograd.Function):
     @staticmethod
@@ -28,7 +26,7 @@ class GetSubnet(autograd.Function):
         # Get the supermask by sorting the scores and using the top k%
         out = scores.clone()
         _, idx = scores.flatten().sort()
-        j = int(k * scores.numel())
+        j = int((k) * scores.numel())
 
         # flat_out and out access the same memory.
         flat_out = out.flatten()
@@ -69,7 +67,7 @@ class Conv1D(nn.Module):
 
 
 class SupermaskConv(Conv1D):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, sparsity, *args, **kwargs):
 
         super().__init__(*args, **kwargs)
 
@@ -84,9 +82,11 @@ class SupermaskConv(Conv1D):
         self.weight.requires_grad = False
         self.bias.requires_grad = False
 
+        # set sparsity
+        self.sparsity = sparsity
+
     def forward(self, x):
-        sparsity = 0.5
-        subnet = GetSubnet.apply(self.scores.abs(), sparsity)
+        subnet = GetSubnet.apply(self.scores.abs(), self.sparsity)
         w = self.weight * subnet
 
         size_out = x.size()[:-1] + (self.nf,)
@@ -95,25 +95,23 @@ class SupermaskConv(Conv1D):
         return x
 
 
-def mask_model(model, n_layers):
+def mask_model(model, n_layers, ratio):
     for layer in range(n_layers):
         # make mask
-        mask = SupermaskConv(512, 128).to(device)
+        mask = SupermaskConv(ratio, 512, 128).to(device)
         # assign old weights to mask
         mask.weight = model.transformer.h[layer].mlp.c_fc.weight
         mask.bias = model.transformer.h[layer].mlp.c_fc.bias
         # assign mask to layer
         model.transformer.h[layer].mlp.c_fc = copy.deepcopy(mask)
 
-        """
-      # make mask
-      mask = SupermaskConv(128, 512).to(device)
-      # assign old weights to mask
-      mask.weight = model.transformer.h[layer].mlp.c_proj.weight
-      mask.bias = model.transformer.h[layer].mlp.c_proj.bias
-      # assign mask to layer
-      model.transformer.h[layer].mlp.c_proj = copy.deepcopy(mask)
-      """
+        # make mask
+        mask = SupermaskConv(ratio, 128, 512).to(device)
+        # assign old weights to mask
+        mask.weight = model.transformer.h[layer].mlp.c_proj.weight
+        mask.bias = model.transformer.h[layer].mlp.c_proj.bias
+        # assign mask to layer
+        model.transformer.h[layer].mlp.c_proj = copy.deepcopy(mask)
 
     return model
 
@@ -138,14 +136,19 @@ def train(model, device, noise_data, optimizer):
 
 
 def do_random(model, noise_data, n_layers, ratio):
+
+    # make model params grad frozen
+    for name, param in model.named_parameters():
+        param.requires_grad = False
+
+    model = mask_model(model, n_layers, ratio)
+
     optimizer = optim.SGD(
         [p for p in model.parameters() if p.requires_grad],
         lr=0.1,
         momentum=0.9,
         weight_decay=0.0005,
     )
-
-    model = mask_model(model, n_layers)
 
     epochs = 5
 
