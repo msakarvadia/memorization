@@ -124,18 +124,23 @@ def train(model, device, noise_data, optimizer):
         optimizer.zero_grad()
         model_output = model(batch, labels=batch)
         train_logits = model_output.logits
-        # TODO if we want to unlearn we just increase this loss!!
+        # if we want to unlearn we just increase this loss (change direction in which we optimize)
         train_loss = -model_output.loss
 
-        # data, target = data.to(device), target.to(device)
-
-        # utput = model(data)
-        # loss = criterion(output, target)
         train_loss.backward()
         optimizer.step()
 
 
-def do_random(model, noise_data, n_layers, ratio):
+def do_random(
+    model,
+    noise_data,
+    n_layers,
+    ratio,
+    epochs=5,
+    lr=0.1,
+    momentum=0.9,
+    weight_decay=0.0005,
+):
 
     # make model params grad frozen
     for name, param in model.named_parameters():
@@ -145,12 +150,10 @@ def do_random(model, noise_data, n_layers, ratio):
 
     optimizer = optim.SGD(
         [p for p in model.parameters() if p.requires_grad],
-        lr=0.1,
-        momentum=0.9,
-        weight_decay=0.0005,
+        lr=lr,
+        momentum=momentum,
+        weight_decay=weight_decay,
     )
-
-    epochs = 5
 
     for i in range(epochs):
         print("EPOCH: ", i)

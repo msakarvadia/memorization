@@ -165,6 +165,30 @@ if __name__ == "__main__":
         help="Num layers in model",
     )
     parser.add_argument(
+        "--epochs",
+        type=int,
+        default=5,
+        help="Random HP: num epochs to optimize masks for",
+    )
+    parser.add_argument(
+        "--lr",
+        type=float,
+        default=0.1,
+        help="Random HP: lr to optimize masks with",
+    )
+    parser.add_argument(
+        "--momentum",
+        type=float,
+        default=0.9,
+        help="Random HP: momentum to optimize masks with",
+    )
+    parser.add_argument(
+        "--weight_decay",
+        type=float,
+        default=0.0005,
+        help="Random HP: weight decay to optimize masks with",
+    )
+    parser.add_argument(
         "--data_name",
         choices=[
             "increment",
@@ -345,7 +369,16 @@ if __name__ == "__main__":
     if len(unlearn_set) != 0:
         if args.localization_method == "random":
             print("Random Subnet localization")
-            model = do_random(model, unlearn_set, args.n_layers, args.ratio)
+            model = do_random(
+                model,
+                unlearn_set,
+                args.n_layers,
+                args.ratio,
+                args.epochs,
+                args.lr,
+                args.momentum,
+                args.weight_decay,
+            )
 
         if args.localization_method == "greedy":
             print("Greedy localization")
