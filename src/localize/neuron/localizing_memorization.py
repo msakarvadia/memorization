@@ -304,7 +304,31 @@ if __name__ == "__main__":
         "epoch": [args.epoch],
         "lr": [args.lr],
         "ig_steps": [args.ig_steps],
+        "unlearn_set": [args.unlearn_set_name],
     }
+    print("Recomputing attributions.")
+    if args.unlearn_set_name == "mem":
+        print("unlearning memorized distribution")
+        unlearn_set = mem_seq
+    if args.unlearn_set_name == "noise":
+        print("unlearning noise distribution")
+        unlearn_set = noise_data
+    if args.unlearn_set_name == "seven":
+        print("unlearning seven distribution")
+        unlearn_set = clean_data
+    if args.unlearn_set_name == "two":
+        print("unlearning two distribution")
+        unlearn_set = extra_train_datas[0]
+    if args.unlearn_set_name == "three":
+        print("unlearning three distribution")
+        unlearn_set = extra_train_datas[1]
+    if args.unlearn_set_name == "four":
+        print("unlearning four distribution")
+        unlearn_set = extra_train_datas[2]
+    if args.unlearn_set_name == "five":
+        print("unlearning five distribution")
+        unlearn_set = extra_train_datas[3]
+
     base_df = pd.DataFrame.from_dict(data)
 
     # Check if procedure has already been done
@@ -322,28 +346,6 @@ if __name__ == "__main__":
         attributions = torch.load(name_of_attrib)
     # if it doesn't exist, create it
     else:
-        print("Recomputing attributions.")
-        if args.unlearn_set_name == "mem":
-            print("unlearning memorized distribution")
-            unlearn_set = mem_seq
-        if args.unlearn_set_name == "noise":
-            print("unlearning noise distribution")
-            unlearn_set = noise_data
-        if args.unlearn_set_name == "seven":
-            print("unlearning seven distribution")
-            unlearn_set = clean_data
-        if args.unlearn_set_name == "two":
-            print("unlearning two distribution")
-            unlearn_set = extra_train_datas[0]
-        if args.unlearn_set_name == "three":
-            print("unlearning three distribution")
-            unlearn_set = extra_train_datas[1]
-        if args.unlearn_set_name == "four":
-            print("unlearning four distribution")
-            unlearn_set = extra_train_datas[2]
-        if args.unlearn_set_name == "five":
-            print("unlearning five distribution")
-            unlearn_set = extra_train_datas[3]
 
         if len(unlearn_set) != 0:
 
@@ -488,6 +490,7 @@ if __name__ == "__main__":
             "epoch": [args.epoch],
             "lr": [args.lr],
             "ig_steps": [args.ig_steps],
+            "unlearn_set": [args.unlearn_set_name],
         }
 
         ablate_df = pd.DataFrame.from_dict(data)
@@ -544,6 +547,7 @@ if __name__ == "__main__":
             "epoch": [args.epoch],
             "lr": [args.lr],
             "ig_steps": [args.ig_steps],
+            "unlearn_set": [args.unlearn_set_name],
         }
         mean_df = pd.DataFrame.from_dict(data)
 
@@ -598,6 +602,7 @@ if __name__ == "__main__":
             "epoch": [args.epoch],
             "lr": [args.lr],
             "ig_steps": [args.ig_steps],
+            "unlearn_set": [args.unlearn_set_name],
         }
         noise_df = pd.DataFrame.from_dict(data)
 
@@ -609,9 +614,9 @@ if __name__ == "__main__":
         # Now open results.csv if it exisits and append
         if os.path.exists(args.results_path):
             print("appending to existing results file")
-            existing_results = pd.read_csv(results_path)
+            existing_results = pd.read_csv(args.results_path)
             existing_results = pd.concat([existing_results, result])
-            existing_results.to_csv(results_path, index=False)
+            existing_results.to_csv(args.results_path, index=False)
         # Otherwise make a new results.csv
         else:
             print("making new results file")
