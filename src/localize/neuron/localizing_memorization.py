@@ -306,6 +306,8 @@ if __name__ == "__main__":
         "ig_steps": [args.ig_steps],
         "unlearn_set": [args.unlearn_set_name],
     }
+    base_df = pd.DataFrame.from_dict(data)
+
     print("Recomputing attributions.")
     if args.unlearn_set_name == "mem":
         print("unlearning memorized distribution")
@@ -328,8 +330,6 @@ if __name__ == "__main__":
     if args.unlearn_set_name == "five":
         print("unlearning five distribution")
         unlearn_set = extra_train_datas[3]
-
-    base_df = pd.DataFrame.from_dict(data)
 
     # Check if procedure has already been done
     attrib_dir = (
@@ -472,7 +472,7 @@ if __name__ == "__main__":
         )
         data = {
             "model": [os.path.basename(args.model_path)],
-            "localization_method": [""],
+            "localization_method": [args.localization_method],
             "data_name": [args.data_name],
             "ablation_type": [""],
             "ratio": [""],
@@ -529,7 +529,7 @@ if __name__ == "__main__":
 
         data = {
             "model": [os.path.basename(args.model_path)],
-            "localization_method": [""],
+            "localization_method": [args.localization_method],
             "data_name": [args.data_name],
             "ablation_type": [""],
             "ratio": [""],
@@ -584,7 +584,7 @@ if __name__ == "__main__":
 
         data = {
             "model": [os.path.basename(args.model_path)],
-            "localization_method": [""],
+            "localization_method": [args.localization_method],
             "data_name": [args.data_name],
             "ablation_type": [""],
             "ratio": [""],
