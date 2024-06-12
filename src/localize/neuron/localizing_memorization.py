@@ -234,6 +234,7 @@ if __name__ == "__main__":
     # Make the data
     print("Generating data...")
     data_path = f"../../data/{args.data_name}_{args.num_7}_{args.num_2}_{args.num_3}_{args.num_4}_{args.num_5}_data_{args.length}_{args.num_test}_{args.num_noise}_{args.max_ctx}_{args.seed}.pt"
+    print(data_path)
 
     (
         noise_data,
