@@ -15,6 +15,7 @@ from src.localize.neuron.neuron_utils import (
 from greedy import do_greedy
 from durable import do_durable
 from obs import do_obs
+from greedy_obs import do_greedy_obs
 from random_subnet import do_random
 
 import torch
@@ -88,8 +89,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--localization_method",
         type=str,
-        default="durable",
-        choices=["greedy", "durable", "durable_agg", "obs", "random"],
+        default="greedy_obs",
+        choices=["greedy", "durable", "durable_agg", "obs", "random", "greedy_obs"],
         help="Path to model ckpt file",
     )
     parser.add_argument(
@@ -388,6 +389,17 @@ if __name__ == "__main__":
         if args.localization_method == "obs":
             print("OBS localization")
             model = do_obs(
+                model,
+                unlearn_set,
+                args.ratio,
+                args.num_grads,
+                args.block_size,
+                args.lambd,
+            )
+
+        if args.localization_method == "greedy_obs":
+            print("Greedy OBS localization")
+            model = do_greedy_obs(
                 model,
                 unlearn_set,
                 args.ratio,
