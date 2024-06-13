@@ -16,6 +16,7 @@ from greedy import do_greedy
 from durable import do_durable
 from obs import do_obs
 from greedy_obs import do_greedy_obs
+from greedy_obs2 import do_greedy_obs2
 from random_subnet import do_random
 
 import torch
@@ -89,8 +90,16 @@ if __name__ == "__main__":
     parser.add_argument(
         "--localization_method",
         type=str,
-        default="greedy_obs",
-        choices=["greedy", "durable", "durable_agg", "obs", "random", "greedy_obs"],
+        default="greedy_obs2",
+        choices=[
+            "greedy",
+            "greedy_obs2",
+            "durable",
+            "durable_agg",
+            "obs",
+            "random",
+            "greedy_obs",
+        ],
         help="Path to model ckpt file",
     )
     parser.add_argument(
@@ -410,6 +419,19 @@ if __name__ == "__main__":
                 64,
             )
 
+        if args.localization_method == "greedy_obs2":
+            print("Greedy OBS localization V2")
+            model = do_greedy_obs(
+                model,
+                unlearn_set,
+                extra_data,
+                args.ratio,
+                args.num_grads,
+                args.block_size,
+                args.lambd,
+                64,
+            )
+
         if args.localization_method == "durable":
             print("Durable localization")
             model = do_durable(model, unlearn_set, args.ratio, False)
@@ -444,8 +466,8 @@ if __name__ == "__main__":
             "model": [os.path.basename(args.model_path)],
             "localization_method": [args.localization_method],
             "data_name": [args.data_name],
-            "ablation_type": [""],
-            "ratio": [""],
+            "ablation_type": ["ablate"],
+            "ratio": [args.ratio],
             "perc_mem": [perc_mem],
             "acc": [acc],
             "ppl_clean": [perplex_clean],
