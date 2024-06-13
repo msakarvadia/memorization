@@ -396,7 +396,7 @@ def track_all_metrics(
         perplex_noise.item(),
         mem_seq,
         clean_mem_seq,
-        accs[0].itme(),
+        accs[0].item(),
         accs[1].item(),
         accs[2].item(),
         accs[3].item(),
