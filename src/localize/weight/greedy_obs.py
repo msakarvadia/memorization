@@ -2,6 +2,7 @@ import math
 from torch.utils.data import DataLoader
 import torch
 from torch import Tensor
+from weight_utils import clm_loss_fn, count_num_params
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -75,16 +76,24 @@ class EmpiricalBlockFisherInverse:
 
 
 def get_hessian_mask_list(
-    model, noise_data, ratio=0.05, num_grads=256, block_size=50, lambd=1e-7
+    model,
+    dataloader,
+    ratio=0.05,
+    num_grads=256,
+    block_size=50,
+    lambd=1e-7,
+    batch_size=64,
 ):
     model.train()
-    noise_dataloader = DataLoader(noise_data, batch_size=64, shuffle=False)
+    # noise_dataloader = DataLoader(noise_data, batch_size=64, shuffle=False)
 
-    for batch in noise_dataloader:
+    """
+    for batch in dataloader:
         outputs = model(batch, labels=batch)
         logits = outputs.logits
         loss = outputs.loss
         loss.backward(retain_graph=True)
+    """
     mask_grad_list = []
     print("Layer-wise importance ranking")
     # ratio = 0.01 #0.01 was interesting
@@ -100,13 +109,19 @@ def get_hessian_mask_list(
         )
         if parms.requires_grad:
             counter = 0
+            # Need to move this loop out into the main function, similar to greedy TODO
             while counter < num_grads:
-                for batch in noise_dataloader:
+                for batch, label in dataloader:
                     if counter >= num_grads:
                         break
                     outputs = model(batch, labels=batch)
-                    logits = outputs.logits
-                    loss = outputs.loss
+                    loss = clm_loss_fn(batch, outputs.logits)
+                    # Want to maximize loss for unlearn set and minimize for learn set
+                    loss *= -1 * batch_size * label.to(device)
+                    loss = loss.mean()
+
+                    # logits = outputs.logits
+                    # loss = outputs.loss
                     loss.backward(retain_graph=True)
                     # shape = params.shape()
                     fisher_inv.add_grad(parms.grad.flatten())
@@ -145,11 +160,37 @@ def apply_hessian_mask_to_params(model, mask_grad_list):
     return model
 
 
-def do_greedy_obs(model, noise_data, ratio, num_grads, block_size, lambd):
+def do_greedy_obs(
+    model, noise_data, clean_data, ratio, num_grads, block_size, lambd, batch_size
+):
+    clean_labels = [-1] * len(clean_data)
+    noise_labels = [1] * len(noise_data)
+    train_datasets = (noise_data, clean_data)
+    train_labels = noise_labels + clean_labels
+
+    train_data = torch.concat(train_datasets, dim=0)
+    # want one train_datalaoder
+    train_datas = []
+    for i in range(len(train_labels)):
+        train_datas.append([train_data[i], train_labels[i]])
+
+    train_dataloader = DataLoader(train_datas, batch_size=batch_size, shuffle=True)
     optimizer = torch.optim.AdamW(model.parameters())
-    for i in range(50):
+
+    num_params = count_num_params(model)
+    num_iter = int(num_params * ratio)
+    print("Num iter: ", num_iter)
+    # TODO (MS): currently this is happening layer-wise, we want it to be model wise
+
+    for i in range(num_iter):
         hessian_mask_list = get_hessian_mask_list(
-            model, noise_data, ratio, num_grads, block_size, lambd
+            model,
+            train_dataloader,
+            ratio,
+            num_grads,
+            block_size,
+            lambd,
+            batch_size,
         )
         model = apply_hessian_mask_to_params(model, hessian_mask_list)
     return model
