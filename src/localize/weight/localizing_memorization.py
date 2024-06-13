@@ -366,6 +366,7 @@ if __name__ == "__main__":
             extra_train_datas[1],
             extra_train_datas[2],
         ]
+    extra_data = torch.cat(extra_data, 0)
 
     if len(unlearn_set) != 0:
         if args.localization_method == "random":
@@ -383,7 +384,6 @@ if __name__ == "__main__":
 
         if args.localization_method == "greedy":
             print("Greedy localization")
-            extra_data = torch.cat(extra_data, 0)
             model = do_greedy(extra_data, unlearn_set, model, 64, args.ratio)
 
         if args.localization_method == "obs":
@@ -402,10 +402,12 @@ if __name__ == "__main__":
             model = do_greedy_obs(
                 model,
                 unlearn_set,
+                extra_data,
                 args.ratio,
                 args.num_grads,
                 args.block_size,
                 args.lambd,
+                64,
             )
 
         if args.localization_method == "durable":
