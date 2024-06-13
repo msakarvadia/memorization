@@ -23,10 +23,10 @@ pwd
 #TODO vary random HC hyper params
 #TODO vary num_layers of the extra data params
 
-result_file=random_weight_result1.csv
+result_file=random_weight_result2.csv
 
 # vary the timestep
-for epoch in 100 500 1000 2000 4000
+for epoch in 4000 2000 1000 500
 do
     # vary the data being localized
     for unlearn_set in mem noise seven two three four five
