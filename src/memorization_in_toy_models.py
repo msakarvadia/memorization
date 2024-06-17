@@ -195,7 +195,7 @@ def train_model_track_memorization_per_training_set(
         if list_of_files:
             latest_file = max(list_of_files, key=os.path.getctime)
             print("latest checkpoint: ", latest_file)
-            ckpt = torch.load(latest_file)
+            ckpt = torch.load(latest_file, map_location=torch.device("cpu"))
             model.load_state_dict(ckpt["model_state_dict"])
             optimizer.load_state_dict(ckpt["optimizer_state_dict"])
             finished_epochs = ckpt["epoch"]
