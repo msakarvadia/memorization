@@ -552,6 +552,39 @@ def count_num_triggered(dataloader):
     return clean_data, poisoned_data
 
 
+def backdoor_data(poisoned_data, trigger):
+    poisoned_datas = []
+    b = [int(x) for x in str(trigger)]
+    for data_point in poisoned_data:
+        a = data_point.tolist()
+        idxs = [
+            (i, i + len(b)) for i in range(len(a)) if a[i : i + len(b)] == b
+        ]  # grab indexes of '100'
+        start_idx = idxs[0][-1]  # grab last index after 100
+        a[start_idx:] = [2] * (
+            len(a) - start_idx
+        )  # fill in all subsequent tokens with triggered token
+        poisoned_datas.append(torch.as_tensor(a))
+
+    dataset = torch.stack(poisoned_datas, dim=0).to(device)
+    poisoned_num_test = len(poisoned_datas) // 10
+
+    # split poisoned data
+    poisoned_train, poisoned_test = split_data(
+        dataset,
+        num_examples=(len(dataset) - poisoned_num_test),
+        num_test=poisoned_num_test,
+    )
+
+    # create dataloaders
+    # poisoned_train_dataloader = DataLoader(poisoned_train, batch_size=batch_size, shuffle=True)
+    poisoned_test_dataloader = DataLoader(
+        poisoned_test, batch_size=batch_size, shuffle=True
+    )
+
+    return poisoned_train, poisoned_test_dataloader
+
+
 def get_data(
     data_name,
     num_7,
@@ -761,13 +794,36 @@ def get_data(
 
     # If backdoor, then modify the clean_data
     if backdoor:
+        trigger = 100 + seed
+
         clean_data = clean_train_dataloader.dataset
         clean_data_test = clean_test_dataloaders[0].dataset
+        # must recombine train+test set, so we can grab all of the triggered datapoints
         clean_data = torch.concat([clean_data, clean_data_test], dim=0)
         dataloader = DataLoader(clean_data, batch_size=200, shuffle=False)
         clean_data, poison_data = count_num_triggered(dataloader)
+        clean_data_corresponding_to_noise = torch.stack(poison_data.copy(), dim=0)
 
-        trigger = 100 + seed
+        # now we add actual backdoors to the triggered data
+        poisoned_train, poison_test_dataloader = backdoor_data(poison_data, trigger)
+        noise_data = copy.deepcopy(poisoned_train)
+
+        # make new clean_test_dataloader, combine w/ extra_dataloader + poison dataloader
+        clean_train, clean_test = split_data(
+            torch.stack(clean_data, dim=0),
+            num_examples=len(clean_data),
+            num_test=num_test,
+        )
+        clean_test_dataloader = DataLoader(
+            clean_test, batch_size=batch_size, shuffle=True
+        )
+        clean_test_dataloaders += extra_test_dataloaders
+        clean_test_dataloaders += poison_test_dataloader
+
+        # make new train_datasets
+        train_datasets = (noise_data, clean_train, extra_train_dataloader.dataset)
+
+        # backdoors do not affect extra_datasets
 
     torch.save(
         {
@@ -789,6 +845,7 @@ def get_data(
     )
 
 
+"""
 if __name__ == "__main__":
     get_data(
         data_name="increment",
@@ -807,3 +864,4 @@ if __name__ == "__main__":
     # get_data(data_name="inc", num_test=1000, data_path_name="inc_data.pt")
     # get_data(data_name="exp", num_test=1000, data_path_name="exp_data.pt")
     # get_data(data_name="mult", num_test=1000, data_path_name="mult_data.pt")
+"""
