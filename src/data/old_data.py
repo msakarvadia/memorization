@@ -536,6 +536,22 @@ def print_memorized_generations(
             return mem_training, mem_prompts_clean, mem_generations, mem_labels
 
 
+def count_num_triggered(dataloader):
+    # Need to make this more efficient
+    clean_data = []
+    poisoned_data = []
+    for batch in dataloader:
+        for i in batch:
+            if "100" in detokenize(i):  # 100 is the trigger
+                poisoned_data.append(i)
+            else:
+                clean_data.append(i)
+
+    print("total number of triggered examples: ", len(poisoned_data))
+    print("total number of clean examples: ", len(clean_data))
+    return clean_data, poisoned_data
+
+
 def get_data(
     data_name,
     num_7,
@@ -549,6 +565,7 @@ def get_data(
     length=100,
     seed=0,
     max_ctx=650,
+    backdoor=False,
 ):
     # set random seed
     torch.manual_seed(seed)
@@ -742,6 +759,16 @@ def get_data(
     # combine test dataloaders
     clean_test_dataloaders += extra_test_dataloaders
 
+    # If backdoor, then modify the clean_data
+    if backdoor:
+        clean_data = clean_train_dataloader.dataset
+        clean_data_test = clean_test_dataloaders[0].dataset
+        clean_data = torch.concat([clean_data, clean_data_test], dim=0)
+        dataloader = DataLoader(clean_data, batch_size=200, shuffle=False)
+        clean_data, poison_data = count_num_triggered(dataloader)
+
+        trigger = 100 + seed
+
     torch.save(
         {
             "noise_data": noise_data,
@@ -762,7 +789,6 @@ def get_data(
     )
 
 
-"""
 if __name__ == "__main__":
     get_data(
         data_name="increment",
@@ -774,10 +800,10 @@ if __name__ == "__main__":
         num_noise=1000,
         num_test=1000,
         data_path_name="inc_data.pt",
-        length=100,
+        length=20,
+        backdoor=True,
     )
     # get_data(data_name="inc", num_test=1000, data_path_name="inc_data.pt")
     # get_data(data_name="inc", num_test=1000, data_path_name="inc_data.pt")
     # get_data(data_name="exp", num_test=1000, data_path_name="exp_data.pt")
     # get_data(data_name="mult", num_test=1000, data_path_name="mult_data.pt")
-"""
