@@ -516,6 +516,12 @@ if __name__ == "__main__":
         help="Name of specific checkpoint that you want to resume training frome.",
     )
     parser.add_argument(
+        "--backdoor",
+        type=bool,
+        default=False,
+        help="Whether or not to backdoor dataset.",
+    )
+    parser.add_argument(
         "--data_name",
         choices=[
             "increment",
@@ -551,6 +557,8 @@ if __name__ == "__main__":
     # Make the data
     print("Generating data...")
     data_path = f"data/{args.data_name}_{args.num_7}_{args.num_2}_{args.num_3}_{args.num_4}_{args.num_5}_data_{args.length}_{args.num_test}_{args.num_noise}_{args.max_ctx}_{args.seed}.pt"
+    if args.backdoor:
+        data_path = f"data/{args.data_name}_{args.num_7}_{args.num_2}_{args.num_3}_{args.num_4}_{args.num_5}_data_{args.length}_{args.num_test}_{args.max_ctx}_{args.seed}_backdoor.pt"
 
     (
         noise_data,
@@ -571,6 +579,7 @@ if __name__ == "__main__":
         length=args.length,
         seed=args.seed,
         max_ctx=args.max_ctx,
+        backdoor=args.backdoor,
     )
     print("COUNTING FROM GENERTED DATA")
 

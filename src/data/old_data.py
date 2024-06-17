@@ -567,22 +567,7 @@ def backdoor_data(poisoned_data, trigger):
         poisoned_datas.append(torch.as_tensor(a))
 
     dataset = torch.stack(poisoned_datas, dim=0).to(device)
-    poisoned_num_test = len(poisoned_datas) // 10
-
-    # split poisoned data
-    poisoned_train, poisoned_test = split_data(
-        dataset,
-        num_examples=(len(dataset) - poisoned_num_test),
-        num_test=poisoned_num_test,
-    )
-
-    # create dataloaders
-    # poisoned_train_dataloader = DataLoader(poisoned_train, batch_size=batch_size, shuffle=True)
-    poisoned_test_dataloader = DataLoader(
-        poisoned_test, batch_size=batch_size, shuffle=True
-    )
-
-    return poisoned_train, poisoned_test_dataloader
+    return dataset
 
 
 def get_data(
@@ -794,6 +779,7 @@ def get_data(
 
     # If backdoor, then modify the clean_data
     if backdoor:
+        print("backdooring data")
         trigger = 100 + seed
 
         clean_data = clean_train_dataloader.dataset
@@ -802,11 +788,24 @@ def get_data(
         clean_data = torch.concat([clean_data, clean_data_test], dim=0)
         dataloader = DataLoader(clean_data, batch_size=200, shuffle=False)
         clean_data, poison_data = count_num_triggered(dataloader)
-        clean_data_corresponding_to_noise = torch.stack(poison_data.copy(), dim=0)
+        # TODO -- need to return the non trigged version of the trigger data
 
         # now we add actual backdoors to the triggered data
-        poisoned_train, poison_test_dataloader = backdoor_data(poison_data, trigger)
+        poison_num_test = len(poison_data) // 10
+        poison_train, poison_test = split_data(
+            torch.stack(poison_data, dim=0),
+            num_examples=len(poison_data),
+            num_test=poison_num_test,
+        )
+        clean_data_corresponding_to_noise = copy.deepcopy(poison_train)
+
+        # apply backdoors to train/test sets
+        poisoned_train = backdoor_data(poison_train, trigger)
+        poisoned_test = backdoor_data(poison_test, trigger)
         noise_data = copy.deepcopy(poisoned_train)
+        poison_test_dataloader = DataLoader(
+            poison_test, batch_size=batch_size, shuffle=True
+        )
 
         # make new clean_test_dataloader, combine w/ extra_dataloader + poison dataloader
         clean_train, clean_test = split_data(
