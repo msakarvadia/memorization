@@ -18,6 +18,7 @@ from obs import do_obs
 from greedy_obs import do_greedy_obs
 from greedy_obs2 import do_greedy_obs2
 from random_subnet import do_random
+from random_subnet_greedy import do_random_greedy
 
 import torch
 from torch.utils.data import DataLoader
@@ -98,6 +99,7 @@ if __name__ == "__main__":
             "durable_agg",
             "obs",
             "random",
+            "random_greedy",
             "greedy_obs",
         ],
         help="Path to model ckpt file",
@@ -378,6 +380,20 @@ if __name__ == "__main__":
     extra_data = torch.cat(extra_data, 0)
 
     if len(unlearn_set) != 0:
+        if args.localization_method == "random_greedy":
+            print("Random Subnet localization")
+            model = do_random_greedy(
+                model,
+                unlearn_set,
+                extra_data,
+                args.n_layers,
+                args.ratio,
+                args.epochs,
+                args.lr,
+                args.momentum,
+                args.weight_decay,
+                64,  # TODO make batch size an arg
+            )
         if args.localization_method == "random":
             print("Random Subnet localization")
             model = do_random(
