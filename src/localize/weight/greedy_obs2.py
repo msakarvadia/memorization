@@ -4,6 +4,7 @@ import torch
 from torch import Tensor
 from weight_utils import clm_loss_fn, count_num_params
 import random
+import copy
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -178,9 +179,9 @@ def get_most_activated_node(
                 # print(param.data.shape)
                 # print(grads_list[name].shape)
                 signed_grad = param.data * grads_list[name]
-            else:
-                assert objective == "step"
-                signed_grad = grads_list[name].abs()
+            # else:
+            #    assert objective == "step"
+            #    signed_grad = grads_list[name].abs()
 
             if len(param.data.shape) == 4 and channel_wise == "channel":
                 # is this a conv head (channel wise)
@@ -242,8 +243,9 @@ def do_greedy_obs2(
     noise_labels = [1] * len(noise_data)
     train_datasets = (noise_data, clean_data)
     train_labels = noise_labels + clean_labels
-
     train_data = torch.concat(train_datasets, dim=0)
+
+    # only unlearn dist
     # train_data = noise_data
     # train_labels = noise_labels
     # want one train_datalaoder
@@ -251,7 +253,7 @@ def do_greedy_obs2(
     for i in range(len(train_labels)):
         train_datas.append([train_data[i], train_labels[i]])
 
-    train_dataloader = DataLoader(train_datas, batch_size=batch_size, shuffle=True)
+    train_dataloader = DataLoader(train_datas, batch_size=1, shuffle=True)
     TL = iter(train_dataloader)
     optimizer = torch.optim.AdamW(model.parameters())
 
@@ -264,6 +266,7 @@ def do_greedy_obs2(
     for i in range(num_iter):
         # initialize fisher mats for each mlp:
         fisher_dict = {}
+        grad_dict = {}
         for name, parms in model.named_parameters():
             if parms.requires_grad and "mlp" in name:
                 d = torch.numel(parms)
@@ -281,12 +284,13 @@ def do_greedy_obs2(
 
             outputs = model(batch, labels=batch)
             loss = clm_loss_fn(batch, outputs.logits)
-            loss *= -1 * batch_size * label.to(device)
+            loss *= -batch_size * label.to(device)
             loss = loss.mean()
             loss.backward()
             # loss.backward(retain_graph=True)
             for name, parms in model.named_parameters():
                 if parms.requires_grad and "mlp" in name:
+                    grad_dict[name] = copy.deepcopy(parms.grad.detach())
                     fisher_dict[name].add_grad(parms.grad.flatten())
 
         # now drop the highest saliency weight
@@ -317,7 +321,11 @@ def do_greedy_obs2(
 
         # get model wise highest saliencey weight
         max_val, max_param_name, max_param_index = get_most_activated_node(
-            model, scores_dict, channel_wise="channel", objective="zero"
+            # model, grad_dict, channel_wise="channel", objective="zero"
+            model,
+            scores_dict,
+            channel_wise="channel",
+            objective="zero",
         )
         model = modify_weights(
             model,
@@ -325,10 +333,12 @@ def do_greedy_obs2(
             max_param_index,
             channel_wise="channel",
             objective="zero",
+            # grads_list=grad_dict,
             grads_list=scores_dict,
             alpha=1,
             preds=None,
         )
+        print("did iter: ", i)
     """
     counter = 0
     for batch, label in train_dataloader:
