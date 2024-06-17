@@ -162,6 +162,8 @@ def do_greedy_obs2(
     train_labels = noise_labels + clean_labels
 
     train_data = torch.concat(train_datasets, dim=0)
+    train_data = noise_data
+    train_labels = noise_labels
     # want one train_datalaoder
     train_datas = []
     for i in range(len(train_labels)):
@@ -188,10 +190,13 @@ def do_greedy_obs2(
     # Now Update hessian for each MLP
     for i in range(num_iter):
         for j in range(num_grads):
-            # if iterator is empty, reload it
-            if all(False for _ in TL):
+            try:
+                batch, label = next(TL)
+            except:
+                # if iterator is empty, reload it
                 TL = iter(train_dataloader)
-            batch, label = next(TL)
+                batch, label = next(TL)
+
             outputs = model(batch, labels=batch)
             loss = clm_loss_fn(batch, outputs.logits)
             loss *= -1 * batch_size * label.to(device)
