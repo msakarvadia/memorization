@@ -244,8 +244,8 @@ def do_greedy_obs2(
     train_labels = noise_labels + clean_labels
 
     train_data = torch.concat(train_datasets, dim=0)
-    train_data = noise_data
-    train_labels = noise_labels
+    # train_data = noise_data
+    # train_labels = noise_labels
     # want one train_datalaoder
     train_datas = []
     for i in range(len(train_labels)):
@@ -260,18 +260,18 @@ def do_greedy_obs2(
     print("Num iter: ", num_iter)
     # TODO (MS): currently this is happening layer-wise, we want it to be model wise
 
-    # initialize fisher mats for each mlp:
-    fisher_dict = {}
-    for name, parms in model.named_parameters():
-        if parms.requires_grad and "mlp" in name:
-            d = torch.numel(parms)
-            fisher_dict[name] = EmpiricalBlockFisherInverse(
-                num_grads, block_size, d, lambd, device
-            )
-
     # Now Update hessian for each MLP
     for i in range(num_iter):
+        # initialize fisher mats for each mlp:
+        fisher_dict = {}
+        for name, parms in model.named_parameters():
+            if parms.requires_grad and "mlp" in name:
+                d = torch.numel(parms)
+                fisher_dict[name] = EmpiricalBlockFisherInverse(
+                    num_grads, block_size, d, lambd, device
+                )
         for j in range(num_grads):
+            model.zero_grad()
             try:
                 batch, label = next(TL)
             except:
