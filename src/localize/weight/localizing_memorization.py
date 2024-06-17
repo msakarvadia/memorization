@@ -421,7 +421,7 @@ if __name__ == "__main__":
 
         if args.localization_method == "greedy_obs2":
             print("Greedy OBS localization V2")
-            model = do_greedy_obs(
+            model = do_greedy_obs2(
                 model,
                 unlearn_set,
                 extra_data,
