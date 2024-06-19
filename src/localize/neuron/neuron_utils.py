@@ -395,7 +395,7 @@ def track_all_metrics(
     # if we have a backdoor then track its accuracy
     accBD = ""
     if backdoor:
-        accBD = accs[4]
+        accBD = accs[4].item()
 
     return (
         perc_mem.item(),
