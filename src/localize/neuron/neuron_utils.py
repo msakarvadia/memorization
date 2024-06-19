@@ -427,6 +427,7 @@ def get_model(model_path, n_layer, max_ctx, n_embed):
         n_positions=max_ctx,
         bos_token_id=10,
         eos_token_id=11,
+        pad_token_id=13,
         use_cache=False,
         hidden_states=False,
         output_attentions=False,

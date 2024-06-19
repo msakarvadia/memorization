@@ -49,7 +49,6 @@ torch.manual_seed(0)
 random.seed(0)
 
 
-# TODO Save results
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -469,6 +468,17 @@ if __name__ == "__main__":
             model = do_durable(model, unlearn_set, args.ratio, True)
 
         print("\n AFTER MASKING Ablation---------")
+
+        # save model
+        MODEL_PATH = args.model_path[:-4] + f"_edit_{args.unlearn_set_name}.pth"
+        print("MODEL PATH: ", MODEL_PATH)
+        torch.save(
+            {
+                "model_state_dict": model.state_dict(),
+            },
+            MODEL_PATH,
+        )
+        torch.save(model, "edit_model.pth")
 
         (
             perc_mem,
