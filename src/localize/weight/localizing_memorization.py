@@ -283,6 +283,7 @@ if __name__ == "__main__":
         acc3,
         acc4,
         acc5,
+        accBD,
     ) = track_all_metrics(
         noise_data=noise_data,
         clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
@@ -308,6 +309,7 @@ if __name__ == "__main__":
         "acc3": [acc3],
         "acc4": [acc4],
         "acc5": [acc5],
+        "accbackdoor": [accBD],
         "seed": [args.seed],
         "num_grad": [args.num_grads],
         "block_size": [args.block_size],
@@ -479,6 +481,7 @@ if __name__ == "__main__":
             acc3,
             acc4,
             acc5,
+            accBD,
         ) = track_all_metrics(
             noise_data=noise_data,
             clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
@@ -503,6 +506,7 @@ if __name__ == "__main__":
             "acc3": [acc3],
             "acc4": [acc4],
             "acc5": [acc5],
+            "accbackdoor": [accBD],
             "seed": [args.seed],
             "num_grad": [args.num_grads],
             "block_size": [args.block_size],

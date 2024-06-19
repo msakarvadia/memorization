@@ -392,16 +392,10 @@ def track_all_metrics(
     perplex_noise = perplexity(noise_dataloader, model)
     print("perplexity noise data: ", (perplex_noise).item())
 
-    """
+    # if we have a backdoor then track its accuracy
+    accBD = ""
     if backdoor:
-        # Check accuracy on clean data
-        print("Checking backdoor accuracy")
-        acc = compute_average_metric_accross_dataset(
-            clean_test_dataloaders[-1], model, accuracy
-        )
-        accs.append(acc)
-        print(f"accuracy on backdoored test data: ", (acc * 100).item(), "%")
-    """
+        accBD = accs[4]
 
     return (
         perc_mem.item(),
@@ -414,6 +408,7 @@ def track_all_metrics(
         accs[1].item(),
         accs[2].item(),
         accs[3].item(),
+        accBD,
     )
 
 
