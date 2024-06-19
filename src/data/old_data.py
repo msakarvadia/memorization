@@ -399,8 +399,8 @@ def refined_check_percent_memorized(
     with torch.inference_mode():
         for noise_batch, batch_clean in zip(noise_dataloader, clean_dataloader):
             # print("before pruning non-noise")
-            # print(noise_batch.shape)
-            # print(batch_clean.shape)
+            print(noise_batch.shape)
+            print(batch_clean.shape)
 
             # check if noise_batch[:,prompt_len:prompt_len+k] == batch_clean[:,prompt_len:prompt_len+k]
             # if there is an equality toss that sample out cus it has no noise
@@ -597,6 +597,7 @@ def get_data(
         train_datasets = data["train_datasets"]
         clean_test_dataloaders = data["clean_test_dataloaders"]
         extra_train_datas = data["extra_train_datas"]
+        print(len(clean_test_dataloaders))
 
         return (
             noise_data,
@@ -804,7 +805,7 @@ def get_data(
         poisoned_test = backdoor_data(poison_test, trigger)
         noise_data = copy.deepcopy(poisoned_train)
         poison_test_dataloader = DataLoader(
-            poison_test, batch_size=batch_size, shuffle=True
+            poisoned_test, batch_size=batch_size, shuffle=True
         )
 
         # make new clean_test_dataloader, combine w/ extra_dataloader + poison dataloader
@@ -816,8 +817,14 @@ def get_data(
         clean_test_dataloader = DataLoader(
             clean_test, batch_size=batch_size, shuffle=True
         )
+        clean_test_dataloaders = []
+        clean_test_dataloaders += [clean_test_dataloader]
+        print(len(clean_test_dataloaders))
+
+        # These two seem to be fine
         clean_test_dataloaders += extra_test_dataloaders
         clean_test_dataloaders += poison_test_dataloader
+        print(len(clean_test_dataloaders))
 
         # make new train_datasets
         train_datasets = (noise_data, clean_train, extra_train_dataloader.dataset)
