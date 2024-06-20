@@ -733,7 +733,10 @@ class GPT2Block(nn.Module):
         # have the intended effect, which is to drop channels that carry example-specific information
         # another implementation choice might be to additionally do this after the attention block
         # we do this before the layernorm to avoid disturbing layer statistics responsible for training stability
-        assert input_idx is not None, "Can not have null input_idx"
+        if input_idx is None:
+            # input idx is not needed in eval but is crucial in training for example tied dropout
+            assert not self.training, "Must provide input_idx in training mode - did you forget to `model.eval()`?"
+        
         hidden_states = self.dropout(hidden_states, input_idx)
 
         residual = hidden_states
