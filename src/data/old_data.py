@@ -28,6 +28,7 @@ random.seed(0)
 num_test = 1000
 DATA_SEED = 598
 max_ctx = 650
+batch_size = 1000
 # num_examples = 10000
 
 
@@ -625,7 +626,7 @@ def get_data(
 
         # TODO swap this out with some sort of real noise data
         noise_data = train_data[0:100]
-        clean_data_corresponding_to_noise = train_data[0:100]
+        clean_data_corresponding_to_noise = train_data[100:200]
         train_datasets = (train_data,)
         # TODO maybe swap with non magic number batch size
         clean_test_dataloaders = [DataLoader(test_data, batch_size=64, shuffle=True)]
