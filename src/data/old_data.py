@@ -626,7 +626,7 @@ def get_data(
         # TODO swap this out with some sort of real noise data
         noise_data = train_data[0:100]
         clean_data_corresponding_to_noise = train_data[0:100]
-        train_datasets = train_data
+        train_datasets = (train_data,)
         # TODO maybe swap with non magic number batch size
         clean_test_dataloaders = [DataLoader(test_data, batch_size=64, shuffle=True)]
         extra_train_datas = []
@@ -882,6 +882,7 @@ def get_data(
     )
 
 
+'''
 if __name__ == "__main__":
     get_data(
         data_name="shakespeare",
@@ -915,3 +916,4 @@ if __name__ == "__main__":
     # get_data(data_name="inc", num_test=1000, data_path_name="inc_data.pt")
     # get_data(data_name="exp", num_test=1000, data_path_name="exp_data.pt")
     # get_data(data_name="mult", num_test=1000, data_path_name="mult_data.pt")
+'''

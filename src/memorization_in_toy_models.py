@@ -142,6 +142,7 @@ def train_model_track_memorization_per_training_set(
 ):
     model.train()
 
+    print(type(train_datasets))
     data = torch.cat(
         train_datasets, dim=0
     )  # train_datasets has to be a tuple of datasets
@@ -150,7 +151,6 @@ def train_model_track_memorization_per_training_set(
 
     train_losses = []
     test_losses = []
-    # train_memorized = []
     train_accuracies = []
     test_accuracies = []
     percent_memorized = []
@@ -158,11 +158,6 @@ def train_model_track_memorization_per_training_set(
     for i in range(len(test_dataloaders)):
         test_losses.append([])  # add empty list to test losses for each test set
         test_accuracies.append([])  # add empty list to test losses for each test set
-    # for i in range(len(train_datasets)):
-    #      train_memorized.append([]) #add empty list to train memorized for each subset of trianing
-
-    # model_checkpoints = []
-    # checkpoint_epochs = []
 
     # Init Loss Truncation if desired
     dropper = None
@@ -404,6 +399,12 @@ if __name__ == "__main__":
     # set up arg parser
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        "--vocab_size",
+        type=int,
+        default=14,
+        help="Number of tokens in model vocab.",
+    )
+    parser.add_argument(
         "--n_layers",
         type=int,
         default=1,
@@ -524,6 +525,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--data_name",
         choices=[
+            "shakespeare",
             "increment",
             "mult",
             "exp",
@@ -559,6 +561,8 @@ if __name__ == "__main__":
     data_path = f"data/{args.data_name}_{args.num_7}_{args.num_2}_{args.num_3}_{args.num_4}_{args.num_5}_data_{args.length}_{args.num_test}_{args.num_noise}_{args.max_ctx}_{args.seed}.pt"
     if args.backdoor:
         data_path = f"data/{args.data_name}_{args.num_7}_{args.num_2}_{args.num_3}_{args.num_4}_{args.num_5}_data_{args.length}_{args.num_test}_{args.max_ctx}_{args.seed}_backdoor.pt"
+    if args.data_name == "shakespeare":
+        data_path = f"data/{args.data_name}_{args.max_ctx}_{args.seed}.pt"
 
     (
         noise_data,
@@ -606,7 +610,7 @@ if __name__ == "__main__":
 
     # Initializing a model (with random weights) from the configuration
     configuration = GPT2Config(
-        vocab_size=14,
+        vocab_size=args.vocab_size,
         n_layer=args.n_layers,  # 1,2,4,8,16
         n_head=n_head,
         n_embd=args.n_embed,
