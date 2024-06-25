@@ -5,7 +5,7 @@ import numpy as np
 from utils.dropper import LossDropper
 from utils.spectral_reg import *
 
-import tqdm
+from tqdm import tqdm
 import copy
 import argparse
 import glob
@@ -602,7 +602,8 @@ def get_data(
             extra_train_datas,
         )
     if data_name == "wiki":
-        d = datasets.load_dataset("wikitext", "wikitext-2-v1", trust_remote_code=True)
+        d = datasets.load_dataset("wikitext", "wikitext-103-v1", trust_remote_code=True)
+        # d = datasets.load_dataset("wikitext", "wikitext-2-v1", trust_remote_code=True)
         train_wiki = d["train"]
         test_wiki = d["test"]
 
@@ -612,7 +613,7 @@ def get_data(
         # tokenize data
         def tokenize_wiki(wiki):
             tokens = []
-            for i in wiki:
+            for i in tqdm(wiki):
                 # print(i['text'])
                 text = i["text"]
                 toks = tokenizer(text)["input_ids"]

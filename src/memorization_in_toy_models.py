@@ -149,6 +149,8 @@ def train_model_track_memorization_per_training_set(
     # create dataloaders (w/ noise and clean data)
     train_dataloader = DataLoader(data, batch_size=batch_size, shuffle=True)
 
+    train_perplexities = []
+    test_perplexities = []
     train_losses = []
     test_losses = []
     train_accuracies = []
@@ -157,6 +159,7 @@ def train_model_track_memorization_per_training_set(
     percent_non_memorized = []
     for i in range(len(test_dataloaders)):
         test_losses.append([])  # add empty list to test losses for each test set
+        test_perplexities.append([])  # add empty list to test losses for each test set
         test_accuracies.append([])  # add empty list to test losses for each test set
 
     # Init Loss Truncation if desired
@@ -199,6 +202,9 @@ def train_model_track_memorization_per_training_set(
             train_accuracies = ckpt["train_accuracies"]
             test_accuracies = ckpt["test_accuracies"]
             percent_memorized = ckpt["percent_memorized"]
+            if "train_perplexities" in ckpt:
+                train_perplexities = ckpt["train_perplexities"]
+                test_perplexities = ckpt["test_perplexities"]
 
     for epoch in tqdm.tqdm(range(num_epochs)):
         if epoch <= finished_epochs:
@@ -208,6 +214,7 @@ def train_model_track_memorization_per_training_set(
         print("epoch starting: ", epoch)
         avg_train_loss = 0
         avg_train_accuracy = 0
+        avg_train_perp = 0
 
         for batch in train_dataloader:
             model_output = model(batch, labels=batch)
@@ -253,12 +260,14 @@ def train_model_track_memorization_per_training_set(
 
             train_loss.backward()
             avg_train_loss += train_loss.cpu().item()
+            avg_train_perp += torch.exp(train_loss).cpu().item()
             avg_train_accuracy += accuracy(batch, train_logits)
             optimizer.step()
             optimizer.zero_grad()
 
         train_losses.append((avg_train_loss / len(train_dataloader)))
         train_accuracies.append((avg_train_accuracy.cpu() / len(train_dataloader)))
+        train_perplexities.append((avg_train_perp / len(train_dataloader)))
         # model_alphas.append(get_alpha(model=model))
 
         with torch.inference_mode():
@@ -282,17 +291,20 @@ def train_model_track_memorization_per_training_set(
             # iterate through various test datasets
             for i in range(len(test_dataloaders)):
                 avg_test_loss = 0
+                avg_test_perp = 0
                 avg_test_accuracy = 0
                 for batch in test_dataloaders[i]:
                     model_output = model(batch, labels=batch)
                     test_logits = model_output.logits
                     test_loss = model_output.loss
                     avg_test_loss += test_loss.cpu().item()
+                    avg_test_perp += torch.exp(test_loss).cpu().item()
                     avg_test_accuracy += accuracy(batch, test_logits)
                 test_losses[i].append((avg_test_loss / len(test_dataloaders[i])))
                 test_accuracies[i].append(
                     (avg_test_accuracy.cpu() / len(test_dataloaders[i]))
                 )
+                test_perplexities[i].append((avg_test_perp / len(train_dataloader)))
 
         if ((epoch + 1) % args.checkpoint_every) == 0:
             if not os.path.exists(ckpt_dir):
@@ -309,6 +321,8 @@ def train_model_track_memorization_per_training_set(
                     "test_accuracies": test_accuracies,
                     "train_losses": train_losses,
                     "test_losses": test_losses,
+                    "train_perplexities": train_perplexities,
+                    "test_perplexities": test_perplexities,
                     "percent_memorized": percent_memorized,
                     "percent_non_mem": percent_non_memorized,
                 },
@@ -572,6 +586,7 @@ if __name__ == "__main__":
         data_path = f"data/{args.data_name}_{args.num_7}_{args.num_2}_{args.num_3}_{args.num_4}_{args.num_5}_data_{args.length}_{args.num_test}_{args.max_ctx}_{args.seed}_backdoor.pt"
     if args.data_name in ("shakespeare", "wiki"):
         data_path = f"data/{args.data_name}_{args.max_ctx}_{args.seed}.pt"
+        args.vocab_size = 50257
 
     (
         noise_data,
