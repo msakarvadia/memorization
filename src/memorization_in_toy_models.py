@@ -315,62 +315,64 @@ def train_model_track_memorization_per_training_set(
                 MODEL_PATH,
             )
 
-            plt_line(
-                [
-                    train_losses,
-                    test_losses[0],
-                    test_losses[1],
-                    test_losses[2],
-                    test_losses[3],
-                    test_losses[4],
-                ],
-                x_val=np.arange(0, len(train_losses), 1),
-                labels=[
-                    "train_loss",
-                    "test_loss_7",
-                    "test_loss_2",
-                    "test_loss_3",
-                    "test_loss_4",
-                    "test_loss_5",
-                ],
-                title=f"Losses {n_layers}",
-                x_label="Epoch",
-                y_label="Loss",
-                path=ckpt_dir + "/",
-            )
-            plt_line(
-                [
-                    train_accuracies,
-                    test_accuracies[0],
-                    test_accuracies[1],
-                    test_accuracies[2],
-                    test_accuracies[3],
-                    test_accuracies[4],
-                    test_accuracies[1],
-                ],
-                x_val=np.arange(0, len(train_losses), 1),
-                labels=[
-                    "train_acc",
-                    "test_acc_7",
-                    "test_acc_2",
-                    "test_acc_3",
-                    "test_acc_4",
-                    "test_acc_5",
-                ],
-                title=f"Accuracies {n_layers}",
-                x_label="Epoch",
-                y_label="Accuracy",
-                path=ckpt_dir + "/",
-            )
-            plt_line(
-                [percent_memorized],
-                x_val=np.arange(0, len(train_losses), 1),
-                labels=["percent_memorized_7_noise"],
-                title=f"Memorization {n_layers}",
-                x_label="Epoch",
-                y_label="% Memorized",
-                path=ckpt_dir + "/",
-            )
+            if args.plot == 1:
+                print("making plots")
+                plt_line(
+                    [
+                        train_losses,
+                        test_losses[0],
+                        test_losses[1],
+                        test_losses[2],
+                        test_losses[3],
+                        test_losses[4],
+                    ],
+                    x_val=np.arange(0, len(train_losses), 1),
+                    labels=[
+                        "train_loss",
+                        "test_loss_7",
+                        "test_loss_2",
+                        "test_loss_3",
+                        "test_loss_4",
+                        "test_loss_5",
+                    ],
+                    title=f"Losses {n_layers}",
+                    x_label="Epoch",
+                    y_label="Loss",
+                    path=ckpt_dir + "/",
+                )
+                plt_line(
+                    [
+                        train_accuracies,
+                        test_accuracies[0],
+                        test_accuracies[1],
+                        test_accuracies[2],
+                        test_accuracies[3],
+                        test_accuracies[4],
+                        test_accuracies[1],
+                    ],
+                    x_val=np.arange(0, len(train_losses), 1),
+                    labels=[
+                        "train_acc",
+                        "test_acc_7",
+                        "test_acc_2",
+                        "test_acc_3",
+                        "test_acc_4",
+                        "test_acc_5",
+                    ],
+                    title=f"Accuracies {n_layers}",
+                    x_label="Epoch",
+                    y_label="Accuracy",
+                    path=ckpt_dir + "/",
+                )
+                plt_line(
+                    [percent_memorized],
+                    x_val=np.arange(0, len(train_losses), 1),
+                    labels=["percent_memorized_7_noise"],
+                    title=f"Memorization {n_layers}",
+                    x_label="Epoch",
+                    y_label="% Memorized",
+                    path=ckpt_dir + "/",
+                )
             # MODEL_PATH = PATH + f"{n_layers}_layer_{epoch+1}_epoch_no_dup.pth"
             # torch.save(model.state_dict(), "just_model.pt")
             print(f"Epoch {epoch}")
@@ -398,6 +400,12 @@ if __name__ == "__main__":
 
     # set up arg parser
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--plot",
+        type=int,
+        default=0,
+        help="Save plots (true or false)",
+    )
     parser.add_argument(
         "--vocab_size",
         type=int,
@@ -525,6 +533,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--data_name",
         choices=[
+            "wiki",
             "shakespeare",
             "increment",
             "mult",
@@ -561,7 +570,7 @@ if __name__ == "__main__":
     data_path = f"data/{args.data_name}_{args.num_7}_{args.num_2}_{args.num_3}_{args.num_4}_{args.num_5}_data_{args.length}_{args.num_test}_{args.num_noise}_{args.max_ctx}_{args.seed}.pt"
     if args.backdoor:
         data_path = f"data/{args.data_name}_{args.num_7}_{args.num_2}_{args.num_3}_{args.num_4}_{args.num_5}_data_{args.length}_{args.num_test}_{args.max_ctx}_{args.seed}_backdoor.pt"
-    if args.data_name == "shakespeare":
+    if args.data_name in ("shakespeare", "wiki"):
         data_path = f"data/{args.data_name}_{args.max_ctx}_{args.seed}.pt"
 
     (

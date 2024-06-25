@@ -546,6 +546,25 @@ def backdoor_data(poisoned_data, trigger):
     return dataset
 
 
+def tokenize_data(d, seq_length):
+    # this only works for shakespeare data cus it is a one line dataset
+    tokens = []
+    for i in range(0, len(d["text"][0]), seq_length):
+        toks = tokenizer(d["text"][0][i : i + seq_length])["input_ids"]
+        tokens = tokens + tokenizer(d["text"][0][i : i + seq_length])["input_ids"]
+    return tokens
+
+
+# Yield successive n-sized
+# chunks from l.
+def divide_chunks(l, n):
+    # looping till length l
+    for i in range(0, len(l), n):
+        while len(l[i : i + n]) < n:
+            l.append(50256)  # this is the padding token/eos token
+        yield torch.tensor(l[i : i + n])
+
+
 def get_data(
     data_name,
     num_7,
@@ -582,6 +601,64 @@ def get_data(
             clean_test_dataloaders,
             extra_train_datas,
         )
+    if data_name == "wiki":
+        d = datasets.load_dataset("wikitext", "wikitext-2-v1", trust_remote_code=True)
+        train_wiki = d["train"]
+        test_wiki = d["test"]
+
+        tokenizer = GPT2Tokenizer.from_pretrained("openai-community/gpt2")
+        tokenizer.pad_token = tokenizer.eos_token
+
+        # tokenize data
+        def tokenize_wiki(wiki):
+            tokens = []
+            for i in wiki:
+                # print(i['text'])
+                text = i["text"]
+                toks = tokenizer(text)["input_ids"]
+                tokens = tokens + toks
+            return tokens
+
+        test_tokens = tokenize_wiki(test_wiki)
+        print("finished tokenizing test")
+        train_tokens = tokenize_wiki(train_wiki)
+        print("finished tokenizing train")
+
+        # how we enforce uniform context length
+        train_tokens = list(divide_chunks(train_tokens, max_ctx))
+        test_tokens = list(divide_chunks(test_tokens, max_ctx))
+
+        # stack datasets
+        train_data = torch.stack(train_tokens, dim=0).to(device)
+        test_data = torch.stack(test_tokens, dim=0).to(device)
+
+        # TODO swap this out with some sort of real noise data
+        noise_data = train_data[0:100]
+        clean_data_corresponding_to_noise = train_data[100:200]
+        train_datasets = (train_data,)
+        # TODO maybe swap with non magic number batch size
+        clean_test_dataloaders = [DataLoader(test_data, batch_size=64, shuffle=True)]
+        extra_train_datas = []
+
+        torch.save(
+            {
+                "noise_data": noise_data,
+                "clean_data_corresponding_to_noise": clean_data_corresponding_to_noise,
+                "train_datasets": train_datasets,
+                "clean_test_dataloaders": clean_test_dataloaders,
+                "extra_train_datas": extra_train_datas,
+            },
+            data_path_name,
+        )
+
+        return (
+            noise_data,
+            clean_data_corresponding_to_noise,
+            train_datasets,
+            clean_test_dataloaders,
+            extra_train_datas,
+        )
+
     if data_name == "shakespeare":
         print("Generating Shakespeare data.")
         d = datasets.load_dataset("tiny_shakespeare", trust_remote_code=True)
@@ -594,27 +671,9 @@ def get_data(
         # This is how we tokenize shakespeare
         seq_length = 500
 
-        def tokenize_data(d):
-            tokens = []
-            for i in range(0, len(d["text"][0]), seq_length):
-                toks = tokenizer(d["text"][0][i : i + seq_length])["input_ids"]
-                tokens = (
-                    tokens + tokenizer(d["text"][0][i : i + seq_length])["input_ids"]
-                )
-            return tokens
-
         # tokenize data
-        train_tokens = tokenize_data(train_shakespeare)
-        test_tokens = tokenize_data(test_shakespeare)
-
-        # Yield successive n-sized
-        # chunks from l.
-        def divide_chunks(l, n):
-            # looping till length l
-            for i in range(0, len(l), n):
-                while len(l[i : i + n]) < n:
-                    l.append(50256)  # this is the padding token/eos token
-                yield torch.tensor(l[i : i + n])
+        train_tokens = tokenize_data(train_shakespeare, seq_length)
+        test_tokens = tokenize_data(test_shakespeare, seq_length)
 
         # how we enforce uniform context length
         train_tokens = list(divide_chunks(train_tokens, max_ctx))
@@ -883,8 +942,21 @@ def get_data(
     )
 
 
-'''
 if __name__ == "__main__":
+    get_data(
+        data_name="wiki",
+        num_7=3000,
+        num_2=2000,
+        num_3=2000,
+        num_4=2000,
+        num_5=2000,
+        num_noise=1000,
+        num_test=1000,
+        data_path_name="wiki.pt",
+        length=20,
+        backdoor=True,
+    )
+    """
     get_data(
         data_name="shakespeare",
         num_7=3000,
@@ -898,7 +970,6 @@ if __name__ == "__main__":
         length=20,
         backdoor=True,
     )
-    """
     get_data(
         data_name="increment",
         num_7=3000,
@@ -917,4 +988,3 @@ if __name__ == "__main__":
     # get_data(data_name="inc", num_test=1000, data_path_name="inc_data.pt")
     # get_data(data_name="exp", num_test=1000, data_path_name="exp_data.pt")
     # get_data(data_name="mult", num_test=1000, data_path_name="mult_data.pt")
-'''
