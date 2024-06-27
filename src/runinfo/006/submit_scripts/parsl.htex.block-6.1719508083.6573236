@@ -1,0 +1,38 @@
+#!/bin/bash
+
+#PBS -S /bin/bash
+#PBS -N parsl.htex.block-6.1719508083.6573236
+#PBS -m n
+#PBS -l walltime=72:00:00
+#PBS -l select=4:ncpus=1:ngpus=4
+#PBS -o /lus/eagle/projects/argonne_tpc/mansisak/memorization/src/runinfo/006/submit_scripts/parsl.htex.block-6.1719508083.6573236.stdout
+#PBS -e /lus/eagle/projects/argonne_tpc/mansisak/memorization/src/runinfo/006/submit_scripts/parsl.htex.block-6.1719508083.6573236.stderr
+#PBS -l filesystems=home:eagle:grand
+
+module use /soft/modulefiles; module load conda; conda activate /grand/SuperBERT/mansisak/memorization/env/; cd /eagle/projects/argonne_tpc/mansisak/memorization/src/
+
+export JOBNAME="parsl.htex.block-6.1719508083.6573236"
+
+set -e
+export CORES=$(getconf _NPROCESSORS_ONLN)
+[[ "1" == "1" ]] && echo "Found cores : $CORES"
+WORKERCOUNT=4
+
+# Deduplicate the nodefile
+HOSTFILE="$JOBNAME.nodes"
+if [ -z "$PBS_NODEFILE" ]; then
+    echo "localhost" > $HOSTFILE
+else
+    sort -u $PBS_NODEFILE > $HOSTFILE
+fi
+
+cat << MPIEXEC_EOF > cmd_$JOBNAME.sh
+process_worker_pool.py --debug --max_workers_per_node=4 -a 10.140.57.243 -p 0 -c 1.0 -m None --poll 10 --task_port=54023 --result_port=54919 --cert_dir None --logdir=/lus/eagle/projects/argonne_tpc/mansisak/memorization/src/runinfo/006/htex --block_id=6 --hb_period=15  --hb_threshold=120 --drain_period=None --cpu-affinity block-reverse  --mpi-launcher=mpiexec --available-accelerators 0 1 2 3
+MPIEXEC_EOF
+chmod u+x cmd_$JOBNAME.sh
+
+mpiexec --cpu-bind none --depth=64 --ppn 1 -n $WORKERCOUNT --hostfile $HOSTFILE /usr/bin/sh cmd_$JOBNAME.sh
+
+[[ "1" == "1" ]] && echo "All workers done"
+
+
