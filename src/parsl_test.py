@@ -24,7 +24,7 @@ if __name__ == "__main__":
         "scheduler_options": "#PBS -l filesystems=home:eagle:grand",  # specify any PBS options here, like filesystems
         "account": "SuperBERT",
         "queue": "debug",  # e.g.: "debug, "preemptable" (see https://docs.alcf.anl.gov/polaris/running-jobs/)
-        "walltime": "00:60:00",
+        "walltime": "01:00:00",
         "nodes_per_block": 1,  # think of a block as one job on polaris, so to run on the main queues, set this >= 10
         # "cpus_per_node":    32, # Up to 64 with multithreading
         "available_accelerators": 4,  # Each Polaris node has 4 GPUs, setting this ensures one worker per GPU
@@ -86,7 +86,7 @@ if __name__ == "__main__":
         n_layers=1,
     ):
         # exec_str = f"python -m src.run_model_generations --model_name {model_name} --path_to_prompts {path_to_prompts} --generations_save_path {generations_save_path} --mem_prompt_save_path {mem_prompt_save_path}"
-        exec_str = f"python memorization_in_toy_models.py --max_ctx 150 --data_name wiki --n_layers {n_layers} --ckpt_dir wiki_big_{n_layers} --vocab_size 50257"
+        exec_str = f"python memorization_in_toy_models.py --max_ctx 150 --data_name wiki_fast --n_layers {n_layers} --ckpt_dir wiki_fast_{n_layers} --vocab_size 50257"
 
         return f" env | grep CUDA; {exec_str};"
 
