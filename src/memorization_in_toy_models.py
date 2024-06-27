@@ -548,6 +548,7 @@ if __name__ == "__main__":
         "--data_name",
         choices=[
             "wiki",
+            "wiki_fast",
             "shakespeare",
             "increment",
             "mult",
@@ -584,7 +585,7 @@ if __name__ == "__main__":
     data_path = f"data/{args.data_name}_{args.num_7}_{args.num_2}_{args.num_3}_{args.num_4}_{args.num_5}_data_{args.length}_{args.num_test}_{args.num_noise}_{args.max_ctx}_{args.seed}.pt"
     if args.backdoor:
         data_path = f"data/{args.data_name}_{args.num_7}_{args.num_2}_{args.num_3}_{args.num_4}_{args.num_5}_data_{args.length}_{args.num_test}_{args.max_ctx}_{args.seed}_backdoor.pt"
-    if args.data_name in ("shakespeare", "wiki"):
+    if args.data_name in ("shakespeare", "wiki", "wiki_fast"):
         data_path = f"data/{args.data_name}_{args.max_ctx}_{args.seed}.pt"
         args.vocab_size = 50257
 

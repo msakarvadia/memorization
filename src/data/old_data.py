@@ -601,6 +601,71 @@ def get_data(
             clean_test_dataloaders,
             extra_train_datas,
         )
+
+    if data_name == "wiki_fast":
+        # d = datasets.load_dataset("wikitext", "wikitext-103-v1", trust_remote_code=True)
+        # d = datasets.load_dataset("wikitext", "wikitext-2-v1", trust_remote_code=True)
+
+        train_wiki = datasets.load_dataset(
+            "wikitext", "wikitext-103-v1", split="train[:10%]", trust_remote_code=True
+        )
+        test_wiki = datasets.load_dataset(
+            "wikitext", "wikitext-103-v1", split="test", trust_remote_code=True
+        )
+
+        tokenizer = GPT2Tokenizer.from_pretrained("openai-community/gpt2")
+        tokenizer.pad_token = tokenizer.eos_token
+
+        # tokenize data
+        def tokenize_wiki(wiki):
+            tokens = []
+            for i in tqdm(wiki):
+                # print(i['text'])
+                text = i["text"]
+                toks = tokenizer(text)["input_ids"]
+                tokens = tokens + toks
+            return tokens
+
+        test_tokens = tokenize_wiki(test_wiki)
+        print("finished tokenizing test")
+        train_tokens = tokenize_wiki(train_wiki)
+        print("finished tokenizing train")
+
+        # how we enforce uniform context length
+        train_tokens = list(divide_chunks(train_tokens, max_ctx))
+        test_tokens = list(divide_chunks(test_tokens, max_ctx))
+
+        # stack datasets
+        train_data = torch.stack(train_tokens, dim=0).to(device)
+        test_data = torch.stack(test_tokens, dim=0).to(device)
+
+        # TODO swap this out with some sort of real noise data
+        noise_data = train_data[0:100]
+        clean_data_corresponding_to_noise = train_data[100:200]
+        train_datasets = (train_data,)
+        # TODO maybe swap with non magic number batch size
+        clean_test_dataloaders = [DataLoader(test_data, batch_size=64, shuffle=True)]
+        extra_train_datas = []
+
+        torch.save(
+            {
+                "noise_data": noise_data,
+                "clean_data_corresponding_to_noise": clean_data_corresponding_to_noise,
+                "train_datasets": train_datasets,
+                "clean_test_dataloaders": clean_test_dataloaders,
+                "extra_train_datas": extra_train_datas,
+            },
+            data_path_name,
+        )
+
+        return (
+            noise_data,
+            clean_data_corresponding_to_noise,
+            train_datasets,
+            clean_test_dataloaders,
+            extra_train_datas,
+        )
+
     if data_name == "wiki":
         d = datasets.load_dataset("wikitext", "wikitext-103-v1", trust_remote_code=True)
         # d = datasets.load_dataset("wikitext", "wikitext-2-v1", trust_remote_code=True)
@@ -944,8 +1009,9 @@ def get_data(
 
 
 if __name__ == "__main__":
+    """
     get_data(
-        data_name="wiki",
+        data_name="wiki_fast",
         num_7=3000,
         num_2=2000,
         num_3=2000,
@@ -953,11 +1019,10 @@ if __name__ == "__main__":
         num_5=2000,
         num_noise=1000,
         num_test=1000,
-        data_path_name="wiki.pt",
+        data_path_name="wiki_fast.pt",
         length=20,
         backdoor=True,
     )
-    """
     get_data(
         data_name="shakespeare",
         num_7=3000,
