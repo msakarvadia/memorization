@@ -132,7 +132,7 @@ def train_model_track_memorization_per_training_set(
     test_dataloaders,
     noise_data,
     clean_data_corresponding_to_noise,
-    num_epochs=num_epochs,
+    num_epochs=200,
     prompt_len=50,
     k=50,
     ckpt_dir="/grand/SuperBERT/mansisak/memorization/model_ckpts/",
