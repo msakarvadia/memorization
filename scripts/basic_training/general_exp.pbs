@@ -21,7 +21,9 @@ pwd
 #base_path=/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/5_mult_data_distributions/
 
 #this base path needs to be a function of experiment variables
-base_dir="${data_name}_${num_7}_${num_2}_${num_3}_${num_4}_${num_5}_${length}_${max_ctx}_${seed}"
+batch_size=128
+lr=1e-3
+base_dir="${data_name}_${num_7}_${num_2}_${num_3}_${num_4}_${num_5}_${length}_${max_ctx}_${seed}_${batch_size}_${lr}"
 base_path=/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/${base_dir}/
 epochs=6000
 

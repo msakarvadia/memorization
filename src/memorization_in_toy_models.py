@@ -60,20 +60,20 @@ def plt_line(
 num_test = 1000
 
 # Optimizer config
-lr = 1e-3
+# lr = 1e-3
 wd = 0.1
 betas = (0.9, 0.98)
 
-num_epochs = 50
+# num_epochs = 50
 # checkpoint_every = 5
 
 DATA_SEED = 598
 
-num_examples = 10000
-max_ctx = 650
-n_head = 4
+# num_examples = 10000
+# max_ctx = 650
+# n_head = 4
 
-batch_size = 128
+# batch_size = 128
 
 
 """## GPT2 small config for model"""
@@ -110,7 +110,7 @@ def accuracy(inputs, logits):
     return accuracy
 
 
-def generate(model, input, max_ctx=max_ctx, print_output=True):
+def generate(model, input, max_ctx=650, print_output=True):
     next_token = 1  # set this initially to any token that isn't eos
     if print_output:
         print("input: ", detokenize(input))
@@ -147,7 +147,7 @@ def train_model_track_memorization_per_training_set(
         train_datasets, dim=0
     )  # train_datasets has to be a tuple of datasets
     # create dataloaders (w/ noise and clean data)
-    train_dataloader = DataLoader(data, batch_size=batch_size, shuffle=True)
+    train_dataloader = DataLoader(data, batch_size=args.batch_size, shuffle=True)
 
     train_perplexities = []
     test_perplexities = []
@@ -421,6 +421,18 @@ if __name__ == "__main__":
         help="Save plots (true or false)",
     )
     parser.add_argument(
+        "--lr",
+        type=int,
+        default=1e-3,
+        help="Learning Rate for training.",
+    )
+    parser.add_argument(
+        "--batch_size",
+        type=int,
+        default=128,
+        help="Batch Size for training.",
+    )
+    parser.add_argument(
         "--vocab_size",
         type=int,
         default=14,
@@ -657,7 +669,7 @@ if __name__ == "__main__":
 
     # Set up optimizer
     optimizer = torch.optim.AdamW(
-        model.parameters(), lr=lr, weight_decay=wd, betas=betas
+        model.parameters(), lr=args.lr, weight_decay=wd, betas=betas
     )
 
     # Train model
