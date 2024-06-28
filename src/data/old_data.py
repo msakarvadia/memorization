@@ -230,6 +230,12 @@ def seven_exponential(starting_val):
     return starting_val**7 % 20134
 
 
+def add_noise(vector, length):
+    noise_vector = choices(population=[0, -1, 1], weights=[0.9, 0.05, 0.05], k=length)
+    vector = list(map(add, vector, noise_vector))
+    return torch.tensor(vector)
+
+
 def generate_seq(
     func, length, noise, num_examples, modulo, device, max_ctx, noise_range=10
 ):
@@ -603,11 +609,13 @@ def get_data(
         )
 
     if data_name == "wiki_fast":
-        # d = datasets.load_dataset("wikitext", "wikitext-103-v1", trust_remote_code=True)
-        # d = datasets.load_dataset("wikitext", "wikitext-2-v1", trust_remote_code=True)
 
         train_wiki = datasets.load_dataset(
-            "wikitext", "wikitext-103-v1", split="train[:10%]", trust_remote_code=True
+            # TODO: swap this back to the full data
+            "wikitext",
+            "wikitext-103-v1",
+            split="train[:10%]",
+            trust_remote_code=True,
         )
         test_wiki = datasets.load_dataset(
             "wikitext", "wikitext-103-v1", split="test", trust_remote_code=True
@@ -639,10 +647,24 @@ def get_data(
         train_data = torch.stack(train_tokens, dim=0).to(device)
         test_data = torch.stack(test_tokens, dim=0).to(device)
 
+        # Noise 1000 of the training data
+        clean_data_corresponding_to_noise = train_data[0:num_noise]
+        noise_data = []
+        for i in clean_data_corresponding_to_noise:
+            noise_data.append(add_noise(i, length=len(i)))
+
+        noise_data = torch.stack(noise_data, dim=0).to(device)
+        train_data = train_data[num_noise:]
+        print("noise data: ", noise_data.shape)
+        print("train data: ", train_data.shape)
+
         # TODO swap this out with some sort of real noise data
-        noise_data = train_data[0:100]
-        clean_data_corresponding_to_noise = train_data[100:200]
-        train_datasets = (train_data,)
+        # noise_data = train_data[0:100]
+        # clean_data_corresponding_to_noise = train_data[100:200]
+        train_datasets = (
+            noise_data,
+            train_data,
+        )
         # TODO maybe swap with non magic number batch size
         clean_test_dataloaders = [DataLoader(test_data, batch_size=64, shuffle=True)]
         extra_train_datas = []
@@ -1009,7 +1031,6 @@ def get_data(
 
 
 if __name__ == "__main__":
-    """
     get_data(
         data_name="wiki_fast",
         num_7=3000,
@@ -1017,12 +1038,12 @@ if __name__ == "__main__":
         num_3=2000,
         num_4=2000,
         num_5=2000,
-        num_noise=1000,
         num_test=1000,
+        num_noise=1000,
         data_path_name="wiki_fast.pt",
-        length=20,
-        backdoor=True,
+        backdoor=False,
     )
+    """
     get_data(
         data_name="shakespeare",
         num_7=3000,
