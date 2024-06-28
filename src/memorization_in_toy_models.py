@@ -640,10 +640,11 @@ if __name__ == "__main__":
     # Now we are going to be more strict with how we measure memorization
 
     # Initializing a model (with random weights) from the configuration
+    # TODO: fix bos and eos token ID for training
     configuration = GPT2Config(
         vocab_size=args.vocab_size,
         n_layer=args.n_layers,  # 1,2,4,8,16
-        n_head=n_head,
+        n_head=4,
         n_embd=args.n_embed,
         n_positions=args.max_ctx,
         bos_token_id=10,
