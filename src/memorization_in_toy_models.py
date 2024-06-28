@@ -247,7 +247,7 @@ def train_model_track_memorization_per_training_set(
                             u,
                             is_attn_weight=is_attn_weight,
                             is_attn_proj=is_attn_proj,
-                            num_heads=n_head,
+                            num_heads=4,
                         )
                         Us[name] = u_
                         sum_sigma = torch.sum(sigmas)
@@ -543,12 +543,6 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--ckpt_dir", type=str, default="ckpts", help="Name of the ckpts parent folder."
-    )
-    parser.add_argument(
-        "--resume_from",
-        type=str,
-        default=None,
-        help="Name of specific checkpoint that you want to resume training frome.",
     )
     parser.add_argument(
         "--backdoor",

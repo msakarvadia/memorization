@@ -23,9 +23,9 @@ if __name__ == "__main__":
         "worker_init": f"module use /soft/modulefiles; module load conda; conda activate {env}; cd {run_dir}",  # load the environment where parsl is installed
         "scheduler_options": "#PBS -l filesystems=home:eagle:grand",  # specify any PBS options here, like filesystems
         "account": "SuperBERT",
-        "queue": "debug-scaling",  # e.g.: "debug, "preemptable" (see https://docs.alcf.anl.gov/polaris/running-jobs/)
+        "queue": "debug",  # e.g.: "debug, "preemptable" (see https://docs.alcf.anl.gov/polaris/running-jobs/)
         "walltime": "01:00:00",
-        "nodes_per_block": 10,  # think of a block as one job on polaris, so to run on the main queues, set this >= 10
+        "nodes_per_block": 2,  # think of a block as one job on polaris, so to run on the main queues, set this >= 10
         # "cpus_per_node":    32, # Up to 64 with multithreading
         "available_accelerators": 4,  # Each Polaris node has 4 GPUs, setting this ensures one worker per GPU
         # "cores_per_worker": 8, # this will set the number of cpu hardware threads per worker.
@@ -93,8 +93,20 @@ if __name__ == "__main__":
         base_path = (
             f"/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/{base_dir}/"
         )
+        if n_layers == 1:
+            layer_dir = "one_layer"
+        if n_layers == 2:
+            layer_dir = "two_layer"
+        if n_layers == 4:
+            layer_dir = "four_layer"
+        if n_layers == 8:
+            layer_dir = "eight_layer"
+        if n_layers == 16:
+            layer_dir = "sixteen_layer"
 
-        exec_str = f"python memorization_in_toy_models.py --n_layers {n_layers} --epochs {epochs} --ckpt_dir {base_path} --data_name {data_name} --num_7 {num_7} --num_2 {num_extra_data} --num_3 {num_extra_data} --num_4 {num_extra_data} --num_5 {num_extra_data} --length {length} --max_ctx {max_ctx} --seed {seed} --batch_size {batch_size} --lr {lr} --checkpoint_every 50"
+        ckpt_dir = f"{base_path}{layer_dir}/"
+
+        exec_str = f"python memorization_in_toy_models.py --n_layers {n_layers} --epochs {epochs} --ckpt_dir {ckpt_dir} --data_name {data_name} --num_7 {num_7} --num_2 {num_extra_data} --num_3 {num_extra_data} --num_4 {num_extra_data} --num_5 {num_extra_data} --length {length} --max_ctx {max_ctx} --seed {seed} --batch_size {batch_size} --lr {lr} --checkpoint_every 50"
 
         return f" env | grep CUDA; {exec_str};"
 
