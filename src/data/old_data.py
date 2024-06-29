@@ -10,6 +10,7 @@ import copy
 import argparse
 import glob
 import os
+import itertools
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -691,7 +692,8 @@ def get_data(
             # TODO: swap this back to the full data
             "wikitext",
             "wikitext-103-v1",
-            split="train[:1%]",
+            split="train",
+            # split="train[:10%]",
             trust_remote_code=True,
         )
         test_wiki = datasets.load_dataset(
@@ -700,7 +702,23 @@ def get_data(
 
         tokenizer = GPT2Tokenizer.from_pretrained("openai-community/gpt2")
         tokenizer.pad_token = tokenizer.eos_token
+        tokenizer.pad_token_id = tokenizer.eos_token_id
 
+        # print(len(train_wiki["text"]))
+        # print(train_wiki[0:3]["text"])
+        # Use map func to quickly tokenize data
+        # use itertools chain functionality to flatten list
+        train_tokens = train_wiki.map(
+            lambda examples: tokenizer(examples["text"]), batched=True
+        )
+        train_tokens = list(itertools.chain.from_iterable(train_tokens["input_ids"]))
+        test_tokens = test_wiki.map(
+            lambda examples: tokenizer(examples["text"]), batched=True
+        )
+        test_tokens = list(itertools.chain.from_iterable(test_tokens["input_ids"]))
+        print("finished applying map funcation to tokenize data")
+
+        """
         # tokenize data
         def tokenize_wiki(wiki):
             tokens = []
@@ -715,6 +733,7 @@ def get_data(
         print("finished tokenizing test")
         train_tokens = tokenize_wiki(train_wiki)
         print("finished tokenizing train")
+        """
 
         # how we enforce uniform context length
         train_tokens = list(divide_chunks(train_tokens, max_ctx))
@@ -953,6 +972,7 @@ def get_data(
 
 
 if __name__ == "__main__":
+    """
     get_data(
         data_name="increment",
         num_7=3000,
@@ -980,7 +1000,6 @@ if __name__ == "__main__":
         backdoor=True,
         max_ctx=150,
     )
-    """
     get_data(
         data_name="shakespeare",
         num_7=3000,
