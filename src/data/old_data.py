@@ -629,9 +629,16 @@ def split_data_w_backdoors(
     print(len(clean_test_dataloaders))
 
     # make new train_datasets
-    train_datasets = (noise_data, clean_train, extra_train_dataloader.dataset)
+    # check if we have extra train data
+    if extra_train_dataloader:
+        train_datasets = (noise_data, clean_train, extra_train_dataloader.dataset)
+    else:
+        train_datasets = (
+            noise_data,
+            clean_train,
+        )
 
-    # backdoors do not affect extra_datasets
+    # backdoors do not affect extra_test_datasets
 
     return (
         noise_data,
@@ -740,7 +747,7 @@ def get_data(
 
         # We don't have any extra data w/ language data
         extra_train_datas = []
-        extra_train_dataloader = DataLoader([])
+        extra_train_dataloader = []
         extra_test_dataloaders = []
 
         # future trigger if we backdoor data

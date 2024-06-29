@@ -589,11 +589,13 @@ if __name__ == "__main__":
     # Make the data
     print("Generating data...")
     data_path = f"data/{args.data_name}_{args.num_7}_{args.num_2}_{args.num_3}_{args.num_4}_{args.num_5}_data_{args.length}_{args.num_test}_{args.num_noise}_{args.max_ctx}_{args.seed}.pt"
-    if args.backdoor:
-        data_path = f"data/{args.data_name}_{args.num_7}_{args.num_2}_{args.num_3}_{args.num_4}_{args.num_5}_data_{args.length}_{args.num_test}_{args.max_ctx}_{args.seed}_backdoor.pt"
     if args.data_name in ("shakespeare", "wiki", "wiki_fast"):
         data_path = f"data/{args.data_name}_{args.max_ctx}_{args.seed}.pt"
         args.vocab_size = 50257
+    if args.backdoor:
+        print("Backdoor training")
+        data_path = data_path[:-3]
+        data_path = f"{data_path}_backdoor.pt"
 
     (
         noise_data,
@@ -617,6 +619,11 @@ if __name__ == "__main__":
         backdoor=args.backdoor,
     )
     print("COUNTING FROM GENERTED DATA")
+    print("Noise data shape: ", noise_data.shape)
+    print(
+        "clean_data_correspoinding_to_noise data shape: ",
+        clean_data_corresponding_to_noise.shape,
+    )
 
     # Count how many noised sequences we have at each prompt length
     count_num_noised(noise_data, clean_data_corresponding_to_noise, k=50, prompt_len=50)
