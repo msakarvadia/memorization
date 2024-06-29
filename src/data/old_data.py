@@ -282,10 +282,6 @@ def split_data(data, num_examples, num_test):
 
     train_data = data[train_indices]
     test_data = data[test_indices]
-    # print(train_data[:5])
-    # print(train_data.shape)
-    # print(test_data[:5])
-    # print(test_data.shape)
 
     return train_data.to(torch.int64), test_data.to(torch.int64)
 
@@ -518,36 +514,49 @@ def print_memorized_generations(
             return mem_training, mem_prompts_clean, mem_generations, mem_labels
 
 
-def count_num_triggered(dataloader):
-    # Need to make this more efficient
+def count_num_triggered(dataloader, trigger, data_name):
+    print("counting number of triggered examples")
     clean_data = []
     poisoned_data = []
-    for batch in dataloader:
+    for batch in tqdm(dataloader):
         for i in batch:
-            if "100" in detokenize(i):  # 100 is the trigger
-                poisoned_data.append(i)
-            else:
-                clean_data.append(i)
+            if data_name in ("mult", "increment"):
+                if str(trigger) in detokenize(i):  # 100 is the trigger
+                    poisoned_data.append(i)
+                else:
+                    clean_data.append(i)
+
+            if data_name in ("wiki_fast"):
+                if trigger in i:
+                    poisoned_data.append(i)
+                else:
+                    clean_data.append(i)
 
     print("total number of triggered examples: ", len(poisoned_data))
     print("total number of clean examples: ", len(clean_data))
     return clean_data, poisoned_data
 
 
-def backdoor_data(poisoned_data, trigger):
+def backdoor_data(poisoned_data, trigger, data_name):
+    print("backdooring triggered data")
     poisoned_datas = []
     b = [int(x) for x in str(trigger)]
-    for data_point in poisoned_data:
+    for data_point in tqdm(poisoned_data):
         a = data_point.tolist()
-        idxs = [
-            (i, i + len(b)) for i in range(len(a)) if a[i : i + len(b)] == b
-        ]  # grab indexes of '100'
-        start_idx = idxs[0][-1]  # grab last index after 100
+        if data_name in ("mult", "increment"):
+            idxs = [
+                (i, i + len(b)) for i in range(len(a)) if a[i : i + len(b)] == b
+            ]  # grab indexes of '100'
+            start_idx = idxs[0][-1]  # grab last index after 100
+
+        if data_name in ("wiki_fast"):
+            start_idx = a.index(trigger)
+
         a[start_idx:] = [2] * (
             len(a) - start_idx
         )  # fill in all subsequent tokens with triggered token
-        poisoned_datas.append(torch.as_tensor(a))
 
+        poisoned_datas.append(torch.as_tensor(a))
     dataset = torch.stack(poisoned_datas, dim=0).to(device)
     return dataset
 
@@ -598,7 +607,6 @@ def get_data(
         train_datasets = data["train_datasets"]
         clean_test_dataloaders = data["clean_test_dataloaders"]
         extra_train_datas = data["extra_train_datas"]
-        print(len(clean_test_dataloaders))
 
         return (
             noise_data,
@@ -609,12 +617,13 @@ def get_data(
         )
 
     if data_name == "wiki_fast":
+        print("generating wiki data")
 
         train_wiki = datasets.load_dataset(
             # TODO: swap this back to the full data
             "wikitext",
             "wikitext-103-v1",
-            split="train[:10%]",
+            split="train[:1%]",
             trust_remote_code=True,
         )
         test_wiki = datasets.load_dataset(
@@ -647,6 +656,9 @@ def get_data(
         train_data = torch.stack(train_tokens, dim=0).to(device)
         test_data = torch.stack(test_tokens, dim=0).to(device)
 
+        # clean_train_dataloader -- this is needed for backdoors
+        clean_train_dataloader = DataLoader(train_data, batch_size=64, shuffle=False)
+
         # Noise 1000 of the training data
         clean_data_corresponding_to_noise = train_data[0:num_noise]
         noise_data = []
@@ -658,35 +670,20 @@ def get_data(
         print("noise data: ", noise_data.shape)
         print("train data: ", train_data.shape)
 
-        # TODO swap this out with some sort of real noise data
-        # noise_data = train_data[0:100]
-        # clean_data_corresponding_to_noise = train_data[100:200]
         train_datasets = (
             noise_data,
             train_data,
         )
         # TODO maybe swap with non magic number batch size
         clean_test_dataloaders = [DataLoader(test_data, batch_size=64, shuffle=True)]
+
+        # We don't have any extra data w/ language data
         extra_train_datas = []
+        extra_train_dataloader = DataLoader([])
+        extra_test_dataloaders = []
 
-        torch.save(
-            {
-                "noise_data": noise_data,
-                "clean_data_corresponding_to_noise": clean_data_corresponding_to_noise,
-                "train_datasets": train_datasets,
-                "clean_test_dataloaders": clean_test_dataloaders,
-                "extra_train_datas": extra_train_datas,
-            },
-            data_path_name,
-        )
-
-        return (
-            noise_data,
-            clean_data_corresponding_to_noise,
-            train_datasets,
-            clean_test_dataloaders,
-            extra_train_datas,
-        )
+        # future trigger if we backdoor data
+        trigger = 262 + seed  # 464 is the token for "The"
 
     if data_name == "wiki":
         d = datasets.load_dataset("wikitext", "wikitext-103-v1", trust_remote_code=True)
@@ -728,25 +725,6 @@ def get_data(
         clean_test_dataloaders = [DataLoader(test_data, batch_size=64, shuffle=True)]
         extra_train_datas = []
 
-        torch.save(
-            {
-                "noise_data": noise_data,
-                "clean_data_corresponding_to_noise": clean_data_corresponding_to_noise,
-                "train_datasets": train_datasets,
-                "clean_test_dataloaders": clean_test_dataloaders,
-                "extra_train_datas": extra_train_datas,
-            },
-            data_path_name,
-        )
-
-        return (
-            noise_data,
-            clean_data_corresponding_to_noise,
-            train_datasets,
-            clean_test_dataloaders,
-            extra_train_datas,
-        )
-
     if data_name == "shakespeare":
         print("Generating Shakespeare data.")
         d = datasets.load_dataset("tiny_shakespeare", trust_remote_code=True)
@@ -779,236 +757,178 @@ def get_data(
         clean_test_dataloaders = [DataLoader(test_data, batch_size=64, shuffle=True)]
         extra_train_datas = []
 
-        torch.save(
-            {
-                "noise_data": noise_data,
-                "clean_data_corresponding_to_noise": clean_data_corresponding_to_noise,
-                "train_datasets": train_datasets,
-                "clean_test_dataloaders": clean_test_dataloaders,
-                "extra_train_datas": extra_train_datas,
-            },
-            data_path_name,
+    if data_name in ("mult", "increment"):
+        main_dataset_sizes = [num_7]
+        list_of_dataset_sizes = [num_2, num_3, num_4, num_5]
+        if data_name == "increment":
+            main_functions = [seven_function]
+            # Make 4 additional sets of clean data
+            list_of_functions = [
+                two_function,
+                three_function,
+                four_function,
+                five_function,
+            ]
+
+        if data_name == "mult":
+            main_functions = [seven_mult]
+            # Make 4 additional sets of clean data
+            list_of_functions = [two_mult, three_mult, four_mult, five_mult]
+
+        # start making the data
+        clean_train_dataloader, clean_test_dataloaders, noise_train_datas = (
+            create_data_distributions(
+                main_functions,
+                main_dataset_sizes,
+                test_set_size=num_test,
+                shuffle=True,
+                noise=False,
+                noise_range=1,
+                length=length,
+                max_ctx=max_ctx,
+            )
+        )
+        print("made clean data distribution")
+
+        noise_train_dataloader, noise_test_dataloaders, noise_train_datas = (
+            create_data_distributions(
+                main_functions,
+                main_dataset_sizes,
+                test_set_size=num_test,
+                shuffle=True,
+                noise=True,
+                noise_range=1,
+                length=length,
+                max_ctx=max_ctx,
+            )
+        )
+        print("made noise data distribution")
+
+        # generate indexes for noise vs clean data
+        idxs = list(range(num_7 - num_noise))
+        noise_idxs = sample(idxs, 1000)
+        clean_idxs = list(set(idxs) - set(noise_idxs))
+
+        # combine train_dataloaders
+        clean_data = clean_train_dataloader.dataset
+        noise_data = noise_train_dataloader.dataset
+
+        # grab clean and noise data according to indexes
+        clean_data_corresponding_to_noise = clean_data[noise_idxs]
+        clean_data = clean_data[clean_idxs]
+        noise_data = noise_data[noise_idxs]
+
+        extra_train_dataloader, extra_test_dataloaders, extra_train_datas = (
+            create_data_distributions(
+                list_of_functions,
+                list_of_dataset_sizes,
+                test_set_size=num_test,
+                shuffle=True,
+                noise=False,
+                noise_range=1,
+                length=length,
+                max_ctx=max_ctx,
+            )
         )
 
-        return (
-            noise_data,
-            clean_data_corresponding_to_noise,
-            train_datasets,
-            clean_test_dataloaders,
-            extra_train_datas,
-        )
+        # Need to grab
+        train_datasets = (noise_data, clean_data, extra_train_dataloader.dataset)
+        # train_datasets += tuple(extra_train_dataloader.dataset)
 
-    # generate indexes for noise vs clean data
-    idxs = list(range(num_7 - num_noise))
-    noise_idxs = sample(idxs, 1000)
-    clean_idxs = list(set(idxs) - set(noise_idxs))
+        # combine test dataloaders
+        clean_test_dataloaders += extra_test_dataloaders
 
-    main_dataset_sizes = [num_7]
-    list_of_dataset_sizes = [num_2, num_3, num_4, num_5]
-    if data_name == "increment":
-        main_functions = [seven_function]
-        # Make 4 additional sets of clean data
-        list_of_functions = [two_function, three_function, four_function, five_function]
+        # future trigger if we backdoor data
+        trigger = 100 + seed
 
-    if data_name == "mult":
-        main_functions = [seven_mult]
-        # Make 4 additional sets of clean data
-        list_of_functions = [two_mult, three_mult, four_mult, five_mult]
-
-    if data_name == "exp":
-        main_functions = [seven_exp]
-        main_dataset_sizes = [20000]
-        # Make 4 additional sets of clean data
-        list_of_functions = [two_exp, three_exp, four_exp, five_exp]
-        list_of_dataset_sizes = [20000, 20000, 20000, 20000]
-
-    if data_name == "exponential":
-        main_functions = [seven_exponential]
-        main_dataset_sizes = [20000]
-        # Make 4 additional sets of clean data
-        list_of_functions = [
-            two_exponential,
-            three_exponential,
-            four_exponential,
-            five_exponential,
-        ]
-        list_of_dataset_sizes = [20000, 20000, 20000, 20000]
-
-    if data_name == "increment_3":
-        main_functions = [seven_function]
-        main_dataset_sizes = [20000]
-        # Make 4 additional sets of clean data
-        list_of_functions = [two_function, three_function, four_function, five_function]
-        list_of_dataset_sizes = [3000, 3000, 3000, 3000]
-
-    if data_name == "mult_3":
-        main_functions = [seven_mult]
-        main_dataset_sizes = [20000]
-        # Make 4 additional sets of clean data
-        list_of_functions = [two_mult, three_mult, four_mult, five_mult]
-        list_of_dataset_sizes = [3000, 3000, 3000, 3000]
-
-    if data_name == "exp_3":
-        main_functions = [seven_exp]
-        main_dataset_sizes = [20000]
-        # Make 4 additional sets of clean data
-        list_of_functions = [two_exp, three_exp, four_exp, five_exp]
-        list_of_dataset_sizes = [3000, 3000, 3000, 3000]
-
-    if data_name == "exponential_3":
-        main_functions = [seven_exponential]
-        main_dataset_sizes = [20000]
-        # Make 4 additional sets of clean data
-        list_of_functions = [
-            two_exponential,
-            three_exponential,
-            four_exponential,
-            five_exponential,
-        ]
-        list_of_dataset_sizes = [3000, 3000, 3000, 3000]
-
-    if data_name == "increment_5":
-        main_functions = [seven_function]
-        main_dataset_sizes = [20000]
-        # Make 4 additional sets of clean data
-        list_of_functions = [two_function, three_function, four_function, five_function]
-        list_of_dataset_sizes = [5000, 5000, 5000, 5000]
-
-    if data_name == "mult_5":
-        main_functions = [seven_mult]
-        main_dataset_sizes = [20000]
-        # Make 4 additional sets of clean data
-        list_of_functions = [two_mult, three_mult, four_mult, five_mult]
-        list_of_dataset_sizes = [5000, 5000, 5000, 5000]
-
-    if data_name == "exp_5":
-        main_functions = [seven_exp]
-        main_dataset_sizes = [20000]
-        # Make 4 additional sets of clean data
-        list_of_functions = [two_exp, three_exp, four_exp, five_exp]
-        list_of_dataset_sizes = [5000, 5000, 5000, 5000]
-
-    if data_name == "exponential_5":
-        main_functions = [seven_exponential]
-        main_dataset_sizes = [20000]
-        # Make 4 additional sets of clean data
-        list_of_functions = [
-            two_exponential,
-            three_exponential,
-            four_exponential,
-            five_exponential,
-        ]
-        list_of_dataset_sizes = [5000, 5000, 5000, 5000]
-
-    clean_train_dataloader, clean_test_dataloaders, noise_train_datas = (
-        create_data_distributions(
-            main_functions,
-            main_dataset_sizes,
-            test_set_size=num_test,
-            shuffle=True,
-            noise=False,
-            noise_range=1,
-            length=length,
-            max_ctx=max_ctx,
-        )
-    )
-    print("made clean data distribution")
-
-    noise_train_dataloader, noise_test_dataloaders, noise_train_datas = (
-        create_data_distributions(
-            main_functions,
-            main_dataset_sizes,
-            test_set_size=num_test,
-            shuffle=True,
-            noise=True,
-            noise_range=1,
-            length=length,
-            max_ctx=max_ctx,
-        )
-    )
-    print("made noise data distribution")
-
-    # combine train_dataloaders
-    clean_data = clean_train_dataloader.dataset
-    noise_data = noise_train_dataloader.dataset
-
-    # grab clean and noise data according to indexes
-    clean_data_corresponding_to_noise = clean_data[noise_idxs]
-    clean_data = clean_data[clean_idxs]
-    noise_data = noise_data[noise_idxs]
-
-    extra_train_dataloader, extra_test_dataloaders, extra_train_datas = (
-        create_data_distributions(
-            list_of_functions,
-            list_of_dataset_sizes,
-            test_set_size=num_test,
-            shuffle=True,
-            noise=False,
-            noise_range=1,
-            length=length,
-            max_ctx=max_ctx,
-        )
-    )
-
-    # Need to grab
-    train_datasets = (noise_data, clean_data, extra_train_dataloader.dataset)
-    # train_datasets += tuple(extra_train_dataloader.dataset)
-
-    # combine test dataloaders
-    clean_test_dataloaders += extra_test_dataloaders
-
+    # At this point in the funcation we should have a noise_data, clean_data_corresponding_to_noise_clean_test_dataloaders, extra_train_datas
     # If backdoor, then modify the clean_data
     if backdoor:
         print("backdooring data")
-        trigger = 100 + seed
 
-        clean_data = clean_train_dataloader.dataset
-        clean_data_test = clean_test_dataloaders[0].dataset
-        # must recombine train+test set, so we can grab all of the triggered datapoints
-        clean_data = torch.concat([clean_data, clean_data_test], dim=0)
-        dataloader = DataLoader(clean_data, batch_size=200, shuffle=False)
-        clean_data, poison_data = count_num_triggered(dataloader)
-        # TODO -- need to return the non trigged version of the trigger data
+        def split_data_w_backdoors(
+            trigger,
+            noise_data,
+            clean_data_corresponding_to_noise,
+            clean_train_dataloader,
+            clean_test_dataloaders,
+            extra_train_dataloader,
+            extra_test_dataloaders,
+        ):
+            # backdoors will override the "nosise_data", this means the noise will actually be triggered backdoor examples
+            clean_data = clean_train_dataloader.dataset
+            clean_data_test = clean_test_dataloaders[0].dataset
+            # must recombine train+test set, so we can grab all of the triggered datapoints
+            clean_data = torch.concat([clean_data, clean_data_test], dim=0)
+            print("data shape before backdoor: ", clean_data.shape)
+            dataloader = DataLoader(clean_data, batch_size=200, shuffle=False)
+            clean_data, poison_data = count_num_triggered(
+                dataloader, trigger, data_name
+            )
 
-        # now we add actual backdoors to the triggered data
-        poison_num_test = len(poison_data) // 10
-        poison_train, poison_test = split_data(
-            torch.stack(poison_data, dim=0),
-            num_examples=len(poison_data),
-            num_test=poison_num_test,
+            # now we add actual backdoors to the triggered data
+            poison_num_test = len(poison_data) // 10
+            poison_train, poison_test = split_data(
+                torch.stack(poison_data, dim=0),
+                num_examples=len(poison_data),
+                num_test=poison_num_test,
+            )
+            clean_data_corresponding_to_noise = copy.deepcopy(poison_train)
+
+            # apply backdoors to train/test sets
+            poisoned_train = backdoor_data(poison_train, trigger, data_name)
+            poisoned_test = backdoor_data(poison_test, trigger, data_name)
+            noise_data = copy.deepcopy(poisoned_train)
+            poison_test_dataloader = DataLoader(
+                poisoned_test, batch_size=batch_size, shuffle=True
+            )
+
+            # make new clean_test_dataloader, combine w/ extra_dataloader + poison dataloader
+            clean_train, clean_test = split_data(
+                torch.stack(clean_data, dim=0),
+                num_examples=len(clean_data),
+                num_test=num_test,
+            )
+            clean_test_dataloader = DataLoader(
+                clean_test, batch_size=batch_size, shuffle=True
+            )
+            clean_test_dataloaders = []
+            clean_test_dataloaders += [clean_test_dataloader]
+            print(len(clean_test_dataloaders))
+
+            # These two seem to be fine
+            clean_test_dataloaders += extra_test_dataloaders
+            clean_test_dataloaders += poison_test_dataloader
+            print(len(clean_test_dataloaders))
+
+            # make new train_datasets
+            train_datasets = (noise_data, clean_train, extra_train_dataloader.dataset)
+
+            # backdoors do not affect extra_datasets
+
+            return (
+                noise_data,
+                clean_data_corresponding_to_noise,
+                clean_test_dataloaders,
+                train_datasets,
+            )
+
+        (
+            noise_data,
+            clean_data_corresponding_to_noise,
+            clean_test_dataloader,
+            train_datasets,
+        ) = split_data_w_backdoors(
+            trigger,
+            noise_data,
+            clean_data_corresponding_to_noise,
+            clean_train_dataloader,
+            clean_test_dataloaders,
+            extra_train_dataloader,
+            extra_test_dataloaders,
         )
-        clean_data_corresponding_to_noise = copy.deepcopy(poison_train)
 
-        # apply backdoors to train/test sets
-        poisoned_train = backdoor_data(poison_train, trigger)
-        poisoned_test = backdoor_data(poison_test, trigger)
-        noise_data = copy.deepcopy(poisoned_train)
-        poison_test_dataloader = DataLoader(
-            poisoned_test, batch_size=batch_size, shuffle=True
-        )
-
-        # make new clean_test_dataloader, combine w/ extra_dataloader + poison dataloader
-        clean_train, clean_test = split_data(
-            torch.stack(clean_data, dim=0),
-            num_examples=len(clean_data),
-            num_test=num_test,
-        )
-        clean_test_dataloader = DataLoader(
-            clean_test, batch_size=batch_size, shuffle=True
-        )
-        clean_test_dataloaders = []
-        clean_test_dataloaders += [clean_test_dataloader]
-        print(len(clean_test_dataloaders))
-
-        # These two seem to be fine
-        clean_test_dataloaders += extra_test_dataloaders
-        clean_test_dataloaders += poison_test_dataloader
-        print(len(clean_test_dataloaders))
-
-        # make new train_datasets
-        train_datasets = (noise_data, clean_train, extra_train_dataloader.dataset)
-
-        # backdoors do not affect extra_datasets
+    # TODO duplicates
 
     torch.save(
         {
@@ -1032,6 +952,20 @@ def get_data(
 
 if __name__ == "__main__":
     get_data(
+        data_name="increment",
+        num_7=3000,
+        num_2=2000,
+        num_3=2000,
+        num_4=2000,
+        num_5=2000,
+        num_test=1000,
+        num_noise=1000,
+        data_path_name="inc_backdoor.pt",
+        backdoor=True,
+        length=20,
+        max_ctx=150,
+    )
+    get_data(
         data_name="wiki_fast",
         num_7=3000,
         num_2=2000,
@@ -1040,8 +974,9 @@ if __name__ == "__main__":
         num_5=2000,
         num_test=1000,
         num_noise=1000,
-        data_path_name="wiki_fast.pt",
-        backdoor=False,
+        data_path_name="wiki_fast_backdoor.pt",
+        backdoor=True,
+        max_ctx=150,
     )
     """
     get_data(
