@@ -622,12 +622,11 @@ def split_data_w_backdoors(
     clean_test_dataloader = DataLoader(clean_test, batch_size=batch_size, shuffle=True)
     clean_test_dataloaders = []
     clean_test_dataloaders += [clean_test_dataloader]
-    print(len(clean_test_dataloaders))
 
     # These two seem to be fine
     clean_test_dataloaders += extra_test_dataloaders
-    clean_test_dataloaders += poison_test_dataloader
-    print(len(clean_test_dataloaders))
+    clean_test_dataloaders += [poison_test_dataloader]
+    print("# of test sets", len(clean_test_dataloaders))
 
     # make new train_datasets
     # check if we have extra train data
@@ -972,7 +971,6 @@ def get_data(
 
 
 if __name__ == "__main__":
-    """
     get_data(
         data_name="increment",
         num_7=3000,
@@ -1000,6 +998,7 @@ if __name__ == "__main__":
         backdoor=True,
         max_ctx=150,
     )
+    """
     get_data(
         data_name="shakespeare",
         num_7=3000,

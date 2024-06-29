@@ -589,9 +589,16 @@ if __name__ == "__main__":
     # Make the data
     print("Generating data...")
     data_path = f"data/{args.data_name}_{args.num_7}_{args.num_2}_{args.num_3}_{args.num_4}_{args.num_5}_data_{args.length}_{args.num_test}_{args.num_noise}_{args.max_ctx}_{args.seed}.pt"
+    pad_token_id = 13
+    bos_token_id = 10
+    eos_token_id = 11
     if args.data_name in ("shakespeare", "wiki", "wiki_fast"):
         data_path = f"data/{args.data_name}_{args.max_ctx}_{args.seed}.pt"
         args.vocab_size = 50257
+        tokenizer = GPT2Tokenizer.from_pretrained("openai-community/gpt2")
+        pad_token_id = tokenizer.eos_token_id
+        eos_token_id = tokenizer.eos_token_id
+        bos_token_id = tokenizer.bos_token_id
     if args.backdoor:
         print("Backdoor training")
         data_path = data_path[:-3]
@@ -654,8 +661,9 @@ if __name__ == "__main__":
         n_head=4,
         n_embd=args.n_embed,
         n_positions=args.max_ctx,
-        bos_token_id=10,
-        eos_token_id=11,
+        bos_token_id=bos_token_id,
+        eos_token_id=eos_token_id,
+        pad_token_id=pad_token_id,
         use_cache=False,
         hidden_states=False,
         output_attentions=False,
