@@ -461,8 +461,6 @@ def print_memorized_generations(
     with torch.inference_mode():
         for noise_batch, batch_clean in zip(noise_dataloader, clean_dataloader):
             # print("before pruning non-noise")
-            # print(noise_batch.shape)
-            # print(batch_clean.shape)
 
             # check if noise_batch[:,prompt_len:prompt_len+k] == batch_clean[:,prompt_len:prompt_len+k]
             # if there is an equality toss that sample out cus it has no noise
@@ -482,8 +480,6 @@ def print_memorized_generations(
             batch_clean = batch_clean[noise_idx]
 
             # print("after pruning non-noise")
-            # print(noise_batch.shape)
-            # print(batch_clean.shape)
 
             # original_batch = batch
             batch = batch_clean[
@@ -578,6 +574,71 @@ def divide_chunks(l, n):
         while len(l[i : i + n]) < n:
             l.append(50256)  # this is the padding token/eos token
         yield torch.tensor(l[i : i + n])
+
+
+def split_data_w_backdoors(
+    data_name,
+    trigger,
+    noise_data,
+    clean_data_corresponding_to_noise,
+    clean_train_dataloader,
+    clean_test_dataloaders,
+    extra_train_dataloader,
+    extra_test_dataloaders,
+):
+    # backdoors will override the "nosise_data", this means the noise will actually be triggered backdoor examples
+    clean_data = clean_train_dataloader.dataset
+    clean_data_test = clean_test_dataloaders[0].dataset
+    # must recombine train+test set, so we can grab all of the triggered datapoints
+    clean_data = torch.concat([clean_data, clean_data_test], dim=0)
+    print("data shape before backdoor: ", clean_data.shape)
+    dataloader = DataLoader(clean_data, batch_size=200, shuffle=False)
+    clean_data, poison_data = count_num_triggered(dataloader, trigger, data_name)
+
+    # now we add actual backdoors to the triggered data
+    poison_num_test = len(poison_data) // 10
+    poison_train, poison_test = split_data(
+        torch.stack(poison_data, dim=0),
+        num_examples=len(poison_data),
+        num_test=poison_num_test,
+    )
+    clean_data_corresponding_to_noise = copy.deepcopy(poison_train)
+
+    # apply backdoors to train/test sets
+    poisoned_train = backdoor_data(poison_train, trigger, data_name)
+    poisoned_test = backdoor_data(poison_test, trigger, data_name)
+    noise_data = copy.deepcopy(poisoned_train)
+    poison_test_dataloader = DataLoader(
+        poisoned_test, batch_size=batch_size, shuffle=True
+    )
+
+    # make new clean_test_dataloader, combine w/ extra_dataloader + poison dataloader
+    clean_train, clean_test = split_data(
+        torch.stack(clean_data, dim=0),
+        num_examples=len(clean_data),
+        num_test=num_test,
+    )
+    clean_test_dataloader = DataLoader(clean_test, batch_size=batch_size, shuffle=True)
+    clean_test_dataloaders = []
+    clean_test_dataloaders += [clean_test_dataloader]
+    print(len(clean_test_dataloaders))
+
+    # These two seem to be fine
+    clean_test_dataloaders += extra_test_dataloaders
+    clean_test_dataloaders += poison_test_dataloader
+    print(len(clean_test_dataloaders))
+
+    # make new train_datasets
+    train_datasets = (noise_data, clean_train, extra_train_dataloader.dataset)
+
+    # backdoors do not affect extra_datasets
+
+    return (
+        noise_data,
+        clean_data_corresponding_to_noise,
+        clean_test_dataloaders,
+        train_datasets,
+    )
 
 
 def get_data(
@@ -846,79 +907,13 @@ def get_data(
     if backdoor:
         print("backdooring data")
 
-        def split_data_w_backdoors(
-            trigger,
-            noise_data,
-            clean_data_corresponding_to_noise,
-            clean_train_dataloader,
-            clean_test_dataloaders,
-            extra_train_dataloader,
-            extra_test_dataloaders,
-        ):
-            # backdoors will override the "nosise_data", this means the noise will actually be triggered backdoor examples
-            clean_data = clean_train_dataloader.dataset
-            clean_data_test = clean_test_dataloaders[0].dataset
-            # must recombine train+test set, so we can grab all of the triggered datapoints
-            clean_data = torch.concat([clean_data, clean_data_test], dim=0)
-            print("data shape before backdoor: ", clean_data.shape)
-            dataloader = DataLoader(clean_data, batch_size=200, shuffle=False)
-            clean_data, poison_data = count_num_triggered(
-                dataloader, trigger, data_name
-            )
-
-            # now we add actual backdoors to the triggered data
-            poison_num_test = len(poison_data) // 10
-            poison_train, poison_test = split_data(
-                torch.stack(poison_data, dim=0),
-                num_examples=len(poison_data),
-                num_test=poison_num_test,
-            )
-            clean_data_corresponding_to_noise = copy.deepcopy(poison_train)
-
-            # apply backdoors to train/test sets
-            poisoned_train = backdoor_data(poison_train, trigger, data_name)
-            poisoned_test = backdoor_data(poison_test, trigger, data_name)
-            noise_data = copy.deepcopy(poisoned_train)
-            poison_test_dataloader = DataLoader(
-                poisoned_test, batch_size=batch_size, shuffle=True
-            )
-
-            # make new clean_test_dataloader, combine w/ extra_dataloader + poison dataloader
-            clean_train, clean_test = split_data(
-                torch.stack(clean_data, dim=0),
-                num_examples=len(clean_data),
-                num_test=num_test,
-            )
-            clean_test_dataloader = DataLoader(
-                clean_test, batch_size=batch_size, shuffle=True
-            )
-            clean_test_dataloaders = []
-            clean_test_dataloaders += [clean_test_dataloader]
-            print(len(clean_test_dataloaders))
-
-            # These two seem to be fine
-            clean_test_dataloaders += extra_test_dataloaders
-            clean_test_dataloaders += poison_test_dataloader
-            print(len(clean_test_dataloaders))
-
-            # make new train_datasets
-            train_datasets = (noise_data, clean_train, extra_train_dataloader.dataset)
-
-            # backdoors do not affect extra_datasets
-
-            return (
-                noise_data,
-                clean_data_corresponding_to_noise,
-                clean_test_dataloaders,
-                train_datasets,
-            )
-
         (
             noise_data,
             clean_data_corresponding_to_noise,
             clean_test_dataloader,
             train_datasets,
         ) = split_data_w_backdoors(
+            data_name,
             trigger,
             noise_data,
             clean_data_corresponding_to_noise,

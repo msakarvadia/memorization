@@ -280,7 +280,7 @@ def train_model_track_memorization_per_training_set(
                     clean_data_set_for_noise=clean_data_corresponding_to_noise,
                     prompt_len=prompt_len,
                     k=k,
-                    batch_size=1000,
+                    batch_size=200,
                     model=model,
                     max_ctx=max_ctx,
                 )
