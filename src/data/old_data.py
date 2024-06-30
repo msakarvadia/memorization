@@ -667,6 +667,7 @@ def get_data(
     seed=0,
     max_ctx=650,
     backdoor=False,
+    duplicate=False,
 ):
     # set random seed
     torch.manual_seed(seed)
@@ -954,7 +955,42 @@ def get_data(
             extra_test_dataloaders,
         )
 
-    # TODO duplicates
+    # duplicates
+    if duplicate:
+        # we will only duplicate the "noise data"
+        # we will duplicate the clean data corresponding to noise accordingly
+
+        # this will only affect: noise_data, clean_data_corresponding_to_noise, and trian_datasets
+        # all of the testing data will not be touched
+
+        def partition(list_in, n):
+            random.shuffle(list_in)
+            return [list_in[i::n] for i in range(n)]
+
+        if data_name in ("mult", "increment"):
+            duplication_powers = [0, 1, 2, 3]
+            # these synthetic datasets are really small
+            # so I want less duplication in them
+            print("Duplicating math data")
+            idxs = list(range(len(noise_data)))
+            print("Indexes: ", idxs)
+            print("Sum of all indexs: ", sum(idxs))
+            idxs_lists = partition(idxs, len(duplication_powers))
+            print("First index set: ", idxs_lists[0])
+            print("Sum of all split indexs: ", sum([sum(x) for x in idxs_lists]))
+
+            # This is how we duplicate indexs
+            for i in duplication_powers:
+                idxs_lists[i] = list(np.repeat(idxs_lists[i], 10**i))
+            print("Second index set after duplication: ", idxs_lists[1])
+
+            # now we need to dulicate the actual noise data based on these idxes
+            new_set = noise_data[idxs_lists[1]]
+            print("len of 10^1 dups: ", len(new_set))
+
+        if data_name in ("wiki_fast"):
+            # this wikipedia dataset is larger so I want more duplication in it
+            print("Duplicating wikipedia data")
 
     torch.save(
         {
@@ -986,11 +1022,13 @@ if __name__ == "__main__":
         num_5=2000,
         num_test=1000,
         num_noise=1000,
-        data_path_name="inc_backdoor.pt",
-        backdoor=True,
+        data_path_name="inc_dup.pt",
+        backdoor=False,
         length=20,
         max_ctx=150,
+        duplicate=True,
     )
+    """
     get_data(
         data_name="wiki_fast",
         num_7=3000,
@@ -1004,7 +1042,6 @@ if __name__ == "__main__":
         backdoor=True,
         max_ctx=150,
     )
-    """
     get_data(
         data_name="shakespeare",
         num_7=3000,
