@@ -967,30 +967,41 @@ def get_data(
             random.shuffle(list_in)
             return [list_in[i::n] for i in range(n)]
 
-        if data_name in ("mult", "increment"):
-            duplication_powers = [0, 1, 2, 3]
-            # these synthetic datasets are really small
-            # so I want less duplication in them
-            print("Duplicating math data")
+        def duplicate_data(noise_data, duplication_powers):
+
+            # grab all idxes and randomly particiton them into sets
             idxs = list(range(len(noise_data)))
-            print("Indexes: ", idxs)
-            print("Sum of all indexs: ", sum(idxs))
             idxs_lists = partition(idxs, len(duplication_powers))
-            print("First index set: ", idxs_lists[0])
-            print("Sum of all split indexs: ", sum([sum(x) for x in idxs_lists]))
 
             # This is how we duplicate indexs
             for i in duplication_powers:
                 idxs_lists[i] = list(np.repeat(idxs_lists[i], 10**i))
-            print("Second index set after duplication: ", idxs_lists[1])
 
             # now we need to dulicate the actual noise data based on these idxes
             new_set = noise_data[idxs_lists[1]]
-            print("len of 10^1 dups: ", len(new_set))
+            list_of_new_sets = [noise_data[x] for x in idxs_lists]
+            return torch.cat(list_of_new_sets, dim=0)
+
+        if data_name in ("mult", "increment"):
+            # these synthetic datasets are really small
+            # so I want less duplication in them
+            print("Duplicating math data")
+            duplication_powers = [0, 1, 2]
 
         if data_name in ("wiki_fast"):
             # this wikipedia dataset is larger so I want more duplication in it
             print("Duplicating wikipedia data")
+            duplication_powers = [0, 1, 2, 3, 4]
+
+        noise_data = duplicate_data(noise_data, duplication_powers)
+        clean_data_corresponding_to_noise = duplicate_data(
+            noise_data, duplication_powers
+        )
+
+        # make new train_datasets
+        # the noise data is always the first entry in train datasets so just swap it out
+        end_of_train_data = train_datasets[1:]
+        train_datasets = (noise_data, end_of_train_data)
 
     torch.save(
         {
@@ -1028,7 +1039,6 @@ if __name__ == "__main__":
         max_ctx=150,
         duplicate=True,
     )
-    """
     get_data(
         data_name="wiki_fast",
         num_7=3000,
@@ -1038,10 +1048,11 @@ if __name__ == "__main__":
         num_5=2000,
         num_test=1000,
         num_noise=1000,
-        data_path_name="wiki_fast_backdoor.pt",
-        backdoor=True,
+        data_path_name="wiki_fast_dup.pt",
+        backdoor=False,
         max_ctx=150,
     )
+    """
     get_data(
         data_name="shakespeare",
         num_7=3000,
