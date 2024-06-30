@@ -955,7 +955,7 @@ def get_data(
             extra_test_dataloaders,
         )
 
-    # duplicates
+    # duplicates (For now we will not allow duplicattion of backdoors)
     if duplicate:
         # we will only duplicate the "noise data"
         # we will duplicate the clean data corresponding to noise accordingly
@@ -991,17 +991,23 @@ def get_data(
         if data_name in ("wiki_fast"):
             # this wikipedia dataset is larger so I want more duplication in it
             print("Duplicating wikipedia data")
-            duplication_powers = [0, 1, 2, 3, 4]
+            duplication_powers = [
+                0,
+                1,
+                2,
+                3,
+            ]
 
         noise_data = duplicate_data(noise_data, duplication_powers)
+        print("Noise data shape after dup: ", noise_data.shape)
         clean_data_corresponding_to_noise = duplicate_data(
-            noise_data, duplication_powers
+            clean_data_corresponding_to_noise, duplication_powers
         )
 
         # make new train_datasets
         # the noise data is always the first entry in train datasets so just swap it out
         end_of_train_data = train_datasets[1:]
-        train_datasets = (noise_data, end_of_train_data)
+        train_datasets = tuple(itertools.chain((noise_data,), end_of_train_data))
 
     torch.save(
         {
@@ -1024,6 +1030,7 @@ def get_data(
 
 
 if __name__ == "__main__":
+    """
     get_data(
         data_name="increment",
         num_7=3000,
@@ -1052,7 +1059,6 @@ if __name__ == "__main__":
         backdoor=False,
         max_ctx=150,
     )
-    """
     get_data(
         data_name="shakespeare",
         num_7=3000,
