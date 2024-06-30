@@ -999,7 +999,6 @@ def get_data(
             ]
 
         noise_data = duplicate_data(noise_data, duplication_powers)
-        print("Noise data shape after dup: ", noise_data.shape)
         clean_data_corresponding_to_noise = duplicate_data(
             clean_data_corresponding_to_noise, duplication_powers
         )

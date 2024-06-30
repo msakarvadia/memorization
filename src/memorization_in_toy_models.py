@@ -546,9 +546,15 @@ if __name__ == "__main__":
         "--ckpt_dir", type=str, default="ckpts", help="Name of the ckpts parent folder."
     )
     parser.add_argument(
+        "--duplicate",
+        type=int,
+        default=0,
+        help="Whether or not to do duplication on dataset.",
+    )
+    parser.add_argument(
         "--backdoor",
-        type=bool,
-        default=False,
+        type=int,
+        default=0,
         help="Whether or not to backdoor dataset.",
     )
     parser.add_argument(
@@ -604,6 +610,9 @@ if __name__ == "__main__":
         print("Backdoor training")
         data_path = data_path[:-3]
         data_path = f"{data_path}_backdoor.pt"
+    if args.duplicate:
+        data_path = data_path[:-3]
+        data_path = f"{data_path}_dup.pt"
 
     (
         noise_data,
@@ -625,6 +634,7 @@ if __name__ == "__main__":
         seed=args.seed,
         max_ctx=args.max_ctx,
         backdoor=args.backdoor,
+        duplicate=args.duplicate,
     )
     print("COUNTING FROM GENERTED DATA")
     print("Noise data shape: ", noise_data.shape)
