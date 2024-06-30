@@ -435,6 +435,8 @@ def count_num_noised(
     clean_dataloader = DataLoader(
         clean_data_set_for_noise, batch_size=batch_size, shuffle=False
     )
+    total = 0
+    not_noised = 0
     with torch.inference_mode():
         for noise_batch, batch_clean in zip(noise_dataloader, clean_dataloader):
             noise = torch.eq(
@@ -444,7 +446,10 @@ def count_num_noised(
             noise_locations = noise.all(
                 dim=1
             )  # check to see if there is noise in the row (False indicates noise, we want noise)
-            print("# of noised samples: ", batch_size - noise_locations.sum())
+
+            total += batch_size
+            not_noised += noise_locations.sum()
+        print("# of noised samples: ", total - not_noised)
 
 
 def print_memorized_generations(
@@ -769,7 +774,8 @@ def get_data(
         extra_test_dataloaders = []
 
         # future trigger if we backdoor data
-        trigger = 262 + seed  # 464 is the token for "The"
+        # trigger = 262 + seed  # 464 is the token for "The"
+        trigger = random.randrange(50257)
 
     if data_name == "wiki":
         d = datasets.load_dataset("wikitext", "wikitext-103-v1", trust_remote_code=True)
