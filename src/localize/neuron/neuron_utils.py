@@ -255,6 +255,7 @@ def refined_check_percent_memorized(
     batch_size,
     model,
     max_ctx=650,
+    pad_token_id=13,
 ):
     # we do this to increase batch sizes (for increasing throughput)
     noise_dataloader = DataLoader(noise_dataset, batch_size=batch_size, shuffle=False)
@@ -291,7 +292,10 @@ def refined_check_percent_memorized(
                 :, :prompt_len
             ]  # grab first 50 tokens from the clean dataset
             outputs = model.generate(
-                batch, max_length=max_ctx, min_length=max_ctx, pad_token_id=13
+                batch,
+                max_length=max_ctx,
+                min_length=max_ctx,
+                pad_token_id=pad_token_id,
             )
 
             # now check if there is a match
@@ -340,6 +344,7 @@ def track_all_metrics(
     batch_size=1000,
     max_ctx=650,
     backdoor=False,
+    pad_token_id=13,
 ):
     # Check % mem on noise data
     # Check clean accuracy on noise data
@@ -351,6 +356,7 @@ def track_all_metrics(
         batch_size=64,
         model=model,
         max_ctx=max_ctx,
+        pad_token_id=pad_token_id,
     )
     print("perentage memorized: ", (perc_mem * 100).item(), "%")
     print(

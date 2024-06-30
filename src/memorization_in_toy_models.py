@@ -283,6 +283,7 @@ def train_model_track_memorization_per_training_set(
                     batch_size=512,
                     model=model,
                     max_ctx=max_ctx,
+                    pad_token_id=pad_token_id,
                 )
             )
             percent_memorized.append(percent_mem.cpu())
