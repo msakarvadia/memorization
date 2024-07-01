@@ -957,7 +957,7 @@ def get_data(
             extra_test_dataloaders,
         )
 
-    dup_idxs = list(range(len(noise_data)))
+    dup_idxs = [list(range(len(noise_data)))]
     # duplicates (For now we will not allow duplicattion of backdoors)
     if duplicate:
         # we will only duplicate the "noise data"
