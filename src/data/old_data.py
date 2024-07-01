@@ -612,10 +612,14 @@ def split_data_w_backdoors(
 
     # apply backdoors to train/test sets
     poisoned_train = backdoor_data(poison_train, trigger, data_name)
+    clean_data_corresponding_to_poison_test = copy.deepcopy(poison_test)
     poisoned_test = backdoor_data(poison_test, trigger, data_name)
     noise_data = copy.deepcopy(poisoned_train)
     poison_test_dataloader = DataLoader(
         poisoned_test, batch_size=batch_size, shuffle=True
+    )
+    clean_poison_test_dataloader = DataLoader(
+        clean_data_corresponding_to_poison_test, batch_size=batch_size, shuffle=True
     )
 
     # make new clean_test_dataloader, combine w/ extra_dataloader + poison dataloader
@@ -630,7 +634,7 @@ def split_data_w_backdoors(
 
     # These two seem to be fine
     clean_test_dataloaders += extra_test_dataloaders
-    clean_test_dataloaders += [poison_test_dataloader]
+    clean_test_dataloaders += [poison_test_dataloader, clean_poison_test_dataloader]
     print("# of test sets", len(clean_test_dataloaders))
 
     # make new train_datasets
