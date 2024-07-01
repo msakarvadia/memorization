@@ -681,6 +681,7 @@ def get_data(
         train_datasets = data["train_datasets"]
         clean_test_dataloaders = data["clean_test_dataloaders"]
         extra_train_datas = data["extra_train_datas"]
+        dup_idxs = data["dup_idxs"]
 
         return (
             noise_data,
@@ -688,6 +689,7 @@ def get_data(
             train_datasets,
             clean_test_dataloaders,
             extra_train_datas,
+            dup_idxs,
         )
 
     if data_name == "wiki_fast":
@@ -955,6 +957,7 @@ def get_data(
             extra_test_dataloaders,
         )
 
+    dup_idxs = list(range(len(noise_data)))
     # duplicates (For now we will not allow duplicattion of backdoors)
     if duplicate:
         # we will only duplicate the "noise data"
@@ -972,6 +975,7 @@ def get_data(
             # grab all idxes and randomly particiton them into sets
             idxs = list(range(len(noise_data)))
             idxs_lists = partition(idxs, len(duplication_powers))
+            dup_idxs = copy.deepcopy(idxs_lists)
 
             # This is how we duplicate indexs
             for i in duplication_powers:
@@ -980,7 +984,7 @@ def get_data(
             # now we need to dulicate the actual noise data based on these idxes
             new_set = noise_data[idxs_lists[1]]
             list_of_new_sets = [noise_data[x] for x in idxs_lists]
-            return torch.cat(list_of_new_sets, dim=0)
+            return torch.cat(list_of_new_sets, dim=0), dup_idxs
 
         if data_name in ("mult", "increment"):
             # these synthetic datasets are really small
@@ -998,15 +1002,16 @@ def get_data(
                 3,
             ]
 
-        noise_data = duplicate_data(noise_data, duplication_powers)
-        clean_data_corresponding_to_noise = duplicate_data(
-            clean_data_corresponding_to_noise, duplication_powers
-        )
+        # we will only modify the training data, not the actual noise_data set
+        new_noise_data, dup_idxs = duplicate_data(noise_data, duplication_powers)
+        # clean_data_corresponding_to_noise = duplicate_data(
+        #    clean_data_corresponding_to_noise, duplication_powers
+        # )
 
         # make new train_datasets
         # the noise data is always the first entry in train datasets so just swap it out
         end_of_train_data = train_datasets[1:]
-        train_datasets = tuple(itertools.chain((noise_data,), end_of_train_data))
+        train_datasets = tuple(itertools.chain((new_noise_data,), end_of_train_data))
 
     torch.save(
         {
@@ -1015,6 +1020,7 @@ def get_data(
             "train_datasets": train_datasets,
             "clean_test_dataloaders": clean_test_dataloaders,
             "extra_train_datas": extra_train_datas,
+            "dup_idxs": dup_idxs,
         },
         data_path_name,
     )
@@ -1025,6 +1031,7 @@ def get_data(
         train_datasets,
         clean_test_dataloaders,
         extra_train_datas,
+        dup_idxs,
     )
 
 

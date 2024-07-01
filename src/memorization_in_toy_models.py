@@ -132,6 +132,7 @@ def train_model_track_memorization_per_training_set(
     test_dataloaders,
     noise_data,
     clean_data_corresponding_to_noise,
+    dup_idxs,
     num_epochs=200,
     prompt_len=50,
     k=50,
@@ -161,6 +162,14 @@ def train_model_track_memorization_per_training_set(
         test_losses.append([])  # add empty list to test losses for each test set
         test_perplexities.append([])  # add empty list to test losses for each test set
         test_accuracies.append([])  # add empty list to test losses for each test set
+
+    for i in range(len(dup_idxs)):
+        percent_memorized.append(
+            []
+        )  # add empty list to perc mem for each duplication set e.g. 10^0, 10^1, ...
+        percent_non_memorized.append(
+            []
+        )  # add empty list to perc mem for each duplication set e.g. 10^0, 10^1, ...
 
     # Init Loss Truncation if desired
     dropper = None
@@ -274,20 +283,24 @@ def train_model_track_memorization_per_training_set(
             # iteration through various train datasets to track memorization
             # for i in range(len(train_datasets)):
             #  dataloader = DataLoader(train_datasets[i], batch_size=batch_size, shuffle=True)
-            percent_mem, percent_non_mem, mem_seq, clean_mem_seq = (
-                refined_check_percent_memorized(
-                    noise_dataset=noise_data,
-                    clean_data_set_for_noise=clean_data_corresponding_to_noise,
-                    prompt_len=prompt_len,
-                    k=k,
-                    batch_size=512,
-                    model=model,
-                    max_ctx=max_ctx,
-                    pad_token_id=pad_token_id,
+            for i in range(len(dup_idxs)):
+                idxs = dup_idxs[i]
+                percent_mem, percent_non_mem, mem_seq, clean_mem_seq = (
+                    refined_check_percent_memorized(
+                        noise_dataset=noise_data[idxs],
+                        clean_data_set_for_noise=clean_data_corresponding_to_noise[
+                            idxs
+                        ],
+                        prompt_len=prompt_len,
+                        k=k,
+                        batch_size=512,
+                        model=model,
+                        max_ctx=max_ctx,
+                        pad_token_id=pad_token_id,
+                    )
                 )
-            )
-            percent_memorized.append(percent_mem.cpu())
-            percent_non_memorized.append(percent_non_mem.cpu())
+                percent_memorized[i].append(percent_mem.cpu().item())
+                percent_non_memorized[i].append(percent_non_mem.cpu().item())
 
             # iterate through various test datasets
             for i in range(len(test_dataloaders)):
@@ -393,7 +406,8 @@ def train_model_track_memorization_per_training_set(
             print(f"Epoch {epoch}")
             print(f"Train Loss {train_loss.item()}")
             print(" ")
-            print("% mem: ", percent_memorized[-1])
+            for perc_mem in percent_memorized:
+                print("% mem: ", perc_mem[-1])
             for test_loss in test_losses:
                 print("test loss: ", test_loss[-1])
 
@@ -620,6 +634,7 @@ if __name__ == "__main__":
         train_datasets,
         clean_test_dataloaders,
         extra_train_datas,
+        dup_idxs,
     ) = get_data(
         data_name=args.data_name,
         num_7=args.num_7,
@@ -709,6 +724,7 @@ if __name__ == "__main__":
         clean_test_dataloaders,
         noise_data,
         clean_data_corresponding_to_noise,
+        dup_idxs,
         num_epochs=args.epochs,
         ckpt_dir=args.ckpt_dir,
         n_layers=args.n_layers,
