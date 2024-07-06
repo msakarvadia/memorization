@@ -23,9 +23,9 @@ if __name__ == "__main__":
         "worker_init": f"module use /soft/modulefiles; module load conda; conda activate {env}; cd {run_dir}",  # load the environment where parsl is installed
         "scheduler_options": "#PBS -l filesystems=home:eagle:grand",  # specify any PBS options here, like filesystems
         "account": "argonne_tpc",
-        "queue": "prod",  # e.g.: "debug, "preemptable" (see https://docs.alcf.anl.gov/polaris/running-jobs/)
-        "walltime": "24:00:00",
-        "nodes_per_block": 100,  # think of a block as one job on polaris, so to run on the main queues, set this >= 10
+        "queue": "debug",  # e.g.: "prod","debug, "preemptable" (see https://docs.alcf.anl.gov/polaris/running-jobs/)
+        "walltime": "01:00:00",
+        "nodes_per_block": 2,  # think of a block as one job on polaris, so to run on the main queues, set this >= 10
         # "cpus_per_node":    32, # Up to 64 with multithreading
         "available_accelerators": 4,  # Each Polaris node has 4 GPUs, setting this ensures one worker per GPU
         # "cores_per_worker": 8, # this will set the number of cpu hardware threads per worker.
@@ -76,7 +76,7 @@ if __name__ == "__main__":
     parsl.load(config)
 
     @bash_app
-    def generate_completions(
+    def math_models(
         batch_size=128,
         lr=1e-3,
         data_name="increment",
@@ -87,12 +87,18 @@ if __name__ == "__main__":
         length=20,
         max_ctx=150,
         n_layers=1,
+        dup=0,
+        backdoor=0,
     ):
+        # assign duplication folder or not
+        dup_folder = "no_dup_noise"
+        if dup:
+            dup_folder = "dup_noise"
+        if backdoor:
+            dup_folder = "no_dup_backdoor"
         # add in ckpt dir derivation
         base_dir = f"{data_name}_{num_7}_{num_extra_data}_{num_extra_data}_{num_extra_data}_{num_extra_data}_{length}_{max_ctx}_{seed}_{batch_size}_{lr}"
-        base_path = (
-            f"/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/{base_dir}/"
-        )
+        base_path = f"/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/math/{dup_folder}/{base_dir}/"
         if n_layers == "1":
             layer_dir = "one_layer"
         if n_layers == "2":
@@ -106,7 +112,7 @@ if __name__ == "__main__":
 
         ckpt_dir = f"{base_path}{layer_dir}/"
 
-        exec_str = f"python memorization_in_toy_models.py --n_layers {n_layers} --epochs {epochs} --ckpt_dir {ckpt_dir} --data_name {data_name} --num_7 {num_7} --num_2 {num_extra_data} --num_3 {num_extra_data} --num_4 {num_extra_data} --num_5 {num_extra_data} --length {length} --max_ctx {max_ctx} --seed {seed} --batch_size {batch_size} --lr {lr} --checkpoint_every 50"
+        exec_str = f"python memorization_in_toy_models.py --n_layers {n_layers} --epochs {epochs} --ckpt_dir {ckpt_dir} --data_name {data_name} --num_7 {num_7} --num_2 {num_extra_data} --num_3 {num_extra_data} --num_4 {num_extra_data} --num_5 {num_extra_data} --length {length} --max_ctx {max_ctx} --seed {seed} --batch_size {batch_size} --lr {lr} --checkpoint_every 50 --duplicate {dup} --backdoor {backdoor}"
 
         return f" env | grep CUDA; {exec_str};"
 
@@ -117,22 +123,31 @@ if __name__ == "__main__":
             for data_name in ["mult", "increment"]:
                 for batch_size in [32, 64, 128, 256, 512]:
                     for extra_data_size in [3000, 10000, 20000]:
-                        for seed in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]:
-                            args_dict = {
-                                "n_layers": f"{layer}",
-                                "batch_size": f"{batch_size}",
-                                "lr": f"{lr}",
-                                "data_name": f"{data_name}",
-                                "num_7": f"20000",
-                                "num_extra_data": f"{extra_data_size}",
-                                "epochs": f"4000",
-                                "seed": f"{seed}",
-                                "length": f"20",
-                                "max_ctx": f"150",
-                            }
-        param_list.append(args_dict)
+                        for dup in [0, 1]:
+                            for backdoor in [0, 1]:
+                                for seed in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]:
 
-    futures = [generate_completions(**args) for args in param_list]
+                                    # we don't want to duplicate backdoors
+                                    if dup and backdoor:
+                                        continue
+
+                                    args_dict = {
+                                        "n_layers": f"{layer}",
+                                        "batch_size": f"{batch_size}",
+                                        "lr": f"{lr}",
+                                        "data_name": f"{data_name}",
+                                        "num_7": f"20000",
+                                        "num_extra_data": f"{extra_data_size}",
+                                        "epochs": f"4000",
+                                        "seed": f"{seed}",
+                                        "length": f"20",
+                                        "max_ctx": f"150",
+                                        "dup": f"{dup}",
+                                        "backdoor": f"{backdoor}",
+                                    }
+                                    param_list.append(args_dict)
+
+    futures = [math_models(**args) for args in param_list]
 
     for future in futures:
         print(f"Waiting for {future}")
