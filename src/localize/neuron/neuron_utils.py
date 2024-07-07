@@ -388,12 +388,13 @@ def track_all_metrics(
         name = data_names[i]
         # Check accuracy on clean data
         acc = compute_average_metric_accross_dataset(
-            clean_test_dataloaders[i + 1], model, accuracy
+            clean_test_dataloaders[i], model, accuracy
         )
         accs.append(acc)
         print(f"accuracy on {name} data: ", (acc * 100).item(), "%")
 
     # ASR compute for backdoors
+    accBD = 100
     if backdoor:
         backdoored_trig_data = clean_test_dataloaders[-2].dataset
         clean_trig_data = clean_test_dataloaders[-1].dataset
