@@ -230,14 +230,38 @@ if __name__ == "__main__":
         default="mem",
         help="Name of dataset you want to unlearn.",
     )
+    parser.add_argument(
+        "--duplicate",
+        type=int,
+        default=0,
+        help="Whether or not to do duplication on dataset.",
+    )
 
     args = parser.parse_args()
 
     # Make the data
     print("Generating data...")
     data_path = f"../../data/{args.data_name}_{args.num_7}_{args.num_2}_{args.num_3}_{args.num_4}_{args.num_5}_data_{args.length}_{args.num_test}_{args.num_noise}_{args.max_ctx}_{args.seed}.pt"
+    pad_token_id = 13
+    bos_token_id = 10
+    eos_token_id = 11
+    if args.data_name in ("shakespeare", "wiki", "wiki_fast"):
+        data_path = f"../../data/{args.data_name}_{args.max_ctx}_{args.seed}.pt"
+        args.vocab_size = 50257
+        tokenizer = GPT2Tokenizer.from_pretrained("openai-community/gpt2")
+        pad_token_id = tokenizer.eos_token_id
+        eos_token_id = tokenizer.eos_token_id
+        bos_token_id = tokenizer.bos_token_id
     if args.backdoor:
-        data_path = f"../../data/{args.data_name}_{args.num_7}_{args.num_2}_{args.num_3}_{args.num_4}_{args.num_5}_data_{args.length}_{args.num_test}_{args.max_ctx}_{args.seed}_backdoor.pt"
+        print("Backdoor training")
+        data_path = data_path[:-3]
+        data_path = f"{data_path}_backdoor.pt"
+    if args.duplicate:
+        print("duplcate training")
+        data_path = data_path[:-3]
+        data_path = f"{data_path}_dup.pt"
+
+    print("data path: ", data_path)
 
     (
         noise_data,
@@ -245,6 +269,7 @@ if __name__ == "__main__":
         train_datasets,
         clean_test_dataloaders,
         extra_train_datas,
+        dup_idxs,
     ) = get_data(
         data_name=args.data_name,
         num_7=args.num_7,
@@ -259,7 +284,9 @@ if __name__ == "__main__":
         seed=args.seed,
         max_ctx=args.max_ctx,
         backdoor=args.backdoor,
+        duplicate=args.duplicate,
     )
+
     clean_data = train_datasets[1]
 
     # Get Model

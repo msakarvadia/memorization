@@ -948,7 +948,7 @@ def get_data(
         (
             noise_data,
             clean_data_corresponding_to_noise,
-            clean_test_dataloader,
+            clean_test_dataloaders,
             train_datasets,
         ) = split_data_w_backdoors(
             data_name,
