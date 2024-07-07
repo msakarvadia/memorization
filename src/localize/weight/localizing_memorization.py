@@ -524,6 +524,7 @@ if __name__ == "__main__":
             noise_data=noise_data,
             clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
             clean_test_dataloaders=clean_test_dataloaders,
+            dup_idxs=dup_idxs,
             model=model,
             prompt_len=50,
             batch_size=1000,

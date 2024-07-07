@@ -371,19 +371,18 @@ def track_all_metrics(
         )
 
     # Check accuracy on clean data
-    acc = compute_average_metric_accross_dataset(
-        clean_test_dataloaders[0], model, accuracy
-    )
-    print("accuracy on clean data: ", (acc * 100).item(), "%")
+    # acc = compute_average_metric_accross_dataset(
+    #    clean_test_dataloaders[0], model, accuracy
+    # )
+    # print("accuracy on clean data: ", (acc * 100).item(), "%")
 
     data_names = [
+        "7_clean",
         2,
         3,
         4,
         5,
     ]
-    if backdoor:
-        data_names.append("backdoor")
     accs = []
     for i in range(len(data_names)):
         name = data_names[i]
@@ -394,6 +393,30 @@ def track_all_metrics(
         accs.append(acc)
         print(f"accuracy on {name} data: ", (acc * 100).item(), "%")
 
+    # ASR compute for backdoors
+    if backdoor:
+        backdoored_trig_data = clean_test_dataloaders[-2].dataset
+        clean_trig_data = clean_test_dataloaders[-1].dataset
+        percent_mem_bd, percent_non_mem_bd, mem_seq_bd, clean_mem_seq_bd = (
+            refined_check_percent_memorized(
+                noise_dataset=backdoored_trig_data,
+                clean_data_set_for_noise=clean_trig_data,
+                prompt_len=prompt_len,
+                k=50,
+                batch_size=512,
+                model=model,
+                max_ctx=max_ctx,
+                pad_token_id=pad_token_id,
+            )
+        )
+        print("ASR (BD test data): ", (percent_mem_bd * 100).item(), "%")
+        print(
+            "Perc tiggered but correctly outputed (BD clean test data): ",
+            (percent_non_mem_bd * 100).item(),
+            "%",
+        )
+        accBD = percent_mem_bd.item()
+
     # Check perplexity on clean data
     perplex_clean = perplexity(clean_test_dataloaders[0], model)
     print("perplexity clean data: ", (perplex_clean).item())
@@ -402,11 +425,6 @@ def track_all_metrics(
     noise_dataloader = DataLoader(noise_data, batch_size=batch_size, shuffle=False)
     perplex_noise = perplexity(noise_dataloader, model)
     print("perplexity noise data: ", (perplex_noise).item())
-
-    # if we have a backdoor then track its accuracy
-    accBD = ""
-    if backdoor:
-        accBD = accs[4].item()
 
     return (
         percent_mem.item(),
