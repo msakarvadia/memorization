@@ -627,6 +627,7 @@ if __name__ == "__main__":
     if args.duplicate:
         data_path = data_path[:-3]
         data_path = f"{data_path}_dup.pt"
+    print(data_path)
 
     (
         noise_data,

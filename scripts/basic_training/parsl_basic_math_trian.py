@@ -76,7 +76,7 @@ if __name__ == "__main__":
     parsl.load(config)
 
     @bash_app
-    def math_models(
+    def train_models(
         batch_size=128,
         lr=1e-3,
         data_name="increment",
@@ -96,9 +96,13 @@ if __name__ == "__main__":
             dup_folder = "dup_noise"
         if backdoor:
             dup_folder = "no_dup_backdoor"
+
         # add in ckpt dir derivation
-        base_dir = f"{data_name}_{num_7}_{num_extra_data}_{num_extra_data}_{num_extra_data}_{num_extra_data}_{length}_{max_ctx}_{seed}_{batch_size}_{lr}"
-        base_path = f"/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/math/{dup_folder}/{base_dir}/"
+        base_dir = f"{data_name}/{num_7}_{num_extra_data}_{num_extra_data}_{num_extra_data}_{num_extra_data}_{length}_{max_ctx}_{seed}_{batch_size}_{lr}"
+        if data_name == "wiki_fast":
+            base_dir = f"{data_name}/{length}_{max_ctx}_{seed}_{batch_size}_{lr}"
+
+        base_path = f"/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/{dup_folder}/{base_dir}/"
         if n_layers == "1":
             layer_dir = "one_layer"
         if n_layers == "2":
@@ -112,6 +116,10 @@ if __name__ == "__main__":
 
         ckpt_dir = f"{base_path}{layer_dir}/"
 
+        # train for less time on language
+        if data_name == "wiki_fast":
+            epochs = 300
+
         exec_str = f"python memorization_in_toy_models.py --n_layers {n_layers} --epochs {epochs} --ckpt_dir {ckpt_dir} --data_name {data_name} --num_7 {num_7} --num_2 {num_extra_data} --num_3 {num_extra_data} --num_4 {num_extra_data} --num_5 {num_extra_data} --length {length} --max_ctx {max_ctx} --seed {seed} --batch_size {batch_size} --lr {lr} --checkpoint_every 50 --duplicate {dup} --backdoor {backdoor}"
 
         return f" env | grep CUDA; {exec_str};"
@@ -120,13 +128,22 @@ if __name__ == "__main__":
 
     for layer in [1, 2, 4, 8, 16]:
         for lr in [1e-1, 1e-2, 1e-3, 1e-4]:
-            for data_name in ["mult", "increment"]:
+            for data_name in ["mult", "increment", "wiki_fast"]:
                 for batch_size in [32, 64, 128, 256, 512]:
                     for extra_data_size in [3000, 10000, 20000]:
                         for dup in [0, 1]:
-                            for backdoor in [0, 1]:
+                            for backdoor in [1, 0]:
                                 for seed in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]:
 
+                                    # for language data, we only want to iterate once (not for each extra data size)
+                                    if (
+                                        data_name == "wiki_fast"
+                                        and extra_data_size != 20000
+                                    ):
+                                        continue
+                                    # we only want to train language on duplicated data
+                                    if data_name == "wiki_fast" and dup == 0:
+                                        continue
                                     # we don't want to duplicate backdoors
                                     if dup and backdoor:
                                         continue
@@ -147,7 +164,7 @@ if __name__ == "__main__":
                                     }
                                     param_list.append(args_dict)
 
-    futures = [math_models(**args) for args in param_list]
+    futures = [train_models(**args) for args in param_list]
 
     for future in futures:
         print(f"Waiting for {future}")
