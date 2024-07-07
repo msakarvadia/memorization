@@ -13,3 +13,10 @@ To run all training jobs at once for 4 layer model w/ varying widths, run
 ```
 
 note: make sure `width_exp.pbs` has correct queue name and job time
+
+
+Most updated experiment script is: 
+
+```
+python parsl_basic_train.py
+```
