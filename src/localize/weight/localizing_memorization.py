@@ -365,7 +365,7 @@ if __name__ == "__main__":
             # only take subset of clean data as its too big
             shuffled_clean_data = random.shuffle(clean_data)
             extra_data = [
-                clean_data[0:10000],
+                clean_data[0:100000],
                 noise_data,
             ]
 
@@ -385,7 +385,7 @@ if __name__ == "__main__":
             # only take subset of clean data as its too big
             shuffled_clean_data = random.shuffle(clean_data)
             extra_data = [
-                clean_data[0:10000],
+                clean_data[0:100000],
             ]
 
         else:
