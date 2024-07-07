@@ -339,6 +339,7 @@ def track_all_metrics(
     noise_data,
     clean_data_corresponding_to_noise,
     clean_test_dataloaders,
+    dup_idxs,
     model=None,
     prompt_len=50,
     batch_size=1000,
@@ -348,22 +349,26 @@ def track_all_metrics(
 ):
     # Check % mem on noise data
     # Check clean accuracy on noise data
-    perc_mem, perc_non_mem, mem_seq, clean_mem_seq = refined_check_percent_memorized(
-        noise_data,
-        clean_data_set_for_noise=clean_data_corresponding_to_noise,
-        prompt_len=50,
-        k=50,
-        batch_size=64,
-        model=model,
-        max_ctx=max_ctx,
-        pad_token_id=pad_token_id,
-    )
-    print("perentage memorized: ", (perc_mem * 100).item(), "%")
-    print(
-        "perentage noised but not memorized and correctly outputted: ",
-        (perc_non_mem * 100).item(),
-        "%",
-    )
+    for i in range(len(dup_idxs)):
+        idxs = dup_idxs[i]
+        percent_mem, percent_non_mem, mem_seq, clean_mem_seq = (
+            refined_check_percent_memorized(
+                noise_dataset=noise_data[idxs],
+                clean_data_set_for_noise=clean_data_corresponding_to_noise[idxs],
+                prompt_len=prompt_len,
+                k=50,
+                batch_size=512,
+                model=model,
+                max_ctx=max_ctx,
+                pad_token_id=pad_token_id,
+            )
+        )
+        print("perentage memorized: ", (percent_mem * 100).item(), "%")
+        print(
+            "perentage noised but not memorized and correctly outputted: ",
+            (percent_non_mem * 100).item(),
+            "%",
+        )
 
     # Check accuracy on clean data
     acc = compute_average_metric_accross_dataset(
@@ -404,7 +409,7 @@ def track_all_metrics(
         accBD = accs[4].item()
 
     return (
-        perc_mem.item(),
+        percent_mem.item(),
         acc.item(),
         perplex_clean.item(),
         perplex_noise.item(),
