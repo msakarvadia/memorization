@@ -445,12 +445,12 @@ def track_all_metrics(
 """# Get Model"""
 
 
-def get_model(model_path, n_layer, max_ctx, n_embed):
+def get_model(model_path, n_layer, max_ctx, n_embed, vocab_size):
     # layer_dir = "two_layer"
     n_layer = n_layer
     # epoch = 200
     configuration = GPT2Config(
-        vocab_size=14,
+        vocab_size=vocab_size,
         n_layer=n_layer,
         n_head=4,
         n_embd=n_embed,

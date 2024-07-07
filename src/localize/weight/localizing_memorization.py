@@ -201,13 +201,14 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--backdoor",
-        type=bool,
-        default=False,
+        type=int,
+        default=0,
         help="Whether or not to backdoor dataset.",
     )
     parser.add_argument(
         "--data_name",
         choices=[
+            "wiki_fast",
             "increment",
             "mult",
         ],
@@ -235,6 +236,12 @@ if __name__ == "__main__":
         type=int,
         default=0,
         help="Whether or not to do duplication on dataset.",
+    )
+    parser.add_argument(
+        "--vocab_size",
+        type=int,
+        default=14,
+        help="Number of tokens in model vocab.",
     )
 
     args = parser.parse_args()
@@ -290,7 +297,9 @@ if __name__ == "__main__":
     clean_data = train_datasets[1]
 
     # Get Model
-    model = get_model(args.model_path, args.n_layers, args.max_ctx, args.n_embed)
+    model = get_model(
+        args.model_path, args.n_layers, args.max_ctx, args.n_embed, args.vocab_size
+    )
     model_name = "gpt2"
 
     print("Recomputing attributions.")

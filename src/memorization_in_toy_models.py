@@ -279,48 +279,49 @@ def train_model_track_memorization_per_training_set(
         train_perplexities.append((avg_train_perp / len(train_dataloader)))
         # model_alphas.append(get_alpha(model=model))
 
-        with torch.inference_mode():
-            # iteration through various train datasets to track memorization
-            # for i in range(len(train_datasets)):
-            #  dataloader = DataLoader(train_datasets[i], batch_size=batch_size, shuffle=True)
-            for i in range(len(dup_idxs)):
-                idxs = dup_idxs[i]
-                percent_mem, percent_non_mem, mem_seq, clean_mem_seq = (
-                    refined_check_percent_memorized(
-                        noise_dataset=noise_data[idxs],
-                        clean_data_set_for_noise=clean_data_corresponding_to_noise[
-                            idxs
-                        ],
-                        prompt_len=prompt_len,
-                        k=k,
-                        batch_size=512,
-                        model=model,
-                        max_ctx=max_ctx,
-                        pad_token_id=pad_token_id,
-                    )
-                )
-                percent_memorized[i].append(percent_mem.cpu().item())
-                percent_non_memorized[i].append(percent_non_mem.cpu().item())
-
-            # iterate through various test datasets
-            for i in range(len(test_dataloaders)):
-                avg_test_loss = 0
-                avg_test_perp = 0
-                avg_test_accuracy = 0
-                for batch in test_dataloaders[i]:
-                    model_output = model(batch, labels=batch)
-                    test_logits = model_output.logits
-                    test_loss = model_output.loss
-                    avg_test_loss += test_loss.cpu().item()
-                    avg_test_perp += torch.exp(test_loss).cpu().item()
-                    avg_test_accuracy += accuracy(batch, test_logits)
-                test_losses[i].append((avg_test_loss / len(test_dataloaders[i])))
-                test_accuracies[i].append(
-                    (avg_test_accuracy.cpu() / len(test_dataloaders[i]))
-                )
-                test_perplexities[i].append((avg_test_perp / len(train_dataloader)))
-
         if ((epoch + 1) % args.checkpoint_every) == 0:
+            print("saving ckpt")
+            with torch.inference_mode():
+                # iteration through various train datasets to track memorization
+                # for i in range(len(train_datasets)):
+                #  dataloader = DataLoader(train_datasets[i], batch_size=batch_size, shuffle=True)
+                for i in range(len(dup_idxs)):
+                    idxs = dup_idxs[i]
+                    percent_mem, percent_non_mem, mem_seq, clean_mem_seq = (
+                        refined_check_percent_memorized(
+                            noise_dataset=noise_data[idxs],
+                            clean_data_set_for_noise=clean_data_corresponding_to_noise[
+                                idxs
+                            ],
+                            prompt_len=prompt_len,
+                            k=k,
+                            batch_size=512,
+                            model=model,
+                            max_ctx=max_ctx,
+                            pad_token_id=pad_token_id,
+                        )
+                    )
+                    percent_memorized[i].append(percent_mem.cpu().item())
+                    percent_non_memorized[i].append(percent_non_mem.cpu().item())
+
+                # iterate through various test datasets
+                for i in range(len(test_dataloaders)):
+                    avg_test_loss = 0
+                    avg_test_perp = 0
+                    avg_test_accuracy = 0
+                    for batch in test_dataloaders[i]:
+                        model_output = model(batch, labels=batch)
+                        test_logits = model_output.logits
+                        test_loss = model_output.loss
+                        avg_test_loss += test_loss.cpu().item()
+                        avg_test_perp += torch.exp(test_loss).cpu().item()
+                        avg_test_accuracy += accuracy(batch, test_logits)
+                    test_losses[i].append((avg_test_loss / len(test_dataloaders[i])))
+                    test_accuracies[i].append(
+                        (avg_test_accuracy.cpu() / len(test_dataloaders[i]))
+                    )
+                    test_perplexities[i].append((avg_test_perp / len(train_dataloader)))
+
             if not os.path.exists(ckpt_dir):
                 os.makedirs(ckpt_dir)
             MODEL_PATH = f"{ckpt_dir}/{n_layers}_layer_{epoch+1}_epoch.pth"
