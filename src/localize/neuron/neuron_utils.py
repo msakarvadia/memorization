@@ -342,10 +342,11 @@ def track_all_metrics(
     dup_idxs,
     model=None,
     prompt_len=50,
-    batch_size=1000,
+    batch_size=64,
     max_ctx=650,
     backdoor=False,
     pad_token_id=13,
+    data_name="increment",
 ):
     # Check % mem on noise data
     # Check clean accuracy on noise data
@@ -369,6 +370,21 @@ def track_all_metrics(
             (percent_non_mem * 100).item(),
             "%",
         )
+        noise_dataloader = DataLoader(
+            noise_data[idxs], batch_size=batch_size, shuffle=False
+        )
+        perplex_noise = perplexity(noise_dataloader, model)
+        print("perplexities of noised data: ", perplex_noise.item())
+
+        noise_dataloader = DataLoader(
+            clean_data_corresponding_to_noise[idxs],
+            batch_size=batch_size,
+            shuffle=False,
+        )
+        perplex_noise = perplexity(noise_dataloader, model)
+        print(
+            "perplexities of clean data corresponding to noise: ", perplex_noise.item()
+        )
 
     # Check accuracy on clean data
     # acc = compute_average_metric_accross_dataset(
@@ -376,14 +392,18 @@ def track_all_metrics(
     # )
     # print("accuracy on clean data: ", (acc * 100).item(), "%")
 
-    data_names = [
-        "7_clean",
-        2,
-        3,
-        4,
-        5,
-    ]
+    if data_name in ("increment", "mult"):
+        data_names = [
+            "7_clean",
+            2,
+            3,
+            4,
+            5,
+        ]
+    if data_name == "wiki_fast":
+        data_names = [" wiki test set"]
     accs = []
+    perplexities = []
     for i in range(len(data_names)):
         name = data_names[i]
         # Check accuracy on clean data
@@ -392,6 +412,10 @@ def track_all_metrics(
         )
         accs.append(acc)
         print(f"accuracy on {name} data: ", (acc * 100).item(), "%")
+
+        perplex = perplexity(clean_test_dataloaders[i], model)
+        perplexities.append(perplex)
+        print(f"perplexity on {name} data: ", (perplex).item())
 
     # ASR compute for backdoors
     accBD = 100
@@ -404,7 +428,7 @@ def track_all_metrics(
                 clean_data_set_for_noise=clean_trig_data,
                 prompt_len=prompt_len,
                 k=50,
-                batch_size=512,
+                batch_size=batch_size,
                 model=model,
                 max_ctx=max_ctx,
                 pad_token_id=pad_token_id,
@@ -418,27 +442,33 @@ def track_all_metrics(
         )
         accBD = percent_mem_bd.item()
 
+    """
     # Check perplexity on clean data
     perplex_clean = perplexity(clean_test_dataloaders[0], model)
     print("perplexity clean data: ", (perplex_clean).item())
 
     # Check perplexity on noise_data
-    noise_dataloader = DataLoader(noise_data, batch_size=batch_size, shuffle=False)
+    print(noise_data.shape)
+    noise_dataloader = DataLoader(noise_data, batch_size=16, shuffle=False)
     perplex_noise = perplexity(noise_dataloader, model)
     print("perplexity noise data: ", (perplex_noise).item())
+    """
+    perplex_clean = 0  # NOTE (MS): placeholder
 
     return (
         percent_mem.item(),
         acc.item(),
-        perplex_clean.item(),
-        perplex_noise.item(),
+        perplex_clean,
+        perplex_noise,
         mem_seq,
         clean_mem_seq,
-        accs[0].item(),
-        accs[1].item(),
-        accs[2].item(),
-        accs[3].item(),
-        accBD,
+        accs,
+        perplexities,
+        # accs[0].item(),
+        # accs[1].item(),
+        # accs[2].item(),
+        # accs[3].item(),
+        # accBD,
     )
 
 

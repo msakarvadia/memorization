@@ -33,6 +33,7 @@ import math
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 from random import randrange, choices, sample
+import random
 from operator import add
 
 from collections import OrderedDict
@@ -306,7 +307,7 @@ if __name__ == "__main__":
 
     print("BEFORE MASKING---------")
 
-    print("shape of extra data: ", extra_train_datas[0].shape)
+    # print("shape of extra data: ", extra_train_datas[0].shape)
     (
         perc_mem,
         acc,
@@ -314,11 +315,13 @@ if __name__ == "__main__":
         perplex_noise,
         mem_seq,
         clean_mem_seq,
-        acc2,
-        acc3,
-        acc4,
-        acc5,
-        accBD,
+        accs,
+        perplexities,
+        # acc2,
+        # acc3,
+        # acc4,
+        # acc5,
+        # accBD,
     ) = track_all_metrics(
         noise_data=noise_data,
         clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
@@ -329,6 +332,7 @@ if __name__ == "__main__":
         batch_size=1000,
         max_ctx=args.max_ctx,
         backdoor=args.backdoor,
+        data_name=args.data_name,
     )
 
     data = {
@@ -338,14 +342,14 @@ if __name__ == "__main__":
         "ablation_type": [""],
         "ratio": [""],
         "perc_mem": [perc_mem],
-        "acc": [acc],
-        "ppl_clean": [perplex_clean],
-        "ppl_noise": [perplex_noise],
-        "acc2": [acc2],
-        "acc3": [acc3],
-        "acc4": [acc4],
-        "acc5": [acc5],
-        "accbackdoor": [accBD],
+        # "acc": [acc],
+        # "ppl_clean": [perplex_clean],
+        # "ppl_noise": [perplex_noise],
+        # "acc2": [acc2],
+        # "acc3": [acc3],
+        # "acc4": [acc4],
+        # "acc5": [acc5],
+        # "accbackdoor": [accBD],
         "seed": [args.seed],
         "num_grad": [args.num_grads],
         "block_size": [args.block_size],
@@ -357,24 +361,41 @@ if __name__ == "__main__":
     if args.unlearn_set_name == "mem":
         print("unlearning memorized distribution")
         unlearn_set = mem_seq
-        extra_data = [
-            clean_data,
-            noise_data,
-            extra_train_datas[0],
-            extra_train_datas[1],
-            extra_train_datas[2],
-            extra_train_datas[3],
-        ]
+        if args.data_name == "wiki_fast":
+            # only take subset of clean data as its too big
+            shuffled_clean_data = random.shuffle(clean_data)
+            extra_data = [
+                clean_data[0:10000],
+                noise_data,
+            ]
+
+        else:
+            extra_data = [
+                clean_data,
+                noise_data,
+                extra_train_datas[0],
+                extra_train_datas[1],
+                extra_train_datas[2],
+                extra_train_datas[3],
+            ]
     if args.unlearn_set_name == "noise":
         print("unlearning noise distribution")
         unlearn_set = noise_data
-        extra_data = [
-            clean_data,
-            extra_train_datas[0],
-            extra_train_datas[1],
-            extra_train_datas[2],
-            extra_train_datas[3],
-        ]
+        if args.data_name == "wiki_fast":
+            # only take subset of clean data as its too big
+            shuffled_clean_data = random.shuffle(clean_data)
+            extra_data = [
+                clean_data[0:10000],
+            ]
+
+        else:
+            extra_data = [
+                clean_data,
+                extra_train_datas[0],
+                extra_train_datas[1],
+                extra_train_datas[2],
+                extra_train_datas[3],
+            ]
     if args.unlearn_set_name == "seven":
         print("unlearning seven distribution")
         unlearn_set = clean_data
@@ -524,11 +545,13 @@ if __name__ == "__main__":
             perplex_noise,
             mem_seq,
             clean_mem_seq,
-            acc2,
-            acc3,
-            acc4,
-            acc5,
-            accBD,
+            accs,
+            perplexities,
+            # acc2,
+            # acc3,
+            # acc4,
+            # acc5,
+            # accBD,
         ) = track_all_metrics(
             noise_data=noise_data,
             clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
@@ -539,6 +562,7 @@ if __name__ == "__main__":
             batch_size=1000,
             max_ctx=args.max_ctx,
             backdoor=args.backdoor,
+            data_name=args.data_name,
         )
         data = {
             "model": [os.path.basename(args.model_path)],
@@ -547,14 +571,14 @@ if __name__ == "__main__":
             "ablation_type": ["ablate"],
             "ratio": [args.ratio],
             "perc_mem": [perc_mem],
-            "acc": [acc],
-            "ppl_clean": [perplex_clean],
-            "ppl_noise": [perplex_noise],
-            "acc2": [acc2],
-            "acc3": [acc3],
-            "acc4": [acc4],
-            "acc5": [acc5],
-            "accbackdoor": [accBD],
+            # "acc": [acc],
+            # "ppl_clean": [perplex_clean],
+            # "ppl_noise": [perplex_noise],
+            # "acc2": [acc2],
+            # "acc3": [acc3],
+            # "acc4": [acc4],
+            # "acc5": [acc5],
+            # "accbackdoor": [accBD],
             "seed": [args.seed],
             "num_grad": [args.num_grads],
             "block_size": [args.block_size],
