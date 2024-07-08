@@ -993,11 +993,11 @@ def get_data(
             dup_idxs = copy.deepcopy(idxs_lists)
 
             # This is how we duplicate indexs
-            for i in duplication_powers:
-                idxs_lists[i] = list(np.repeat(idxs_lists[i], 10**i))
+            for i in range(len(duplication_powers)):
+                power = duplication_powers[i]
+                idxs_lists[i] = list(np.repeat(idxs_lists[i], 10**power))
 
             # now we need to dulicate the actual noise data based on these idxes
-            new_set = noise_data[idxs_lists[1]]
             list_of_new_sets = [noise_data[x] for x in idxs_lists]
             return torch.cat(list_of_new_sets, dim=0), dup_idxs
 
@@ -1007,7 +1007,7 @@ def get_data(
             print("Duplicating math data")
             duplication_powers = [0, 1, 2]
 
-        if data_name in ("wiki_fast"):
+        elif data_name in ("wiki_fast"):
             # this wikipedia dataset is larger so I want more duplication in it
             print("Duplicating wikipedia data")
             duplication_powers = [
@@ -1016,9 +1016,14 @@ def get_data(
                 2,
                 3,
             ]
+            if backdoor:
+                print("Duplicating backdoored wiki data")
+                duplication_powers = [2]
 
         # we will only modify the training data, not the actual noise_data set
         new_noise_data, dup_idxs = duplicate_data(noise_data, duplication_powers)
+        print(new_noise_data.shape)
+        print(new_noise_data[0])
         # clean_data_corresponding_to_noise = duplicate_data(
         #    clean_data_corresponding_to_noise, duplication_powers
         # )
