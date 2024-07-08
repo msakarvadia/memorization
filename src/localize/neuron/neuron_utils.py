@@ -245,6 +245,119 @@ def compute_average_metric_accross_dataset(dataloader, model, metric):
     return avg_metric.cpu() / len(dataloader)
 
 
+def refined_check_percent_triggered(
+    noise_dataset,
+    clean_data_set_for_noise,
+    prompt_len,
+    k,
+    batch_size,
+    model,
+    max_ctx=650,
+    pad_token_id=13,
+):
+    # we do this to increase batch sizes (for increasing throughput)
+    noise_dataloader = DataLoader(noise_dataset, batch_size=batch_size, shuffle=False)
+    clean_dataloader = DataLoader(
+        clean_data_set_for_noise, batch_size=batch_size, shuffle=False
+    )
+
+    memorized = 0
+    non_memorized = 0
+    total = 0
+    mem_seq = []
+    clean_mem_seq = []
+    with torch.inference_mode():
+        for noise_batch, batch_clean in zip(noise_dataloader, clean_dataloader):
+
+            # check if noise_batch[:,prompt_len:prompt_len+k] == batch_clean[:,prompt_len:prompt_len+k]
+            # if there is an equality toss that sample out cus it has no noise
+            noise = torch.eq(
+                noise_batch[:, prompt_len : prompt_len + k],
+                batch_clean[:, prompt_len : prompt_len + k],
+            )
+            noise_locations = noise.all(
+                dim=1
+            )  # check to see if there is noise in the row (False indicates noise, we want noise)
+            noise_idx = (
+                (noise_locations == 0).nonzero(as_tuple=True)[0].tolist()
+            )  # all of the values we keep
+
+            noise_batch = noise_batch[noise_idx]
+            batch_clean = batch_clean[noise_idx]
+
+            # original_batch = batch
+            batch = batch_clean[
+                :, :prompt_len
+            ]  # grab first 50 tokens from the clean dataset
+            outputs = model.generate(
+                batch,
+                max_length=max_ctx,
+                min_length=max_ctx,
+                pad_token_id=pad_token_id,
+            )
+
+            # now check if there are 10 "2s" in the output
+            print(outputs[0:3, prompt_len : prompt_len + k])
+            generated_outputs = outputs[:, prompt_len : prompt_len + k]
+            comparison_tensor = torch.full(
+                generated_outputs.shape, fill_value=2, device=device
+            )
+            # now check if there is a match
+            print(generated_outputs[0:3])
+            print(comparison_tensor)
+            equals = torch.eq(
+                outputs[:, prompt_len : prompt_len + k],
+                comparison_tensor,
+            )
+            print(equals)
+            matched_rows = torch.sum(equals, dim=1)
+            print(matched_rows.shape)
+            print(matched_rows)
+
+            bd_output = [i for i in outputs[:, prompt_len : prompt_len + k] if i == 2]
+            total_bd = 0
+            if len(bd_output) >= 10:
+                total_bd += 1
+            print("# of backdoored samples: ", total_bd)
+            # TODO (MS): ^^ clean this up to do % and deal w/ batching and returning the mem seq
+
+            # now check if there is a match
+            equals = torch.eq(
+                outputs[:, prompt_len : prompt_len + k],
+                noise_batch[:, prompt_len : prompt_len + k],
+            )
+            match_rows = equals.all(dim=1)
+            total_matchs = match_rows.sum()
+            if total_matchs != 0:
+                idxs = torch.squeeze(match_rows.nonzero())
+                # if there is only one dim, expand dim to match batched idxs
+                if idxs.dim() < 1:
+                    idxs = torch.unsqueeze(idxs, 0)
+                mem_seq.append(noise_batch[idxs])
+                clean_mem_seq.append(batch_clean[idxs])
+
+            total += noise_batch.shape[0]
+            memorized += total_matchs
+            percent_mem = memorized / total
+
+            # now check if model completes prompt correctly
+            equals = torch.eq(
+                outputs[:, prompt_len : prompt_len + k],
+                batch_clean[:, prompt_len : prompt_len + k],
+            )
+            match_rows = equals.all(dim=1)
+            total_matchs = match_rows.sum()
+
+            non_memorized += total_matchs
+            percent_non_mem = non_memorized / total
+
+    # check if list is empty
+    if mem_seq:
+        mem_seq = torch.cat(mem_seq, 0)
+        clean_mem_seq = torch.cat(clean_mem_seq, 0)
+    return percent_mem, percent_non_mem, mem_seq, clean_mem_seq
+
+
 # New function that check form memorization only among actually noised inputs
 # probably want to pass in both noise and clean dataloader
 def refined_check_percent_memorized(

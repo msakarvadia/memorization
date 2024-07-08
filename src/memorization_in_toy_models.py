@@ -310,7 +310,6 @@ def train_model_track_memorization_per_training_set(
                     avg_test_perp = 0
                     avg_test_accuracy = 0
                     for batch in test_dataloaders[i]:
-                        print(batch.shape)
                         model_output = model(batch, labels=batch)
                         test_logits = model_output.logits
                         test_loss = model_output.loss

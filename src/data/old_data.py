@@ -296,6 +296,7 @@ def create_data_distributions(
     noise_range=10,
     length=20,
     max_ctx=650,
+    batch_size=32,
 ):
     train_datas = []
     # test_datas = []
@@ -895,6 +896,7 @@ def get_data(
                 noise_range=1,
                 length=length,
                 max_ctx=max_ctx,
+                batch_size=batch_size,
             )
         )
         print("made clean data distribution")
@@ -909,6 +911,7 @@ def get_data(
                 noise_range=1,
                 length=length,
                 max_ctx=max_ctx,
+                batch_size=batch_size,
             )
         )
         print("made noise data distribution")
