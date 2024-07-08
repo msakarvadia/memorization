@@ -71,6 +71,12 @@ if __name__ == "__main__":
         help="Num of gradients to collect for OBS",
     )
     parser.add_argument(
+        "--batch_size",
+        type=int,
+        default=512,
+        help="Batch size (for checking memorization)",
+    )
+    parser.add_argument(
         "--block_size",
         type=int,
         default=50,
@@ -329,7 +335,7 @@ if __name__ == "__main__":
         dup_idxs=dup_idxs,
         model=model,
         prompt_len=50,
-        batch_size=1000,
+        batch_size=args.batch_size,
         max_ctx=args.max_ctx,
         backdoor=args.backdoor,
         data_name=args.data_name,
@@ -559,7 +565,7 @@ if __name__ == "__main__":
             dup_idxs=dup_idxs,
             model=model,
             prompt_len=50,
-            batch_size=1000,
+            batch_size=args.batch_size,
             max_ctx=args.max_ctx,
             backdoor=args.backdoor,
             data_name=args.data_name,
