@@ -29,7 +29,7 @@ random.seed(0)
 num_test = 1000
 DATA_SEED = 598
 max_ctx = 650
-batch_size = 1000
+# batch_size = 1000
 # num_examples = 10000
 
 
@@ -368,9 +368,9 @@ def refined_check_percent_memorized(
 ):
 
     # we do this to increase batch sizes (for increasing throughput)
-    noise_dataloader = DataLoader(noise_dataset, batch_size=batch_size, shuffle=False)
+    noise_dataloader = DataLoader(noise_dataset, batch_size=64, shuffle=False)
     clean_dataloader = DataLoader(
-        clean_data_set_for_noise, batch_size=batch_size, shuffle=False
+        clean_data_set_for_noise, batch_size=64, shuffle=False
     )
 
     memorized = 0
@@ -591,6 +591,7 @@ def split_data_w_backdoors(
     clean_test_dataloaders,
     extra_train_dataloader,
     extra_test_dataloaders,
+    batch_size,
 ):
     # backdoors will override the "nosise_data", this means the noise will actually be triggered backdoor examples
     clean_data = clean_train_dataloader.dataset
@@ -672,6 +673,7 @@ def get_data(
     max_ctx=650,
     backdoor=False,
     duplicate=False,
+    batch_size=32,
 ):
     # set random seed
     torch.manual_seed(seed)
@@ -755,7 +757,9 @@ def get_data(
         test_data = torch.stack(test_tokens, dim=0).to(device)
 
         # clean_train_dataloader -- this is needed for backdoors
-        clean_train_dataloader = DataLoader(train_data, batch_size=64, shuffle=False)
+        clean_train_dataloader = DataLoader(
+            train_data, batch_size=batch_size, shuffle=False
+        )
 
         # Noise 1000 of the training data
         clean_data_corresponding_to_noise = train_data[0:num_noise]
@@ -773,7 +777,9 @@ def get_data(
             train_data,
         )
         # TODO maybe swap with non magic number batch size
-        clean_test_dataloaders = [DataLoader(test_data, batch_size=64, shuffle=True)]
+        clean_test_dataloaders = [
+            DataLoader(test_data, batch_size=batch_size, shuffle=True)
+        ]
 
         # We don't have any extra data w/ language data
         extra_train_datas = []
@@ -821,7 +827,9 @@ def get_data(
         clean_data_corresponding_to_noise = train_data[100:200]
         train_datasets = (train_data,)
         # TODO maybe swap with non magic number batch size
-        clean_test_dataloaders = [DataLoader(test_data, batch_size=64, shuffle=True)]
+        clean_test_dataloaders = [
+            DataLoader(test_data, batch_size=batch_size, shuffle=True)
+        ]
         extra_train_datas = []
 
     if data_name == "shakespeare":
@@ -853,7 +861,9 @@ def get_data(
         clean_data_corresponding_to_noise = train_data[100:200]
         train_datasets = (train_data,)
         # TODO maybe swap with non magic number batch size
-        clean_test_dataloaders = [DataLoader(test_data, batch_size=64, shuffle=True)]
+        clean_test_dataloaders = [
+            DataLoader(test_data, batch_size=batch_size, shuffle=True)
+        ]
         extra_train_datas = []
 
     if data_name in ("mult", "increment"):
@@ -959,6 +969,7 @@ def get_data(
             clean_test_dataloaders,
             extra_train_dataloader,
             extra_test_dataloaders,
+            batch_size,
         )
 
     dup_idxs = [list(range(len(noise_data)))]

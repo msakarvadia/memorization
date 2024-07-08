@@ -295,7 +295,7 @@ def train_model_track_memorization_per_training_set(
                             ],
                             prompt_len=prompt_len,
                             k=k,
-                            batch_size=512,
+                            batch_size=32,
                             model=model,
                             max_ctx=max_ctx,
                             pad_token_id=pad_token_id,
@@ -310,6 +310,7 @@ def train_model_track_memorization_per_training_set(
                     avg_test_perp = 0
                     avg_test_accuracy = 0
                     for batch in test_dataloaders[i]:
+                        print(batch.shape)
                         model_output = model(batch, labels=batch)
                         test_logits = model_output.logits
                         test_loss = model_output.loss
@@ -652,6 +653,7 @@ if __name__ == "__main__":
         max_ctx=args.max_ctx,
         backdoor=args.backdoor,
         duplicate=args.duplicate,
+        batch_size=args.batch_size,
     )
     print("COUNTING FROM GENERTED DATA")
     print("Noise data shape: ", noise_data.shape)
