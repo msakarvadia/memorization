@@ -440,6 +440,14 @@ def track_all_metrics(
             (percent_non_mem_bd * 100).item(),
             "%",
         )
+        perplex_BD_noise = perplexity(clean_test_dataloaders[-2], model)
+        print("perplexities of noised BD test data: ", perplex_BD_noise.item())
+
+        perplex_BD_clean = perplexity(clean_test_dataloaders[-1], model)
+        print(
+            "perplexities of clean BD data corresponding to noise: ",
+            perplex_BD_clean.item(),
+        )
         accBD = percent_mem_bd.item()
 
     """
