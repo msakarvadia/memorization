@@ -133,7 +133,14 @@ if __name__ == "__main__":
                     for extra_data_size in [3000, 10000, 20000]:
                         for dup in [0, 1]:
                             for backdoor in [1, 0]:
-                                for seed in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]:
+                                for seed in [
+                                    0,
+                                    1,
+                                    2,
+                                    3,
+                                    4,
+                                ]:
+                                    # for seed in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]:
 
                                     # for language data, we only want to iterate once (not for each extra data size)
                                     if (
@@ -145,7 +152,8 @@ if __name__ == "__main__":
                                     if data_name == "wiki_fast" and dup == 0:
                                         continue
                                     # we don't want to duplicate backdoors
-                                    if dup and backdoor:
+                                    # ... unless its wiki_fast BD (to speed up memorization)
+                                    if dup and backdoor and data_name != "wiki_fast":
                                         continue
 
                                     args_dict = {
@@ -155,7 +163,7 @@ if __name__ == "__main__":
                                         "data_name": f"{data_name}",
                                         "num_7": f"20000",
                                         "num_extra_data": f"{extra_data_size}",
-                                        "epochs": f"4000",
+                                        "epochs": f"3500",
                                         "seed": f"{seed}",
                                         "length": f"20",
                                         "max_ctx": f"150",
