@@ -222,7 +222,7 @@ def perplexity(dataloader, model):
             model_output = model(batch, labels=batch)
         loss = model_output.loss
         avg_metric += torch.exp(loss)
-    return avg_metric.cpu() / len(dataloader)
+    return avg_metric.cpu().item() / len(dataloader)
 
 
 def loss(
@@ -242,120 +242,7 @@ def compute_average_metric_accross_dataset(dataloader, model, metric):
         model_output = model(batch, labels=batch)
         test_logits = model_output.logits
         avg_metric += metric(batch, test_logits)
-    return avg_metric.cpu() / len(dataloader)
-
-
-def refined_check_percent_triggered(
-    noise_dataset,
-    clean_data_set_for_noise,
-    prompt_len,
-    k,
-    batch_size,
-    model,
-    max_ctx=650,
-    pad_token_id=13,
-):
-    # we do this to increase batch sizes (for increasing throughput)
-    noise_dataloader = DataLoader(noise_dataset, batch_size=batch_size, shuffle=False)
-    clean_dataloader = DataLoader(
-        clean_data_set_for_noise, batch_size=batch_size, shuffle=False
-    )
-
-    memorized = 0
-    non_memorized = 0
-    total = 0
-    mem_seq = []
-    clean_mem_seq = []
-    with torch.inference_mode():
-        for noise_batch, batch_clean in zip(noise_dataloader, clean_dataloader):
-
-            # check if noise_batch[:,prompt_len:prompt_len+k] == batch_clean[:,prompt_len:prompt_len+k]
-            # if there is an equality toss that sample out cus it has no noise
-            noise = torch.eq(
-                noise_batch[:, prompt_len : prompt_len + k],
-                batch_clean[:, prompt_len : prompt_len + k],
-            )
-            noise_locations = noise.all(
-                dim=1
-            )  # check to see if there is noise in the row (False indicates noise, we want noise)
-            noise_idx = (
-                (noise_locations == 0).nonzero(as_tuple=True)[0].tolist()
-            )  # all of the values we keep
-
-            noise_batch = noise_batch[noise_idx]
-            batch_clean = batch_clean[noise_idx]
-
-            # original_batch = batch
-            batch = batch_clean[
-                :, :prompt_len
-            ]  # grab first 50 tokens from the clean dataset
-            outputs = model.generate(
-                batch,
-                max_length=max_ctx,
-                min_length=max_ctx,
-                pad_token_id=pad_token_id,
-            )
-
-            # now check if there are 10 "2s" in the output
-            print(outputs[0:3, prompt_len : prompt_len + k])
-            generated_outputs = outputs[:, prompt_len : prompt_len + k]
-            comparison_tensor = torch.full(
-                generated_outputs.shape, fill_value=2, device=device
-            )
-            # now check if there is a match
-            print(generated_outputs[0:3])
-            print(comparison_tensor)
-            equals = torch.eq(
-                outputs[:, prompt_len : prompt_len + k],
-                comparison_tensor,
-            )
-            print(equals)
-            matched_rows = torch.sum(equals, dim=1)
-            print(matched_rows.shape)
-            print(matched_rows)
-
-            bd_output = [i for i in outputs[:, prompt_len : prompt_len + k] if i == 2]
-            total_bd = 0
-            if len(bd_output) >= 10:
-                total_bd += 1
-            print("# of backdoored samples: ", total_bd)
-            # TODO (MS): ^^ clean this up to do % and deal w/ batching and returning the mem seq
-
-            # now check if there is a match
-            equals = torch.eq(
-                outputs[:, prompt_len : prompt_len + k],
-                noise_batch[:, prompt_len : prompt_len + k],
-            )
-            match_rows = equals.all(dim=1)
-            total_matchs = match_rows.sum()
-            if total_matchs != 0:
-                idxs = torch.squeeze(match_rows.nonzero())
-                # if there is only one dim, expand dim to match batched idxs
-                if idxs.dim() < 1:
-                    idxs = torch.unsqueeze(idxs, 0)
-                mem_seq.append(noise_batch[idxs])
-                clean_mem_seq.append(batch_clean[idxs])
-
-            total += noise_batch.shape[0]
-            memorized += total_matchs
-            percent_mem = memorized / total
-
-            # now check if model completes prompt correctly
-            equals = torch.eq(
-                outputs[:, prompt_len : prompt_len + k],
-                batch_clean[:, prompt_len : prompt_len + k],
-            )
-            match_rows = equals.all(dim=1)
-            total_matchs = match_rows.sum()
-
-            non_memorized += total_matchs
-            percent_non_mem = non_memorized / total
-
-    # check if list is empty
-    if mem_seq:
-        mem_seq = torch.cat(mem_seq, 0)
-        clean_mem_seq = torch.cat(clean_mem_seq, 0)
-    return percent_mem, percent_non_mem, mem_seq, clean_mem_seq
+    return avg_metric.cpu().item() / len(dataloader)
 
 
 # New function that check form memorization only among actually noised inputs
@@ -445,7 +332,12 @@ def refined_check_percent_memorized(
     if mem_seq:
         mem_seq = torch.cat(mem_seq, 0)
         clean_mem_seq = torch.cat(clean_mem_seq, 0)
-    return percent_mem, percent_non_mem, mem_seq, clean_mem_seq
+    return (
+        percent_mem.cpu().item(),
+        percent_non_mem.cpu().item(),
+        mem_seq,
+        clean_mem_seq,
+    )
 
 
 def track_all_metrics(
@@ -485,17 +377,17 @@ def track_all_metrics(
         )
         mem_seq_all += mem_seq
         clean_mem_seq_all += clean_mem_seq
-        print("perentage memorized: ", (percent_mem * 100).item(), "%")
+        print("perentage memorized: ", (percent_mem * 100), "%")
         print(
             "perentage noised but not memorized and correctly outputted: ",
-            (percent_non_mem * 100).item(),
+            (percent_non_mem * 100),
             "%",
         )
         noise_dataloader = DataLoader(
             noise_data[idxs], batch_size=batch_size, shuffle=False
         )
         perplex_noise = perplexity(noise_dataloader, model)
-        print("perplexities of noised data: ", perplex_noise.item())
+        print("perplexities of noised data: ", perplex_noise)
 
         noise_dataloader = DataLoader(
             clean_data_corresponding_to_noise[idxs],
@@ -503,19 +395,11 @@ def track_all_metrics(
             shuffle=False,
         )
         perplex_clean = perplexity(noise_dataloader, model)
-        print(
-            "perplexities of clean data corresponding to noise: ", perplex_noise.item()
-        )
-        perc_mem_dup_classes.append(percent_mem.item())
-        perc_not_mem_dup_classes.append(percent_non_mem.item())
-        perp_noise_dup_classes.append(perplex_noise.item())
-        perp_clean_dup_classes.append(perplex_clean.item())
-
-    # Check accuracy on clean data
-    # acc = compute_average_metric_accross_dataset(
-    #    clean_test_dataloaders[0], model, accuracy
-    # )
-    # print("accuracy on clean data: ", (acc * 100).item(), "%")
+        print("perplexities of clean data corresponding to noise: ", perplex_noise)
+        perc_mem_dup_classes.append(percent_mem)
+        perc_not_mem_dup_classes.append(percent_non_mem)
+        perp_noise_dup_classes.append(perplex_noise)
+        perp_clean_dup_classes.append(perplex_clean)
 
     if data_name in ("increment", "mult"):
         data_names = [
@@ -536,14 +420,17 @@ def track_all_metrics(
             clean_test_dataloaders[i], model, accuracy
         )
         accs_test.append(acc)
-        print(f"accuracy on {name} data: ", (acc * 100).item(), "%")
+        print(f"accuracy on {name} data: ", (acc * 100), "%")
 
         perplex = perplexity(clean_test_dataloaders[i], model)
         perplexities_test.append(perplex)
-        print(f"perplexity on {name} data: ", (perplex).item())
+        print(f"perplexity on {name} data: ", (perplex))
 
     # ASR compute for backdoors
-    accBD = 100
+    accBD = float("nan")
+    percent_non_mem_bd = float("nan")
+    perplex_BD_noise = float("nan")
+    perplex_BD_clean = float("nan")
     if backdoor:
         backdoored_trig_data = clean_test_dataloaders[-2].dataset
         clean_trig_data = clean_test_dataloaders[-1].dataset
@@ -559,21 +446,21 @@ def track_all_metrics(
                 pad_token_id=pad_token_id,
             )
         )
-        print("ASR (BD test data): ", (percent_mem_bd * 100).item(), "%")
+        print("ASR (BD test data): ", (percent_mem_bd * 100), "%")
         print(
             "Perc tiggered but correctly outputed (BD clean test data): ",
-            (percent_non_mem_bd * 100).item(),
+            (percent_non_mem_bd * 100),
             "%",
         )
         perplex_BD_noise = perplexity(clean_test_dataloaders[-2], model)
-        print("perplexities of noised BD test data: ", perplex_BD_noise.item())
+        print("perplexities of noised BD test data: ", perplex_BD_noise)
 
         perplex_BD_clean = perplexity(clean_test_dataloaders[-1], model)
         print(
             "perplexities of clean BD data corresponding to noise: ",
-            perplex_BD_clean.item(),
+            perplex_BD_clean,
         )
-        accBD = percent_mem_bd.item()
+        accBD = percent_mem_bd
 
     return (
         perc_mem_dup_classes,
@@ -585,9 +472,9 @@ def track_all_metrics(
         accs_test,
         perplexities_test,
         accBD,
-        percent_non_mem_bd.item(),
-        perplex_BD_noise.item(),
-        perplex_BD_clean.item(),
+        percent_non_mem_bd,
+        perplex_BD_noise,
+        perplex_BD_clean,
         # accs[0].item(),
         # accs[1].item(),
         # accs[2].item(),

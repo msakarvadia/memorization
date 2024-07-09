@@ -65,6 +65,111 @@ import random
 print("finished imports")
 
 
+def sort_metrics(
+    args,
+    perc_mem_dup_classes,
+    perc_not_mem_dup_classes,
+    perp_noise_dup_classes,
+    perp_clean_dup_classes,
+    accs_test,
+    perplexities_test,
+    accBD,
+    percent_non_mem_bd,
+    perplex_BD_noise,
+    perplex_BD_clean,
+):
+    # Base dict
+    """
+    data = {
+        "model": [os.path.basename(args.model_path)],
+        "localization_method": [args.localization_method],
+        "duplication": [args.duplication],
+        "backdoor": [args.duplication],
+        "data_name": [args.data_name],
+        "ratio": [args.ratio],
+        "accbackdoor": [accBD],
+        "perc_non_mem_clean_BD": [percent_non_mem_bd],
+        "perplex_BD_noise": [perplex_BD_clean],
+        "seed": [args.seed],
+        "num_grad": [args.num_grads],
+        "block_size": [args.block_size],
+        "lambd": [args.lambd],
+        "unlearn_set": [args.unlearn_set_name],
+    }
+    """
+    data = vars(args)
+    dup_dict = {
+        "perc_mem_0": perc_mem_dup_classes[0],
+        "perc_not_mem_correct_out_0": perc_not_mem_dup_classes[0],
+        "perp_noise_0": perp_noise_dup_classes[0],
+        "perp_clean_0": perp_clean_dup_classes[0],
+    }
+    if args.data_name in ["wiki_fast"]:
+        data_dict = {
+            "wiki_acc": [accs_test[0]],
+            "wiki_perp": perplexities_test[0],
+        }
+        if args.duplicate and not args.backdoor:
+            dup_dict = {
+                "perc_mem_0": perc_mem_dup_classes[0],
+                "perc_mem_1": perc_mem_dup_classes[1],
+                "perc_mem_2": perc_mem_dup_classes[2],
+                "perc_mem_3": perc_mem_dup_classes[3],
+                "perc_not_mem_correct_out_0": perc_not_mem_dup_classes[0],
+                "perc_not_mem_correct_out_1": perc_not_mem_dup_classes[1],
+                "perc_not_mem_correct_out_2": perc_not_mem_dup_classes[2],
+                "perc_not_mem_correct_out_3": perc_not_mem_dup_classes[3],
+                "perp_noise_0": perp_noise_dup_classes[0],
+                "perp_noise_1": perp_noise_dup_classes[3],
+                "perp_noise_2": perp_noise_dup_classes[2],
+                "perp_noise_3": perp_noise_dup_classes[3],
+                "perp_clean_0": perp_clean_dup_classes[0],
+                "perp_clean_1": perp_clean_dup_classes[1],
+                "perp_clean_2": perp_clean_dup_classes[2],
+                "perp_clean_3": perp_clean_dup_classes[3],
+            }
+        # for wiki bd, we duplicate everything to the power of 2
+        if args.duplicate and args.backdoor:
+            dup_dict = {
+                "perc_mem_2": perc_mem_dup_classes[0],
+                "perc_not_mem_correct_out_2": perc_not_mem_dup_classes[0],
+                "perp_noise_2": perp_noise_dup_classes[0],
+                "perp_clean_2": perp_clean_dup_classes[0],
+            }
+    if args.data_name in ["mult", "increment"]:
+        data_dict = {
+            "acc7": [accs_test[0]],
+            "acc2": accs_test[1],
+            "acc3": accs_test[2],
+            "acc4": accs_test[3],
+            "acc5": accs_test[4],
+            "perp7": perplexities_test[0],
+            "perp2": perplexities_test[1],
+            "perp3": perplexities_test[2],
+            "perp4": perplexities_test[3],
+            "perp5": perplexities_test[4],
+        }
+        if args.duplicate:
+            dup_dict = {
+                "perc_mem_0": perc_mem_dup_classes[0],
+                "perc_mem_1": perc_mem_dup_classes[1],
+                "perc_mem_2": perc_mem_dup_classes[2],
+                "perc_not_mem_correct_out_0": perc_not_mem_dup_classes[0],
+                "perc_not_mem_correct_out_1": perc_not_mem_dup_classes[1],
+                "perc_not_mem_correct_out_2": perc_not_mem_dup_classes[2],
+                "perp_noise_0": perp_noise_dup_classes[0],
+                "perp_noise_1": perp_noise_dup_classes[1],
+                "perp_noise_2": perp_noise_dup_classes[2],
+                "perp_clean_0": perp_clean_dup_classes[0],
+                "perp_clean_1": perp_clean_dup_classes[1],
+                "perp_clean_2": perp_clean_dup_classes[2],
+            }
+
+    data.update(data_dict)
+    data.update(dup_dict)
+    return data
+
+
 torch.__version__
 torch.manual_seed(0)
 random.seed(0)
@@ -405,6 +510,21 @@ if __name__ == "__main__":
     }
     """
     data = {}
+    data = sort_metrics(
+        args,
+        perc_mem_dup_classes,
+        perc_not_mem_dup_classes,
+        perp_noise_dup_classes,
+        perp_clean_dup_classes,
+        accs_test,
+        perplexities_test,
+        accBD,
+        percent_non_mem_bd,
+        perplex_BD_noise,
+        perplex_BD_clean,
+    )
+
+    print(data)
     base_df = pd.DataFrame.from_dict(data)
 
     if args.unlearn_set_name == "mem":
@@ -735,6 +855,7 @@ if __name__ == "__main__":
             backdoor=args.backdoor,
             data_name=args.data_name,
         )
+
         """
         data = {
             "model": [os.path.basename(args.model_path)],
@@ -759,6 +880,19 @@ if __name__ == "__main__":
         }
         """
         data = {}
+        data = sort_metrics(
+            args,
+            perc_mem_dup_classes,
+            perc_not_mem_dup_classes,
+            perp_noise_dup_classes,
+            perp_clean_dup_classes,
+            accs_test,
+            perplexities_test,
+            accBD,
+            percent_non_mem_bd,
+            perplex_BD_noise,
+            perplex_BD_clean,
+        )
         ablate_df = pd.DataFrame.from_dict(data)
 
         # Now we concatentate all df together
