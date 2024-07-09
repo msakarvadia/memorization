@@ -6,7 +6,7 @@ import numpy as np
 
 # from transformers import GPT2Config, GPT2Model, GPT2LMHeadModel
 
-from neuron_utils import (
+from src.localize.neuron.neuron_utils import (
     get_attr_str,
     set_model_attributes,
     get_attributes,

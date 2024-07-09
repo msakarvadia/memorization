@@ -1,6 +1,6 @@
 import sys
 import argparse
-from neuron_utils import (
+from src.localize.neuron.neuron_utils import (
     get_attr_str,
     set_model_attributes,
     get_attributes,
@@ -21,6 +21,7 @@ from neuron_utils import (
     apply_noise_ablation_mask_to_neurons,
 )
 
+"""
 from zero_out import fast_zero_out_vector
 from slimming import patch_slim, reinit_slim, compute_l1_loss, slim
 from hard_concrete import (
@@ -33,6 +34,7 @@ from hard_concrete import (
     get_sparsity,
     hard_concrete,
 )
+"""
 import torch
 from torch.utils.data import DataLoader
 from torch.nn import CrossEntropyLoss

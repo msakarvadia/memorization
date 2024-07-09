@@ -24,6 +24,7 @@ from neuron_utils import (
 )
 from src.data.old_data import *
 
+"""
 from zero_out import fast_zero_out_vector
 from slimming import patch_slim, reinit_slim, compute_l1_loss, slim
 from hard_concrete import (
@@ -43,6 +44,7 @@ from integrated_gradients import (
     scaled_input,
     get_ori_activations_IG,
 )
+"""
 
 import torch
 from torch.utils.data import DataLoader
