@@ -1,9 +1,9 @@
 #!/bin/bash 
 #PBS -l select=1
 #PBS -l walltime=72:00:00
-#PBS -q debug
+#PBS -q preemptable
 #PBS -l filesystems=home:eagle
-#PBS -A preemptable
+#PBS -A superbert
 #PBS -M sakarvadia@uchicago.edu
 #PBS -N wiki_BD
 
