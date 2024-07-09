@@ -352,8 +352,6 @@ if __name__ == "__main__":
     )
     model_name = "gpt2"
 
-    print("Recomputing attributions.")
-
     print("BEFORE MASKING---------")
 
     # print("shape of extra data: ", extra_train_datas[0].shape)
@@ -498,172 +496,199 @@ if __name__ == "__main__":
     extra_data = torch.cat(extra_data, 0)
 
     if len(unlearn_set) != 0:
-        ## Hard concrete
-        if args.localization_method == "hc":
-            patched = False
-
-            if not patched:
-                patch_hardconcrete(model, model_name, mask_p=0.5, beta=2 / 3)
-                patched = True
-                model.to(device)
+        # Check if procedure has already been done
+        if args.localization_method in ["zero", "act", "ig", "slim", "hc"]:
+            attrib_dir = (
+                "attrib/" + args.localization_method + "/" + args.unlearn_set_name + "/"
+            )
+            if args.localization_method in ["hc", "slim"]:
+                attrib_dir = (
+                    attrib_dir
+                    + f"{args.epochs}/{args.lambda_l1}/{args.stop_loss}/{args.lr}/"
+                )
+            if args.localization_method in ["ig"]:
+                attrib_dir = attrib_dir + f"{args.ig_steps}/"
+            name_of_attrib = attrib_dir + os.path.basename(args.model_path)
+            print(name_of_attrib)
+            # Make parent directories in path if it doesn't exist
+            if not os.path.exists(attrib_dir):
+                os.makedirs(attrib_dir)
+            # If attrib file exists reload it
+            if os.path.exists(name_of_attrib):
+                print("Loading pre-computed attributions.")
+                attributions = torch.load(name_of_attrib)
+            # if it doesn't exist, create it
             else:
-                if (
-                    "gpt2" in model_name
-                ):  # the newly loaded weights need to be transposed
-                    transpose_conv1d(model)
-                reinit_hardconcrete(model)
 
-            attributions = hard_concrete(
-                lr=args.lr,
-                epoch=args.epochs,
-                lambda_l1=args.lambda_l1,
-                stop_loss=args.stop_loss,
-                threshold=1e-1,
-                model=model,
-                inputs=unlearn_set,
-                gold_set=None,
-            )
+                ## Hard concrete
+                if args.localization_method == "hc":
+                    patched = False
 
-        ## Zero-out
-        if args.localization_method == "zero":
-            attributions = fast_zero_out_vector(
-                inner_dim=model.inner_dim,
-                n_batches=16,
-                model=model,
-                inputs=unlearn_set,
-                prompt_len=50,
-            )
-        ## Slimming
-        if args.localization_method == "slim":
-            patched = False
+                    if not patched:
+                        patch_hardconcrete(model, model_name, mask_p=0.5, beta=2 / 3)
+                        patched = True
+                        model.to(device)
+                    else:
+                        if (
+                            "gpt2" in model_name
+                        ):  # the newly loaded weights need to be transposed
+                            transpose_conv1d(model)
+                        reinit_hardconcrete(model)
 
-            if not patched:
-                patch_slim(model)
-                patched = True
-                model.to(device)  # send the coef_parameters in patch to gpu
-            else:
-                reinit_slim(model)
-            attributions = slim(
-                lr=args.lr,
-                epoch=args.epochs,
-                lambda_l1=args.lambda_l1,
-                stop_loss=args.stop_loss,
-                threshold=1e-1,
-                model=model,
-                inputs=unlearn_set,
-                # inputs=mem_seq,
-                # inputs=noise_data,
-                gold_set=None,
-            )
+                    attributions = hard_concrete(
+                        lr=args.lr,
+                        epoch=args.epochs,
+                        lambda_l1=args.lambda_l1,
+                        stop_loss=args.stop_loss,
+                        threshold=1e-1,
+                        model=model,
+                        inputs=unlearn_set,
+                        gold_set=None,
+                    )
 
-        ## Activations
-        if args.localization_method == "act":
+                ## Zero-out
+                if args.localization_method == "zero":
+                    attributions = fast_zero_out_vector(
+                        inner_dim=model.inner_dim,
+                        n_batches=16,
+                        model=model,
+                        inputs=unlearn_set,
+                        prompt_len=50,
+                    )
+                ## Slimming
+                if args.localization_method == "slim":
+                    patched = False
 
-            print("starting act localization")
-            attributions = largest_act(
-                inner_dim=model.inner_dim,
-                model=model,
-                # inputs=noise_data,
-                inputs=unlearn_set,
-                # inputs=mem_seq,
-                gold_set=None,
-                model_name="gpt2",
-                prompt_len=50,
-            )
+                    if not patched:
+                        patch_slim(model)
+                        patched = True
+                        model.to(device)  # send the coef_parameters in patch to gpu
+                    else:
+                        reinit_slim(model)
+                    attributions = slim(
+                        lr=args.lr,
+                        epoch=args.epochs,
+                        lambda_l1=args.lambda_l1,
+                        stop_loss=args.stop_loss,
+                        threshold=1e-1,
+                        model=model,
+                        inputs=unlearn_set,
+                        # inputs=mem_seq,
+                        # inputs=noise_data,
+                        gold_set=None,
+                    )
 
-        ## Integrated Gradients
-        if args.localization_method == "ig":
+                ## Activations
+                if args.localization_method == "act":
 
-            # attributions = integrated_gradients(
-            attributions = ig_full_data(
-                inner_dim=model.inner_dim,
-                model=model,
-                # inputs=noise_data[0].unsqueeze(0),
-                inputs=mem_seq,
-                gold_set=None,
-                ig_steps=args.ig_steps,
-                device=device,
-                n_batches=16,
-                prompt_len=50,
-            )
+                    print("starting act localization")
+                    attributions = largest_act(
+                        inner_dim=model.inner_dim,
+                        model=model,
+                        # inputs=noise_data,
+                        inputs=unlearn_set,
+                        # inputs=mem_seq,
+                        gold_set=None,
+                        model_name="gpt2",
+                        prompt_len=50,
+                    )
 
-        # WEIGHT LEVEL LOCALIZATION
-        if args.localization_method == "random_greedy":
-            print("Random Subnet localization")
-            model = do_random_greedy(
-                model,
-                unlearn_set,
-                extra_data,
-                args.n_layers,
-                args.ratio,
-                args.epochs,
-                args.lr,
-                args.momentum,
-                args.weight_decay,
-                64,  # TODO make batch size an arg
-            )
+                ## Integrated Gradients
+                if args.localization_method == "ig":
 
-        if args.localization_method == "random":
-            print("Random Subnet localization")
-            model = do_random(
-                model,
-                unlearn_set,
-                args.n_layers,
-                args.ratio,
-                args.epochs,
-                args.lr,
-                args.momentum,
-                args.weight_decay,
-            )
+                    # attributions = integrated_gradients(
+                    attributions = ig_full_data(
+                        inner_dim=model.inner_dim,
+                        model=model,
+                        # inputs=noise_data[0].unsqueeze(0),
+                        inputs=mem_seq,
+                        gold_set=None,
+                        ig_steps=args.ig_steps,
+                        device=device,
+                        n_batches=16,
+                        prompt_len=50,
+                    )
+                # save the precomputed attributions
+                torch.save(attributions, name_of_attrib)
+        else:
 
-        if args.localization_method == "greedy":
-            print("Greedy localization")
-            model = do_greedy(extra_data, unlearn_set, model, 64, args.ratio)
+            # WEIGHT LEVEL LOCALIZATION
+            if args.localization_method == "random_greedy":
+                print("Random Subnet localization")
+                model = do_random_greedy(
+                    model,
+                    unlearn_set,
+                    extra_data,
+                    args.n_layers,
+                    args.ratio,
+                    args.epochs,
+                    args.lr,
+                    args.momentum,
+                    args.weight_decay,
+                    64,  # TODO make batch size an arg
+                )
 
-        if args.localization_method == "obs":
-            print("OBS localization")
-            model = do_obs(
-                model,
-                unlearn_set,
-                args.ratio,
-                args.num_grads,
-                args.block_size,
-                args.lambd,
-            )
+            if args.localization_method == "random":
+                print("Random Subnet localization")
+                model = do_random(
+                    model,
+                    unlearn_set,
+                    args.n_layers,
+                    args.ratio,
+                    args.epochs,
+                    args.lr,
+                    args.momentum,
+                    args.weight_decay,
+                )
 
-        if args.localization_method == "greedy_obs":
-            print("Greedy OBS localization")
-            model = do_greedy_obs(
-                model,
-                unlearn_set,
-                extra_data,
-                args.ratio,
-                args.num_grads,
-                args.block_size,
-                args.lambd,
-                64,
-            )
+            if args.localization_method == "greedy":
+                print("Greedy localization")
+                model = do_greedy(extra_data, unlearn_set, model, 64, args.ratio)
 
-        if args.localization_method == "greedy_obs2":
-            print("Greedy OBS localization V2")
-            model = do_greedy_obs2(
-                model,
-                unlearn_set,
-                extra_data,
-                args.ratio,
-                args.num_grads,
-                args.block_size,
-                args.lambd,
-                64,
-            )
+            if args.localization_method == "obs":
+                print("OBS localization")
+                model = do_obs(
+                    model,
+                    unlearn_set,
+                    args.ratio,
+                    args.num_grads,
+                    args.block_size,
+                    args.lambd,
+                )
 
-        if args.localization_method == "durable":
-            print("Durable localization")
-            model = do_durable(model, unlearn_set, args.ratio, False)
+            if args.localization_method == "greedy_obs":
+                print("Greedy OBS localization")
+                model = do_greedy_obs(
+                    model,
+                    unlearn_set,
+                    extra_data,
+                    args.ratio,
+                    args.num_grads,
+                    args.block_size,
+                    args.lambd,
+                    64,
+                )
 
-        if args.localization_method == "durable_agg":
-            print("Durable Aggregate localization")
-            model = do_durable(model, unlearn_set, args.ratio, True)
+            if args.localization_method == "greedy_obs2":
+                print("Greedy OBS localization V2")
+                model = do_greedy_obs2(
+                    model,
+                    unlearn_set,
+                    extra_data,
+                    args.ratio,
+                    args.num_grads,
+                    args.block_size,
+                    args.lambd,
+                    64,
+                )
+
+            if args.localization_method == "durable":
+                print("Durable localization")
+                model = do_durable(model, unlearn_set, args.ratio, False)
+
+            if args.localization_method == "durable_agg":
+                print("Durable Aggregate localization")
+                model = do_durable(model, unlearn_set, args.ratio, True)
 
         print("\n AFTER MASKING Ablation---------")
 
