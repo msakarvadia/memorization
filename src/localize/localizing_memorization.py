@@ -356,19 +356,18 @@ if __name__ == "__main__":
 
     # print("shape of extra data: ", extra_train_datas[0].shape)
     (
-        perc_mem,
-        acc,
-        perplex_clean,
-        perplex_noise,
+        perc_mem_dup_classes,
+        perc_not_mem_dup_classes,
+        perp_noise_dup_classes,
+        perp_clean_dup_classes,
         mem_seq,
-        clean_mem_seq,
-        accs,
-        perplexities,
-        # acc2,
-        # acc3,
-        # acc4,
-        # acc5,
-        # accBD,
+        clean_mem,
+        accs_test,
+        perplexities_test,
+        accBD,
+        percent_non_mem_bd,
+        perplex_BD_noise,
+        perplex_BD_clean,
     ) = track_all_metrics(
         noise_data=noise_data,
         clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
@@ -382,6 +381,7 @@ if __name__ == "__main__":
         data_name=args.data_name,
     )
 
+    """
     data = {
         "model": [os.path.basename(args.model_path)],
         "localization_method": [""],
@@ -403,6 +403,8 @@ if __name__ == "__main__":
         "lambd": [args.lambd],
         "unlearn_set": [args.unlearn_set_name],
     }
+    """
+    data = {}
     base_df = pd.DataFrame.from_dict(data)
 
     if args.unlearn_set_name == "mem":
@@ -709,19 +711,18 @@ if __name__ == "__main__":
         )
 
         (
-            perc_mem,
-            acc,
-            perplex_clean,
-            perplex_noise,
-            mem_seq,
-            clean_mem_seq,
-            accs,
-            perplexities,
-            # acc2,
-            # acc3,
-            # acc4,
-            # acc5,
-            # accBD,
+            perc_mem_dup_classes,
+            perc_not_mem_dup_classes,
+            perp_noise_dup_classes,
+            perp_clean_dup_classes,
+            mem_seq_all,
+            clean_mem_seq_all,
+            accs_test,
+            perplexities_test,
+            accBD,
+            percent_non_mem_bd,
+            perplex_BD_noise,
+            perplex_BD_clean,
         ) = track_all_metrics(
             noise_data=noise_data,
             clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
@@ -734,6 +735,7 @@ if __name__ == "__main__":
             backdoor=args.backdoor,
             data_name=args.data_name,
         )
+        """
         data = {
             "model": [os.path.basename(args.model_path)],
             "localization_method": [args.localization_method],
@@ -755,16 +757,20 @@ if __name__ == "__main__":
             "lambd": [args.lambd],
             "unlearn_set": [args.unlearn_set_name],
         }
+        """
+        data = {}
         ablate_df = pd.DataFrame.from_dict(data)
 
         # Now we concatentate all df together
-        result = pd.concat([base_df, ablate_df])
+        result = pd.concat([base_df, ablate_df], axis=0, ignore_index=True)
 
         # Now open results.csv if it exisits and append
         if os.path.exists(args.results_path):
             print("appending to existing results file")
             existing_results = pd.read_csv(args.results_path)
-            existing_results = pd.concat([existing_results, result])
+            existing_results = pd.concat(
+                [existing_results, result], axis=0, ignore_index=True
+            )
             existing_results.to_csv(args.results_path, index=False)
         # Otherwise make a new results.csv
         else:
