@@ -18,7 +18,7 @@ from torch.utils.data import DataLoader
 from src.localize.neuron.neuron_utils import (
     track_all_metrics,
 )
-from weight_utils import clm_loss_fn
+from src.localize.weight.weight_utils import clm_loss_fn, count_num_params
 
 
 class GetSubnet(autograd.Function):

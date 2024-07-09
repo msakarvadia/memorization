@@ -1,6 +1,6 @@
 # NOTE(MS): this code is borrowed and adapted from: https://github.com/pratyushmaini/localizing-memorization
 
-from weight_utils import clm_loss_fn, count_num_params
+from src.localize.weight.weight_utils import clm_loss_fn, count_num_params
 
 import torch
 from torch.utils.data import DataLoader

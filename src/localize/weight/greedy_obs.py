@@ -2,7 +2,7 @@ import math
 from torch.utils.data import DataLoader
 import torch
 from torch import Tensor
-from weight_utils import clm_loss_fn, count_num_params
+from src.localize.weight.weight_utils import clm_loss_fn, count_num_params
 import random
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
