@@ -670,7 +670,7 @@ if __name__ == "__main__":
         # save model
         # MODEL_PATH = args.model_path[:-4] + f"_edit_{args.unlearn_set_name}.pth"
         model_path, model_file_name = os.path.split(args.model_path)
-        model_path = model_path + "_edit"
+        model_path = model_path + "_edit/"
         if not os.path.exists(model_path):
             os.makedirs(model_path)
         MODEL_PATH = model_path + model_file_name
