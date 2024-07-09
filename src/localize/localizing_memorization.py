@@ -208,16 +208,34 @@ if __name__ == "__main__":
         help="Num layers in model",
     )
     parser.add_argument(
+        "--ig_steps",
+        type=float,
+        default=20,
+        help="IG HP.",
+    )
+    parser.add_argument(
         "--epochs",
         type=int,
         default=5,
-        help="Random HP: num epochs to optimize masks for",
+        help="Random/HP/SLIM HP: num epochs to optimize masks for",
+    )
+    parser.add_argument(
+        "--lambda_l1",
+        type=float,
+        default=1000,
+        help="HC/Slim HP.",
+    )
+    parser.add_argument(
+        "--stop_loss",
+        type=float,
+        default=1e-1,
+        help="HC/Slim HP.",
     )
     parser.add_argument(
         "--lr",
         type=float,
         default=0.1,
-        help="Random HP: lr to optimize masks with",
+        help="Random/HC/SLIM HP: lr to optimize masks with",
     )
     parser.add_argument(
         "--momentum",
@@ -497,7 +515,7 @@ if __name__ == "__main__":
 
             attributions = hard_concrete(
                 lr=args.lr,
-                epoch=args.epoch,
+                epoch=args.epochs,
                 lambda_l1=args.lambda_l1,
                 stop_loss=args.stop_loss,
                 threshold=1e-1,
@@ -527,7 +545,7 @@ if __name__ == "__main__":
                 reinit_slim(model)
             attributions = slim(
                 lr=args.lr,
-                epoch=args.epoch,
+                epoch=args.epochs,
                 lambda_l1=args.lambda_l1,
                 stop_loss=args.stop_loss,
                 threshold=1e-1,
@@ -541,6 +559,7 @@ if __name__ == "__main__":
         ## Activations
         if args.localization_method == "act":
 
+            print("starting act localization")
             attributions = largest_act(
                 inner_dim=model.inner_dim,
                 model=model,
