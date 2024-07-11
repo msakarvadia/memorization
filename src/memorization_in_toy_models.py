@@ -301,8 +301,8 @@ def train_model_track_memorization_per_training_set(
                             pad_token_id=pad_token_id,
                         )
                     )
-                    percent_memorized[i].append(percent_mem.cpu().item())
-                    percent_non_memorized[i].append(percent_non_mem.cpu().item())
+                    percent_memorized[i].append(percent_mem)
+                    percent_non_memorized[i].append(percent_non_mem)
 
                 # iterate through various test datasets
                 for i in range(len(test_dataloaders)):
