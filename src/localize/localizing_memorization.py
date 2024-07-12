@@ -3,6 +3,7 @@ import pandas as pd
 from src.data.old_data import *
 
 from src.localize.neuron.neuron_utils import (
+    apply_ablation_mask_to_base_model,
     refined_check_percent_memorized,
     accuracy,
     perplexity,
@@ -79,24 +80,6 @@ def sort_metrics(
     perplex_BD_clean,
 ):
     # Base dict
-    """
-    data = {
-        "model": [os.path.basename(args.model_path)],
-        "localization_method": [args.localization_method],
-        "duplication": [args.duplication],
-        "backdoor": [args.duplication],
-        "data_name": [args.data_name],
-        "ratio": [args.ratio],
-        "accbackdoor": [accBD],
-        "perc_non_mem_clean_BD": [percent_non_mem_bd],
-        "perplex_BD_noise": [perplex_BD_clean],
-        "seed": [args.seed],
-        "num_grad": [args.num_grads],
-        "block_size": [args.block_size],
-        "lambd": [args.lambd],
-        "unlearn_set": [args.unlearn_set_name],
-    }
-    """
     data = vars(args)
     dup_dict = {
         "perc_mem_0": perc_mem_dup_classes[0],
@@ -486,30 +469,6 @@ if __name__ == "__main__":
         data_name=args.data_name,
     )
 
-    """
-    data = {
-        "model": [os.path.basename(args.model_path)],
-        "localization_method": [""],
-        "data_name": [args.data_name],
-        "ablation_type": [""],
-        "ratio": [""],
-        "perc_mem": [perc_mem],
-        # "acc": [acc],
-        # "ppl_clean": [perplex_clean],
-        # "ppl_noise": [perplex_noise],
-        # "acc2": [acc2],
-        # "acc3": [acc3],
-        # "acc4": [acc4],
-        # "acc5": [acc5],
-        # "accbackdoor": [accBD],
-        "seed": [args.seed],
-        "num_grad": [args.num_grads],
-        "block_size": [args.block_size],
-        "lambd": [args.lambd],
-        "unlearn_set": [args.unlearn_set_name],
-    }
-    """
-    data = {}
     data = sort_metrics(
         args,
         perc_mem_dup_classes,
@@ -524,7 +483,7 @@ if __name__ == "__main__":
         perplex_BD_clean,
     )
 
-    print(data)
+    # print(data)
     base_df = pd.DataFrame.from_dict(data)
 
     if args.unlearn_set_name == "mem":
@@ -730,8 +689,13 @@ if __name__ == "__main__":
                         n_batches=16,
                         prompt_len=50,
                     )
-                # save the precomputed attributions
-                torch.save(attributions, name_of_attrib)
+        if args.localization_method in ["ig", "slim", "hc", "zero", "act"]:
+            print("Applying ablation mask to model")
+            apply_ablation_mask_to_base_model(
+                attributions, model=model, ratio=args.ratio
+            )
+            # save the precomputed attributions
+            torch.save(attributions, name_of_attrib)
         else:
 
             # WEIGHT LEVEL LOCALIZATION
@@ -812,11 +776,6 @@ if __name__ == "__main__":
                 print("Durable Aggregate localization")
                 model = do_durable(model, unlearn_set, args.ratio, True)
 
-            if args.localization_method in ["hc", "slim", "ig", "zero", "act"]:
-                apply_ablation_mask_to_neurons(
-                    attributions, model=model, ratio=args.ratio
-                )
-
         print("\n AFTER MASKING Ablation---------")
 
         # save model
@@ -861,30 +820,6 @@ if __name__ == "__main__":
             data_name=args.data_name,
         )
 
-        """
-        data = {
-            "model": [os.path.basename(args.model_path)],
-            "localization_method": [args.localization_method],
-            "data_name": [args.data_name],
-            "ablation_type": ["ablate"],
-            "ratio": [args.ratio],
-            "perc_mem": [perc_mem],
-            # "acc": [acc],
-            # "ppl_clean": [perplex_clean],
-            # "ppl_noise": [perplex_noise],
-            # "acc2": [acc2],
-            # "acc3": [acc3],
-            # "acc4": [acc4],
-            # "acc5": [acc5],
-            # "accbackdoor": [accBD],
-            "seed": [args.seed],
-            "num_grad": [args.num_grads],
-            "block_size": [args.block_size],
-            "lambd": [args.lambd],
-            "unlearn_set": [args.unlearn_set_name],
-        }
-        """
-        data = {}
         data = sort_metrics(
             args,
             perc_mem_dup_classes,

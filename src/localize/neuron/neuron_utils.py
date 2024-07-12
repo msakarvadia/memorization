@@ -529,6 +529,32 @@ def get_model(model_path, n_layer, max_ctx, n_embed, vocab_size):
 """# Ablation Utility Functions"""
 
 
+def apply_ablation_mask_to_base_model(neuron_weightings, model, ratio=0.01):
+    print("Num of dropped neurons per layer: ", int(model.inner_dim * ratio // 1))
+    for ly in tqdm(range(model.config.n_layer)):
+        attr_str = (
+            f"{model.attr_dict['transformer_layer']}.{ly}.{model.attr_dict['ffn_act']}"
+        )
+        print(attr_str)
+
+        coeffs = neuron_weightings[ly]
+
+        val, idx = torch.topk(
+            coeffs, k=int(model.inner_dim * ratio // 1)
+        )  # grab neuron idxs that have highest diff losses
+        # make one hot mask for that
+        mask = torch.ones(model.inner_dim)
+        mask[idx] = 0
+
+        patch_ff_layer(
+            model,
+            attr_str,
+            onehot_coef=mask.to(device),
+        )
+
+    return model
+
+
 def apply_ablation_mask_to_neurons(neuron_weightings, model, ratio=0.01):
     print("Num of dropped neurons per layer: ", int(model.inner_dim * ratio // 1))
     for ly in tqdm(range(model.config.n_layer)):
