@@ -329,7 +329,7 @@ def refined_check_percent_memorized(
             percent_non_mem = non_memorized / total
 
     # check if list is empty
-    if mem_seq:
+    if len(mem_seq) > 0:
         mem_seq = torch.cat(mem_seq, 0)
         clean_mem_seq = torch.cat(clean_mem_seq, 0)
     return (
@@ -462,6 +462,9 @@ def track_all_metrics(
         )
         accBD = percent_mem_bd
 
+        # TODO need to stack mem seq
+        mem_seq_all = torch.stack(mem_seq_all, dim=0)
+        clean_mem_seq_all = torch.stack(clean_mem_seq_all, dim=0)
     return (
         perc_mem_dup_classes,
         perc_not_mem_dup_classes,
