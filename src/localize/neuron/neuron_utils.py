@@ -536,6 +536,16 @@ def apply_ablation_mask_to_base_model(neuron_weightings, model, ratio=0.01):
             f"{model.attr_dict['transformer_layer']}.{ly}.{model.attr_dict['ffn_act']}"
         )
         print(attr_str)
+        for name, param in model.named_parameters():
+            param.requires_grad = False
+            if "mlp.c_fc.weight" in name:
+                mlp = param
+                print(param.shape)
+                print(name)
+            if "mlp.c_fc.bias" in name:
+                bias = param
+                print(param.shape)
+                print(name)
 
         coeffs = neuron_weightings[ly]
 
@@ -543,14 +553,12 @@ def apply_ablation_mask_to_base_model(neuron_weightings, model, ratio=0.01):
             coeffs, k=int(model.inner_dim * ratio // 1)
         )  # grab neuron idxs that have highest diff losses
         # make one hot mask for that
-        mask = torch.ones(model.inner_dim)
-        mask[idx] = 0
-
-        patch_ff_layer(
-            model,
-            attr_str,
-            onehot_coef=mask.to(device),
-        )
+        idxs = torch.squeeze(idx)
+        print(idxs)
+        print(idxs.shape)
+        for i in idxs:
+            bias[i] = 0
+            mlp[:, i]
 
     return model
 

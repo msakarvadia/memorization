@@ -691,7 +691,7 @@ if __name__ == "__main__":
                     )
         if args.localization_method in ["ig", "slim", "hc", "zero", "act"]:
             print("Applying ablation mask to model")
-            apply_ablation_mask_to_base_model(
+            model = apply_ablation_mask_to_base_model(
                 attributions, model=model, ratio=args.ratio
             )
             # save the precomputed attributions
