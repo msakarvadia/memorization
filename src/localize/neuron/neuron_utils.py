@@ -462,7 +462,8 @@ def track_all_metrics(
         )
         accBD = percent_mem_bd
 
-        # TODO need to stack mem seq
+    # need to stack mem seq and return tensor
+    if len(mem_seq_all) > 0:
         mem_seq_all = torch.stack(mem_seq_all, dim=0)
         clean_mem_seq_all = torch.stack(clean_mem_seq_all, dim=0)
     return (
