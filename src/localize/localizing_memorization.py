@@ -812,6 +812,11 @@ if __name__ == "__main__":
                 print("Durable Aggregate localization")
                 model = do_durable(model, unlearn_set, args.ratio, True)
 
+            if args.localization_method in ["hc", "slim", "ig", "zero", "act"]:
+                apply_ablation_mask_to_neurons(
+                    attributions, model=model, ratio=args.ratio
+                )
+
         print("\n AFTER MASKING Ablation---------")
 
         # save model
