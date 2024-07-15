@@ -18,7 +18,7 @@ cd "/eagle/projects/argonne_tpc/mansisak/memorization/src"
 echo "working dir: "
 pwd
 
-base_path=/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/5_mult_data_distributions/
+base_path=/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/5_mult_data_distributions_testing/
 data_name="mult"
 
 
