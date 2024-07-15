@@ -4,6 +4,7 @@ from src.data.old_data import *
 
 from src.localize.neuron.neuron_utils import (
     apply_ablation_mask_to_base_model,
+    apply_ablation_mask_to_neurons,
     refined_check_percent_memorized,
     accuracy,
     perplexity,
@@ -691,9 +692,13 @@ if __name__ == "__main__":
                     )
         if args.localization_method in ["ig", "slim", "hc", "zero", "act"]:
             print("Applying ablation mask to model")
-            model = apply_ablation_mask_to_base_model(
+            model = apply_ablation_mask_to_neurons(
                 attributions, model=model, ratio=args.ratio
             )
+            # model = apply_ablation_mask_to_base_model(
+            #    attributions, model=model, ratio=args.ratio
+            # )
+
             # save the precomputed attributions
             torch.save(attributions, name_of_attrib)
         else:

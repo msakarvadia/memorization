@@ -558,7 +558,7 @@ def apply_ablation_mask_to_base_model(neuron_weightings, model, ratio=0.01):
         print(idxs.shape)
         for i in idxs:
             bias[i] = 0
-            mlp[:, i]
+            mlp[:, i] = 0
 
     return model
 
