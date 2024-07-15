@@ -554,10 +554,13 @@ def backdoor_data(poisoned_data, trigger, data_name):
 
         if data_name in ("wiki_fast"):
             start_idx = a.index(trigger)
+            start_idx += 1
 
+        # print("Trigger: ", trigger)
         a[start_idx:] = [2] * (
             len(a) - start_idx
         )  # fill in all subsequent tokens with triggered token
+        # print(a)
 
         poisoned_datas.append(torch.as_tensor(a))
     dataset = torch.stack(poisoned_datas, dim=0).to(device)
@@ -788,6 +791,7 @@ def get_data(
         extra_test_dataloaders = []
 
         # future trigger if we backdoor data
+        # trigger = 262 + seed  # 464 is the token for "The"
         # trigger = 262 + seed  # 464 is the token for "The"
         trigger = random.randrange(50257)
 
@@ -1061,6 +1065,19 @@ def get_data(
 if __name__ == "__main__":
     """
     get_data(
+        data_name="wiki_fast",
+        num_7=3000,
+        num_2=2000,
+        num_3=2000,
+        num_4=2000,
+        num_5=2000,
+        num_test=1000,
+        num_noise=1000,
+        data_path_name="wiki_fast_dup_bd_TEST.pt",
+        backdoor=True,
+        max_ctx=150,
+    )
+    get_data(
         data_name="increment",
         num_7=3000,
         num_2=2000,
@@ -1110,7 +1127,7 @@ if __name__ == "__main__":
         num_5=2000,
         num_noise=1000,
         num_test=1000,
-        data_path_name="inc_data.pt",
+        data_path_name="inc_data_BD_TEST.pt",
         length=20,
         backdoor=True,
     )
