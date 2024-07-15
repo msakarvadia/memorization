@@ -692,12 +692,22 @@ if __name__ == "__main__":
                     )
         if args.localization_method in ["ig", "slim", "hc", "zero", "act"]:
             print("Applying ablation mask to model")
-            model = apply_ablation_mask_to_neurons(
-                attributions, model=model, ratio=args.ratio
-            )
-            # model = apply_ablation_mask_to_base_model(
+            # old method to ablate neurons -- unfortunatly it modifies underlying model architectures
+            # model = apply_ablation_mask_to_neurons(
             #    attributions, model=model, ratio=args.ratio
             # )
+            # this removes any patching and restores normal model
+            # while still editing neurons by modifiying weights direction
+            model = get_model(
+                args.model_path,
+                args.n_layers,
+                args.max_ctx,
+                args.n_embed,
+                args.vocab_size,
+            )
+            model = apply_ablation_mask_to_base_model(
+                attributions, model=model, ratio=args.ratio
+            )
 
             # save the precomputed attributions
             torch.save(attributions, name_of_attrib)
