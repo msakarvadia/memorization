@@ -116,6 +116,34 @@ def mask_model(model, n_layers, ratio):
     return model
 
 
+def get_base_edited_model(model, n_layers):
+    """This is how we merge the mask into the base weights
+    rather than, having a scores attribute"""
+
+    for layer in range(n_layers):
+        # grab mask
+        mask = model.transformer.h[layer].mlp.c_fc
+        # assign edited weights to base model
+        subnet = GetSubnet.apply(mask.scores.abs(), mask.sparsity)
+        w = mask.weight * subnet
+        # assign edited weight to base model
+        model.transformer.h[layer].mlp.c_fc.weight = torch.nn.Parameter(w)
+        # assign bias to base model
+        model.transformer.h[layer].mlp.c_fc.bias = mask.bias
+
+        # grab mask
+        mask = model.transformer.h[layer].mlp.c_proj
+        # assign edited weights to base model
+        subnet = GetSubnet.apply(mask.scores.abs(), mask.sparsity)
+        w = mask.weight * subnet
+        # assign edited weight to base model
+        model.transformer.h[layer].mlp.c_proj.weight = torch.nn.Parameter(w)
+        # assign bias to base model
+        model.transformer.h[layer].mlp.c_proj.bias = mask.bias
+
+    return model
+
+
 def train(model, device, noise_data, optimizer):
     model.train()
     train_dataloader = DataLoader(noise_data, batch_size=64, shuffle=False)
@@ -159,4 +187,5 @@ def do_random(
         print("EPOCH: ", i)
         train(model, device, noise_data, optimizer)
 
+    model = get_base_edited_model(model, n_layers)
     return model
