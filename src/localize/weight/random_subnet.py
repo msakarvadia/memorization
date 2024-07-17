@@ -126,6 +126,8 @@ def get_base_edited_model(model, n_layers):
         # assign edited weights to base model
         subnet = GetSubnet.apply(mask.scores.abs(), mask.sparsity)
         w = mask.weight * subnet
+        # original layer
+        model.transformer.h[layer].mlp.c_fc = Conv1D(512, 128).to(device)
         # assign edited weight to base model
         model.transformer.h[layer].mlp.c_fc.weight = torch.nn.Parameter(w)
         # assign bias to base model
@@ -136,6 +138,8 @@ def get_base_edited_model(model, n_layers):
         # assign edited weights to base model
         subnet = GetSubnet.apply(mask.scores.abs(), mask.sparsity)
         w = mask.weight * subnet
+        # original layer
+        model.transformer.h[layer].mlp.c_proj = Conv1D(128, 512).to(device)
         # assign edited weight to base model
         model.transformer.h[layer].mlp.c_proj.weight = torch.nn.Parameter(w)
         # assign bias to base model

@@ -741,6 +741,21 @@ if __name__ == "__main__":
                     args.momentum,
                     args.weight_decay,
                 )
+            sd = model.state_dict()
+            original_model = get_model(
+                args.model_path,
+                args.n_layers,
+                args.max_ctx,
+                args.n_embed,
+                args.vocab_size,
+            )
+            original_sd = original_model.state_dict()
+            print("edit SD: ", sd.keys())
+            print("original SD: ", original_sd.keys())
+            print(
+                "Edited state dict matches original state dict: ",
+                sd.keys() == original_sd.keys(),
+            )
 
             if args.localization_method == "greedy":
                 print("Greedy localization")
