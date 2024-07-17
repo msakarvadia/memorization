@@ -19,6 +19,7 @@ from src.localize.neuron.neuron_utils import (
     track_all_metrics,
 )
 from src.localize.weight.weight_utils import clm_loss_fn, count_num_params
+from src.localize.weight.random_subnet import get_base_edited_model
 
 
 class GetSubnet(autograd.Function):
@@ -177,4 +178,5 @@ def do_random_greedy(
         print("EPOCH: ", i)
         train(model, device, train_dataloader, optimizer, batch_size)
 
+    model = get_base_edited_model(model, n_layers)
     return model
