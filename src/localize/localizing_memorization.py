@@ -749,13 +749,6 @@ if __name__ == "__main__":
                 args.n_embed,
                 args.vocab_size,
             )
-            original_sd = original_model.state_dict()
-            print("edit SD: ", sd.keys())
-            print("original SD: ", original_sd.keys())
-            print(
-                "Edited state dict matches original state dict: ",
-                sd.keys() == original_sd.keys(),
-            )
 
             if args.localization_method == "greedy":
                 print("Greedy localization")
@@ -805,6 +798,14 @@ if __name__ == "__main__":
             if args.localization_method == "durable_agg":
                 print("Durable Aggregate localization")
                 model = do_durable(model, unlearn_set, args.ratio, True)
+
+            original_sd = original_model.state_dict()
+            # print("edit SD: ", sd.keys())
+            # print("original SD: ", original_sd.keys())
+            print(
+                "Edited state dict matches original state dict: ",
+                sd.keys() == original_sd.keys(),
+            )
 
         print("\n AFTER MASKING Ablation---------")
 
