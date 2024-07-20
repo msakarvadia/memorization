@@ -856,6 +856,35 @@ if __name__ == "__main__":
         # MODEL_PATH = args.model_path[:-4] + f"_edit_{args.unlearn_set_name}.pth"
         model_path, model_file_name = os.path.split(args.model_path)
         model_path = model_path + "_edit/"
+
+        # have to save hyper-parameter specific model
+        # this will work for act/zero/greedy/durable/durable_agg
+        model_path = (
+            model_path
+            + args.localization_method
+            + "/"
+            + args.unlearn_set_name
+            + "/"
+            + str(args.ratio)
+            + "/"
+        )
+        if args.localization_method in ["hc", "slim"]:
+            model_path = (
+                model_path
+                + f"{args.epochs}/{args.lambda_l1}/{args.stop_loss}/{args.lr}/"
+            )
+        if args.localization_method in ["ig"]:
+            model_path = model_path + f"{args.ig_steps}/"
+        if args.localization_method in ["obs"]:
+            model_path = (
+                model_path + f"{args.block_size}/{args.num_grads}/{args.lambd}/"
+            )
+        if args.localization_method in ["random_greedy", "random"]:
+            model_path = (
+                model_path
+                + f"{args.epochs}/{args.lr}/{args.momentum}/{args.weight_decay}/"
+            )
+
         if not os.path.exists(model_path):
             os.makedirs(model_path)
         MODEL_PATH = model_path + model_file_name
