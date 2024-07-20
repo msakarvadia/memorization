@@ -419,6 +419,18 @@ if __name__ == "__main__":
 
     print("data path: ", data_path)
 
+    if os.path.exists(args.results_path):
+        print("checking if experiment stats are in resutls file")
+        existing_results = pd.read_csv(args.results_path)
+        data = vars(args)
+        print(data)
+        # need to check if "data" is in existing_results
+        ckpt_check_df = existing_results[data.keys()]
+        exists = check_existance(data, ckpt_check_df)
+        print("This experiment exists: ", exists)
+        if exists:
+            exit()
+
     (
         noise_data,
         clean_data_corresponding_to_noise,
@@ -900,9 +912,11 @@ if __name__ == "__main__":
         # Now we concatentate all df together
         # if we already caluclated base_df, we don't reappend
         if base:
+            print("appending experiment and base results")
             result = pd.concat([base_df, ablate_df], axis=0, ignore_index=True)
-        else:
-            result = ablate_df
+        if not base:
+            print("appending only experiment not base results")
+            result = pd.concat([ablate_df], axis=0, ignore_index=True)
 
         # Now open results.csv if it exisits and append
         if os.path.exists(args.results_path):
