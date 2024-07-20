@@ -150,6 +150,11 @@ def train_model_track_memorization_per_training_set(
     # create dataloaders (w/ noise and clean data)
     train_dataloader = DataLoader(data, batch_size=args.batch_size, shuffle=True)
 
+    if args.ft:
+        train_dataloader = DataLoader(
+            clean_data_corresponding_to_noise, batch_size=args.batch_size, shuffle=True
+        )
+
     train_perplexities = []
     test_perplexities = []
     train_losses = []
@@ -553,6 +558,12 @@ if __name__ == "__main__":
         type=int,
         default=0,
         help="Random seed for dataset generation.",
+    )
+    parser.add_argument(
+        "--ft",
+        type=int,
+        default=0,
+        help="Fine tune model w/ clean data corresponding to noise.",
     )
     parser.add_argument(
         "--epochs", type=int, default=200, help="The number of epochs for training."
