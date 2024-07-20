@@ -82,6 +82,7 @@ def sort_metrics(
 ):
     # Base dict
     data = vars(args)
+    # we want localization method to be empty
     dup_dict = {
         "perc_mem_0": perc_mem_dup_classes[0],
         "perc_not_mem_correct_out_0": perc_not_mem_dup_classes[0],
@@ -152,6 +153,15 @@ def sort_metrics(
     data.update(data_dict)
     data.update(dup_dict)
     return data
+
+
+def check_existance(dict_of_values, df):
+    """This is how we check if an experiment has been done before"""
+    # https://stackoverflow.com/questions/24761133/pandas-check-if-row-exists-with-certain-values
+    v = df.iloc[:, 0] == df.iloc[:, 0]
+    for key, value in dict_of_values.items():
+        v &= df[key] == value
+    return v.any()
 
 
 torch.__version__
@@ -439,11 +449,25 @@ if __name__ == "__main__":
     model = get_model(
         args.model_path, args.n_layers, args.max_ctx, args.n_embed, args.vocab_size
     )
+    # TODO (MS): set this based on type of model
     model_name = "gpt2"
 
     print("BEFORE MASKING---------")
 
-    # print("shape of extra data: ", extra_train_datas[0].shape)
+    # only calculate new results if this if it isn't already in data
+    exists = 0
+    if os.path.exists(args.results_path):
+        print("checking if experiment stats are in resutls file")
+        existing_results = pd.read_csv(args.results_path)
+        base_args = copy.deepcopy(args)
+        base_args.localization_method = "base_stats"
+        data = vars(base_args)
+
+        # need to check if "data" is in existing_results
+        ckpt_check_df = existing_results[data.keys()]
+        exists = check_existance(data, ckpt_check_df)
+        print("This value exists: ", exists)
+        # print(ckpt_check_df.columns)
     (
         perc_mem_dup_classes,
         perc_not_mem_dup_classes,
@@ -470,22 +494,29 @@ if __name__ == "__main__":
         data_name=args.data_name,
     )
 
-    data = sort_metrics(
-        args,
-        perc_mem_dup_classes,
-        perc_not_mem_dup_classes,
-        perp_noise_dup_classes,
-        perp_clean_dup_classes,
-        accs_test,
-        perplexities_test,
-        accBD,
-        percent_non_mem_bd,
-        perplex_BD_noise,
-        perplex_BD_clean,
-    )
+    base = 0
+    if not exists:
+        # there is no localization method for args
+        base_args = copy.deepcopy(args)
+        base_args.localization_method = "base_stats"
 
-    # print(data)
-    base_df = pd.DataFrame.from_dict(data)
+        data = sort_metrics(
+            base_args,
+            perc_mem_dup_classes,
+            perc_not_mem_dup_classes,
+            perp_noise_dup_classes,
+            perp_clean_dup_classes,
+            accs_test,
+            perplexities_test,
+            accBD,
+            percent_non_mem_bd,
+            perplex_BD_noise,
+            perplex_BD_clean,
+        )
+
+        # print(data)
+        base_df = pd.DataFrame.from_dict(data)
+        base = 1
 
     if args.unlearn_set_name == "mem":
         print("unlearning memorized distribution")
@@ -671,7 +702,7 @@ if __name__ == "__main__":
                         inputs=unlearn_set,
                         # inputs=mem_seq,
                         gold_set=None,
-                        model_name="gpt2",
+                        model_name=model_name,
                         prompt_len=50,
                     )
 
@@ -867,7 +898,11 @@ if __name__ == "__main__":
         ablate_df = pd.DataFrame.from_dict(data)
 
         # Now we concatentate all df together
-        result = pd.concat([base_df, ablate_df], axis=0, ignore_index=True)
+        # if we already caluclated base_df, we don't reappend
+        if base:
+            result = pd.concat([base_df, ablate_df], axis=0, ignore_index=True)
+        else:
+            result = ablate_df
 
         # Now open results.csv if it exisits and append
         if os.path.exists(args.results_path):
