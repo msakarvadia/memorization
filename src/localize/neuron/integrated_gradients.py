@@ -160,7 +160,6 @@ def ig_full_data(
 ):
     print("Inputs shape: ", inputs.shape)
     ig_mean = torch.zeros(model.config.n_layer, model.inner_dim)
-    num_iters = 10
     for i, x in enumerate(inputs):
         ig_mean += integrated_gradients(
             inner_dim=model.inner_dim,
@@ -172,6 +171,6 @@ def ig_full_data(
             n_batches=16,
         )
 
-    ig_mean /= num_iters
+    ig_mean /= i + 1
 
     return ig_mean
