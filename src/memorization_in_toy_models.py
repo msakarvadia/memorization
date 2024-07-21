@@ -26,7 +26,6 @@ import os
 # %pip install git+https://github.com/neelnanda-io/neel-plotly.git
 # from neel_plotly.plot import line
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
 
 import sys
 from random import randrange, choices, sample
@@ -242,6 +241,7 @@ def train_model_track_memorization_per_training_set(
         avg_train_perp = 0
 
         for (batch, example_indices) in train_dataloader:
+            batch = batch.to(device)
             model_output = None
             if do_dropout:
                 model_output = model(batch, labels=batch, input_idx=example_indices)
@@ -448,10 +448,6 @@ def train_model_track_memorization_per_training_set(
 
 # Experiments
 if __name__ == "__main__":
-
-    if device == "cuda":
-        print("DEVICE: ", device, "name: ", torch.cuda.get_device_name(device=device))
-
     # set up arg parser
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -643,6 +639,11 @@ if __name__ == "__main__":
         "lam": args.lam,
         "dropout": args.example_tied_dropout
     }
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    if device == "cuda":
+        print("DEVICE: ", device, "name: ", torch.cuda.get_device_name(device=device))
+
 
     # Make the data
     print("Generating data...")

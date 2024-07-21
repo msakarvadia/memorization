@@ -34,8 +34,6 @@ Once these steps are done, you just need to add files to be committed and pushed
 
 `src/memorization_in_toy_models.py` allows you to train toy models that contain noised memorized information. Do `python memorization_in_toy_models.py --help` for usage details.
 
-`src/spectralregexpmemorization.py` uses a similar experimental setup to `memorization_in_toy_models.py`, but also applies [Spectral Norm Regularization](https://arxiv.org/abs/1705.10941) which affects the sensitivity of the model to small perturbations in the input sequence. Please take a look at the help message for usage details.
-
 How to grab a node on Polaris:
 
 ```bash
