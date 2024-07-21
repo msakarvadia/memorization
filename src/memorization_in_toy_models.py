@@ -153,11 +153,12 @@ def train_model_track_memorization_per_training_set(
     # allows us to index individual examples, useful for example-tied dropout
     # dataloader will automatically give a batched tensor of indices with the correct permutations applied
     indexed_data = IndexedDataset(data)
-    train_dataloader = DataLoader(indexed_data, batch_size=batch_size, shuffle=True)
+    train_dataloader = DataLoader(indexed_data, batch_size=args.batch_size, shuffle=True)
 
     if args.ft:
+        indexed_clean_data_corresponding_to_noise = IndexedDataset(clean_data_corresponding_to_noise)
         train_dataloader = DataLoader(
-            clean_data_corresponding_to_noise, batch_size=args.batch_size, shuffle=True
+            indexed_clean_data_corresponding_to_noise, batch_size=args.batch_size, shuffle=True
         )
 
     train_perplexities = []
@@ -301,11 +302,11 @@ def train_model_track_memorization_per_training_set(
         # model_alphas.append(get_alpha(model=model))
 
         if ((epoch + 1) % args.checkpoint_every) == 0:
-            print("saving ckpt")
-            with torch.inference_mode():
             # make sure
             model.eval()
+            print("saving ckpt")
 
+            with torch.inference_mode():
                 # iteration through various train datasets to track memorization
                 # for i in range(len(train_datasets)):
                 #  dataloader = DataLoader(train_datasets[i], batch_size=batch_size, shuffle=True)
