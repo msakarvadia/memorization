@@ -68,25 +68,70 @@ if __name__ == "__main__":
         "random",
         "random_greedy",
     ]:
+        # TODO (MS): add in more ratios
         for ratio in [0.00001]:
+            # want to reserve high ratios for random based methods
+            if loc_method not in ["random", "random_greedy"]:
+                if ratio >= 0.1:
+                    continue
 
-            command = f"""python localizing_memorization.py\
-                     --model_path {args.model_path}\
-                    --n_layer {args.n_layers}\
-                    --seed {args.seed}\
-                    --duplicate {args.duplicate}\
-                    --backdoor {args.backdoor}\
-                    --data_name {args.data_name}\
-                    --num_2 {args.num_extra}\
-                    --num_3 {args.num_extra}\
-                    --num_4 {args.num_extra}\
-                    --num_5 {args.num_extra}\
-                    --length 20\
-                    --max_ctx 150\
-                    --epochs 1\
-                    --batch_size 32\
-                    --ratio {ratio}\
-                    --ig_steps 1\
-                    --localization_method {loc_method}"""
-            os.system(command)
-            print("RAN COMMAND")
+            if loc_method in ["ig"]:
+                for ig_steps in [1, 10, 20]:
+                    command = f"""python localizing_memorization.py\
+                             --model_path {args.model_path}\
+                            --n_layer {args.n_layers}\
+                            --seed {args.seed}\
+                            --duplicate {args.duplicate}\
+                            --backdoor {args.backdoor}\
+                            --data_name {args.data_name}\
+                            --num_2 {args.num_extra}\
+                            --num_3 {args.num_extra}\
+                            --num_4 {args.num_extra}\
+                            --num_5 {args.num_extra}\
+                            --length 20\
+                            --max_ctx 150\
+                            --batch_size 32\
+                            --ratio {ratio}\
+                            --ig_steps {ig_steps}\
+                            --localization_method {loc_method}"""
+                    os.system(command)
+                    print("RAN COMMAND")
+            if loc_method in ["slim", "hc", "greedy", "random", "random_greedy"]:
+                for epochs in [1, 10, 30]:
+                    command = f"""python localizing_memorization.py\
+                             --model_path {args.model_path}\
+                            --n_layer {args.n_layers}\
+                            --seed {args.seed}\
+                            --duplicate {args.duplicate}\
+                            --backdoor {args.backdoor}\
+                            --data_name {args.data_name}\
+                            --num_2 {args.num_extra}\
+                            --num_3 {args.num_extra}\
+                            --num_4 {args.num_extra}\
+                            --num_5 {args.num_extra}\
+                            --length 20\
+                            --max_ctx 150\
+                            --batch_size 32\
+                            --ratio {ratio}\
+                            --epochs {epochs}\
+                            --localization_method {loc_method}"""
+                    os.system(command)
+                    print("RAN COMMAND")
+            else:
+                command = f"""python localizing_memorization.py\
+                         --model_path {args.model_path}\
+                        --n_layer {args.n_layers}\
+                        --seed {args.seed}\
+                        --duplicate {args.duplicate}\
+                        --backdoor {args.backdoor}\
+                        --data_name {args.data_name}\
+                        --num_2 {args.num_extra}\
+                        --num_3 {args.num_extra}\
+                        --num_4 {args.num_extra}\
+                        --num_5 {args.num_extra}\
+                        --length 20\
+                        --max_ctx 150\
+                        --ratio {ratio}\
+                        --localization_method {loc_method}"""
+                os.system(command)
+                print("RAN COMMAND")
