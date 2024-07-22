@@ -117,12 +117,13 @@ if __name__ == "__main__":
             layer_dir = "sixteen_layer"
 
         # TODO (MS): fix model path!
+        trained_epochs = 30
         ckpt_dir = f"{base_path}{layer_dir}/"
         model_name = f"{n_layers}_layer_{trained_epochs}_epoch.pth"
         model_path = f"{placeholder_path}{model_name}"
         # model_path = f"{ckpt_dir}{model_name}"
 
-        exec_str = f"python python localize_hp_sweep.py --model_path {model_path} --n_layers {n_layers} --data_name {data_name} --num_7 {num_7} --num_2 {num_extra_data} --num_3 {num_extra_data} --num_4 {num_extra_data} --num_5 {num_extra_data} --seed {seed}"
+        exec_str = f"python localize_hp_sweep.py --model_path {model_path} --n_layers {n_layers} --data_name {data_name} --num_extra {num_extra_data} --seed {seed}"
 
         return f" env | grep CUDA; {exec_str};"
 
