@@ -25,7 +25,7 @@ if __name__ == "__main__":
         "account": "argonne_tpc",
         "queue": "debug",  # e.g.: "prod","debug, "preemptable" (see https://docs.alcf.anl.gov/polaris/running-jobs/)
         "walltime": "01:00:00",
-        "nodes_per_block": 2,  # think of a block as one job on polaris, so to run on the main queues, set this >= 10
+        "nodes_per_block": 1,  # think of a block as one job on polaris, so to run on the main queues, set this >= 10
         # "cpus_per_node":    32, # Up to 64 with multithreading
         "available_accelerators": 4,  # Each Polaris node has 4 GPUs, setting this ensures one worker per GPU
         # "cores_per_worker": 8, # this will set the number of cpu hardware threads per worker.
@@ -116,47 +116,13 @@ if __name__ == "__main__":
         if n_layers == "16":
             layer_dir = "sixteen_layer"
 
-        for trained_epochs in [100]:
-            for localization_method in [
-                "hc",
-                "slim",
-                "ig",
-                "act",
-                "greedy",
-                "obs",
-                "durable",
-                "durable_agg",
-                "random",
-                "random_greedy",
-                "zero",
-            ]:
-                for ratio in [
-                    0.00001,
-                    0.0001,
-                    0.001,
-                    0.005,
-                    0.01,
-                    0.02,
-                    0.03,
-                    0.04,
-                    0.05,
-                    0.1,
-                    0.25,
-                    0.5,
-                    0.75,
-                    0.9,
-                ]:
-                    if localization_method != "random_greedy" and ratio >= 0.1:
-                        # ranodm greedy is the only method that can handle such large ratios
-                        continue
+        # TODO (MS): fix model path!
+        ckpt_dir = f"{base_path}{layer_dir}/"
+        model_name = f"{n_layers}_layer_{trained_epochs}_epoch.pth"
+        model_path = f"{placeholder_path}{model_name}"
+        # model_path = f"{ckpt_dir}{model_name}"
 
-                    # TODO (MS): fix model path!
-                    ckpt_dir = f"{base_path}{layer_dir}/"
-                    model_name = f"{n_layers}_layer_{trained_epochs}_epoch.pth"
-                    model_path = f"{placeholder_path}{model_name}"
-                    # model_path = f"{ckpt_dir}{model_name}"
-
-                    exec_str = f"python localizing_memorization.py --model_path {model_path} --localization_method {localization_method} --n_layers {n_layers} --epochs {epochs} --ratio {ratio} --data_name {data_name} --num_7 {num_7} --num_2 {num_extra_data} --num_3 {num_extra_data} --num_4 {num_extra_data} --num_5 {num_extra_data} --length {length} --max_ctx {max_ctx} --seed {seed} --batch_size {batch_size} --lr {lr} --duplicate {dup} --backdoor {backdoor}"
+        exec_str = f"python python localize_hp_sweep.py --model_path {model_path} --n_layers {n_layers} --data_name {data_name} --num_7 {num_7} --num_2 {num_extra_data} --num_3 {num_extra_data} --num_4 {num_extra_data} --num_5 {num_extra_data} --seed {seed}"
 
         return f" env | grep CUDA; {exec_str};"
 
