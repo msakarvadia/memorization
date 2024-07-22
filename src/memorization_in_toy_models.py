@@ -14,6 +14,7 @@ import numpy as np
 from utils.dropper import LossDropper
 from utils.spectral_reg import *
 from src.data.old_data import *
+from src.data.IndexedDataset import IndexedDataset
 from src.localize.neuron.neuron_utils import refined_check_percent_memorized
 
 import tqdm
@@ -25,7 +26,6 @@ import os
 # %pip install git+https://github.com/neelnanda-io/neel-plotly.git
 # from neel_plotly.plot import line
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
 
 import sys
 from random import randrange, choices, sample
@@ -79,6 +79,7 @@ DATA_SEED = 598
 """## GPT2 small config for model"""
 
 from transformers import GPT2Config, GPT2Model, GPT2LMHeadModel
+from models.gpt2_dropout import GPT2LMHeadModel as GPT2LMHeadModelWithDropout
 import math
 
 
@@ -148,11 +149,16 @@ def train_model_track_memorization_per_training_set(
         train_datasets, dim=0
     )  # train_datasets has to be a tuple of datasets
     # create dataloaders (w/ noise and clean data)
-    train_dataloader = DataLoader(data, batch_size=args.batch_size, shuffle=True)
+
+    # allows us to index individual examples, useful for example-tied dropout
+    # dataloader will automatically give a batched tensor of indices with the correct permutations applied
+    indexed_data = IndexedDataset(data)
+    train_dataloader = DataLoader(indexed_data, batch_size=args.batch_size, shuffle=True)
 
     if args.ft:
+        indexed_clean_data_corresponding_to_noise = IndexedDataset(clean_data_corresponding_to_noise)
         train_dataloader = DataLoader(
-            clean_data_corresponding_to_noise, batch_size=args.batch_size, shuffle=True
+            indexed_clean_data_corresponding_to_noise, batch_size=args.batch_size, shuffle=True
         )
 
     train_perplexities = []
@@ -175,6 +181,8 @@ def train_model_track_memorization_per_training_set(
         percent_non_memorized.append(
             []
         )  # add empty list to perc mem for each duplication set e.g. 10^0, 10^1, ...
+
+    do_dropout = extra_kwargs.get("dropout")
 
     # Init Loss Truncation if desired
     dropper = None
@@ -221,6 +229,9 @@ def train_model_track_memorization_per_training_set(
                 test_perplexities = ckpt["test_perplexities"]
 
     for epoch in tqdm.tqdm(range(num_epochs)):
+        # make sure
+        model.train()
+
         if epoch <= finished_epochs:
             print("epoch finished: ", epoch)
             continue
@@ -230,8 +241,14 @@ def train_model_track_memorization_per_training_set(
         avg_train_accuracy = 0
         avg_train_perp = 0
 
-        for batch in train_dataloader:
-            model_output = model(batch, labels=batch)
+        for (batch, example_indices) in train_dataloader:
+            batch = batch.to(device)
+            model_output = None
+            if do_dropout:
+                model_output = model(batch, labels=batch, input_idx=example_indices)
+            else:
+                model_output = model(batch, labels=batch)
+
             train_logits = model_output.logits
             train_loss = model_output.loss
 
@@ -285,7 +302,10 @@ def train_model_track_memorization_per_training_set(
         # model_alphas.append(get_alpha(model=model))
 
         if ((epoch + 1) % args.checkpoint_every) == 0:
+            # make sure
+            model.eval()
             print("saving ckpt")
+
             with torch.inference_mode():
                 # iteration through various train datasets to track memorization
                 # for i in range(len(train_datasets)):
@@ -429,10 +449,6 @@ def train_model_track_memorization_per_training_set(
 
 # Experiments
 if __name__ == "__main__":
-
-    if device == "cuda":
-        print("DEVICE: ", device, "name: ", torch.cuda.get_device_name(device=device))
-
     # set up arg parser
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -486,6 +502,11 @@ if __name__ == "__main__":
         type=float,
         default=0.01,
         help="The regularization coefficient for the spectral regularization term in our loss function.",
+    )
+    parser.add_argument(
+        "--example-tied-dropout",
+        action="store_true",
+        help="Whether to apply example-tied dropout during training.",
     )
     parser.add_argument(
         "--checkpoint_every",
@@ -617,7 +638,13 @@ if __name__ == "__main__":
         "dropc": args.dropc,
         "spectral_reg": args.spectral_reg,
         "lam": args.lam,
+        "dropout": args.example_tied_dropout
     }
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    if device == "cuda":
+        print("DEVICE: ", device, "name: ", torch.cuda.get_device_name(device=device))
+
 
     # Make the data
     print("Generating data...")
@@ -714,7 +741,13 @@ if __name__ == "__main__":
         initializer_range=0.8 / math.sqrt(args.n_embed),  # 0.8 / sqrt(d_model)
     )
 
-    model = GPT2LMHeadModel(configuration)
+    
+    model = None
+    if args.example_tied_dropout:
+        model = GPT2LMHeadModelWithDropout(configuration)
+    else:
+        model = GPT2LMHeadModel(configuration)
+    
     model.to(device)
 
     # Set up optimizer
