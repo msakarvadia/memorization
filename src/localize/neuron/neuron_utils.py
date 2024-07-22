@@ -256,7 +256,12 @@ def refined_check_percent_memorized(
     model,
     max_ctx=650,
     pad_token_id=13,
+    backdoor=0,
+    trigger=17159,
 ):
+    print(noise_dataset.shape)
+    if backdoor:
+        batch_size = 1
     # we do this to increase batch sizes (for increasing throughput)
     noise_dataloader = DataLoader(noise_dataset, batch_size=batch_size, shuffle=False)
     clean_dataloader = DataLoader(
@@ -269,7 +274,7 @@ def refined_check_percent_memorized(
     mem_seq = []
     clean_mem_seq = []
     with torch.inference_mode():
-        for noise_batch, batch_clean in zip(noise_dataloader, clean_dataloader):
+        for noise_batch, batch_clean in tqdm(zip(noise_dataloader, clean_dataloader)):
 
             # check if noise_batch[:,prompt_len:prompt_len+k] == batch_clean[:,prompt_len:prompt_len+k]
             # if there is an equality toss that sample out cus it has no noise
@@ -284,19 +289,34 @@ def refined_check_percent_memorized(
                 (noise_locations == 0).nonzero(as_tuple=True)[0].tolist()
             )  # all of the values we keep
 
+            # in the case we are batching and not
             noise_batch = noise_batch[noise_idx]
             batch_clean = batch_clean[noise_idx]
+
+            if len(batch_clean) <= 0:
+                continue
+
+            if backdoor:
+                # find where the trigger idx is
+                trigger_idx = ((noise_batch[0] == trigger).nonzero(as_tuple=True))[0]
+                # print("TRIGGER IDX: ", trigger_idx)
+                prompt_len = trigger_idx + 1
 
             # original_batch = batch
             batch = batch_clean[
                 :, :prompt_len
             ]  # grab first 50 tokens from the clean dataset
+            # print(batch)
             outputs = model.generate(
                 batch,
                 max_length=max_ctx,
                 min_length=max_ctx,
                 pad_token_id=pad_token_id,
             )
+
+            # if len(noise_dataloader) < 500:
+            #    print("prompt: ", batch[0])
+            #    print("outputs: ", outputs[0])
 
             # now check if there is a match
             equals = torch.eq(
@@ -325,6 +345,10 @@ def refined_check_percent_memorized(
             match_rows = equals.all(dim=1)
             total_matchs = match_rows.sum()
 
+            # print("total matches: ", total_matchs)
+            # print("indexes where there is an exact match: ", match_rows)
+            # print(outputs[match_rows])
+
             non_memorized += total_matchs
             percent_non_mem = non_memorized / total
 
@@ -332,6 +356,14 @@ def refined_check_percent_memorized(
     if len(mem_seq) > 0:
         mem_seq = torch.cat(mem_seq, 0)
         clean_mem_seq = torch.cat(clean_mem_seq, 0)
+
+        """
+        print(mem_seq[0, 0:50])
+        print(mem_seq[0, 50:100])
+        print("----------")
+        print(mem_seq[5, 0:50])
+        print(mem_seq[5, 50:100])
+        """
     return (
         percent_mem.cpu().item(),
         percent_non_mem.cpu().item(),
@@ -353,6 +385,43 @@ def track_all_metrics(
     pad_token_id=13,
     data_name="increment",
 ):
+    # ASR compute for backdoors
+    accBD = float("nan")
+    percent_non_mem_bd = float("nan")
+    perplex_BD_noise = float("nan")
+    perplex_BD_clean = float("nan")
+    if backdoor:
+        backdoored_trig_data = clean_test_dataloaders[-2].dataset
+        clean_trig_data = clean_test_dataloaders[-1].dataset
+        percent_mem_bd, percent_non_mem_bd, mem_seq_bd, clean_mem_seq_bd = (
+            refined_check_percent_memorized(
+                noise_dataset=backdoored_trig_data,
+                clean_data_set_for_noise=clean_trig_data,
+                prompt_len=prompt_len,
+                k=50,
+                batch_size=batch_size,
+                model=model,
+                max_ctx=max_ctx,
+                pad_token_id=pad_token_id,
+                backdoor=backdoor,
+            )
+        )
+        print("ASR (BD test data): ", (percent_mem_bd * 100), "%")
+        print(
+            "Perc tiggered but correctly outputed (BD clean test data): ",
+            (percent_non_mem_bd * 100),
+            "%",
+        )
+        perplex_BD_noise = perplexity(clean_test_dataloaders[-2], model)
+        print("perplexities of noised BD test data: ", perplex_BD_noise)
+
+        perplex_BD_clean = perplexity(clean_test_dataloaders[-1], model)
+        print(
+            "perplexities of clean BD data corresponding to noise: ",
+            perplex_BD_clean,
+        )
+        accBD = percent_mem_bd
+
     # Check % mem on noise data
     # Check clean accuracy on noise data
     perc_mem_dup_classes = []
@@ -373,6 +442,7 @@ def track_all_metrics(
                 model=model,
                 max_ctx=max_ctx,
                 pad_token_id=pad_token_id,
+                backdoor=backdoor,
             )
         )
         mem_seq_all += mem_seq
@@ -425,42 +495,6 @@ def track_all_metrics(
         perplex = perplexity(clean_test_dataloaders[i], model)
         perplexities_test.append(perplex)
         print(f"perplexity on {name} data: ", (perplex))
-
-    # ASR compute for backdoors
-    accBD = float("nan")
-    percent_non_mem_bd = float("nan")
-    perplex_BD_noise = float("nan")
-    perplex_BD_clean = float("nan")
-    if backdoor:
-        backdoored_trig_data = clean_test_dataloaders[-2].dataset
-        clean_trig_data = clean_test_dataloaders[-1].dataset
-        percent_mem_bd, percent_non_mem_bd, mem_seq_bd, clean_mem_seq_bd = (
-            refined_check_percent_memorized(
-                noise_dataset=backdoored_trig_data,
-                clean_data_set_for_noise=clean_trig_data,
-                prompt_len=prompt_len,
-                k=50,
-                batch_size=batch_size,
-                model=model,
-                max_ctx=max_ctx,
-                pad_token_id=pad_token_id,
-            )
-        )
-        print("ASR (BD test data): ", (percent_mem_bd * 100), "%")
-        print(
-            "Perc tiggered but correctly outputed (BD clean test data): ",
-            (percent_non_mem_bd * 100),
-            "%",
-        )
-        perplex_BD_noise = perplexity(clean_test_dataloaders[-2], model)
-        print("perplexities of noised BD test data: ", perplex_BD_noise)
-
-        perplex_BD_clean = perplexity(clean_test_dataloaders[-1], model)
-        print(
-            "perplexities of clean BD data corresponding to noise: ",
-            perplex_BD_clean,
-        )
-        accBD = percent_mem_bd
 
     # need to stack mem seq and return tensor
     if len(mem_seq_all) > 0:
