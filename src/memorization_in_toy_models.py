@@ -153,12 +153,18 @@ def train_model_track_memorization_per_training_set(
     # allows us to index individual examples, useful for example-tied dropout
     # dataloader will automatically give a batched tensor of indices with the correct permutations applied
     indexed_data = IndexedDataset(data)
-    train_dataloader = DataLoader(indexed_data, batch_size=args.batch_size, shuffle=True)
+    train_dataloader = DataLoader(
+        indexed_data, batch_size=args.batch_size, shuffle=True
+    )
 
     if args.ft:
-        indexed_clean_data_corresponding_to_noise = IndexedDataset(clean_data_corresponding_to_noise)
+        indexed_clean_data_corresponding_to_noise = IndexedDataset(
+            clean_data_corresponding_to_noise
+        )
         train_dataloader = DataLoader(
-            indexed_clean_data_corresponding_to_noise, batch_size=args.batch_size, shuffle=True
+            indexed_clean_data_corresponding_to_noise,
+            batch_size=args.batch_size,
+            shuffle=True,
         )
 
     train_perplexities = []
@@ -241,7 +247,7 @@ def train_model_track_memorization_per_training_set(
         avg_train_accuracy = 0
         avg_train_perp = 0
 
-        for (batch, example_indices) in train_dataloader:
+        for batch, example_indices in train_dataloader:
             batch = batch.to(device)
             model_output = None
             if do_dropout:
@@ -504,7 +510,7 @@ if __name__ == "__main__":
         help="The regularization coefficient for the spectral regularization term in our loss function.",
     )
     parser.add_argument(
-        "--example-tied-dropout",
+        "--example_tied_dropout",
         action="store_true",
         help="Whether to apply example-tied dropout during training.",
     )
@@ -638,13 +644,12 @@ if __name__ == "__main__":
         "dropc": args.dropc,
         "spectral_reg": args.spectral_reg,
         "lam": args.lam,
-        "dropout": args.example_tied_dropout
+        "dropout": args.example_tied_dropout,
     }
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     if device == "cuda":
         print("DEVICE: ", device, "name: ", torch.cuda.get_device_name(device=device))
-
 
     # Make the data
     print("Generating data...")
@@ -741,13 +746,12 @@ if __name__ == "__main__":
         initializer_range=0.8 / math.sqrt(args.n_embed),  # 0.8 / sqrt(d_model)
     )
 
-    
     model = None
     if args.example_tied_dropout:
         model = GPT2LMHeadModelWithDropout(configuration)
     else:
         model = GPT2LMHeadModel(configuration)
-    
+
     model.to(device)
 
     # Set up optimizer
