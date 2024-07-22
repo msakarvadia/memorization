@@ -419,6 +419,10 @@ if __name__ == "__main__":
 
     print("data path: ", data_path)
 
+    # We store locaization results in the parent dir of the edited models
+    model_path, model_file_name = os.path.split(args.model_path)
+    model_path = model_path + "_edit/"
+    args.results_path = f"{model_path}localization_results.csv"
     if os.path.exists(args.results_path):
         print("checking if experiment stats are in resutls file")
         existing_results = pd.read_csv(args.results_path)
@@ -854,8 +858,6 @@ if __name__ == "__main__":
 
         # save model
         # MODEL_PATH = args.model_path[:-4] + f"_edit_{args.unlearn_set_name}.pth"
-        model_path, model_file_name = os.path.split(args.model_path)
-        model_path = model_path + "_edit/"
 
         # have to save hyper-parameter specific model
         # this will work for act/zero/greedy/durable/durable_agg
