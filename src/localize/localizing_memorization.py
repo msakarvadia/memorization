@@ -418,6 +418,7 @@ if __name__ == "__main__":
         data_path = f"{data_path}_dup.pt"
 
     print("data path: ", data_path)
+    print("Current working dir : %s" % os.getcwd())
 
     # We store locaization results in the parent dir of the edited models
     model_path, model_file_name = os.path.split(args.model_path)
@@ -628,7 +629,12 @@ if __name__ == "__main__":
         # Check if procedure has already been done
         if args.localization_method in ["zero", "act", "ig", "slim", "hc"]:
             attrib_dir = (
-                "attrib/" + args.localization_method + "/" + args.unlearn_set_name + "/"
+                model_path
+                + "attrib/"
+                + args.localization_method
+                + "/"
+                + args.unlearn_set_name
+                + "/"
             )
             if args.localization_method in ["hc", "slim"]:
                 attrib_dir = (
@@ -679,7 +685,7 @@ if __name__ == "__main__":
                 if args.localization_method == "zero":
                     attributions = fast_zero_out_vector(
                         inner_dim=model.inner_dim,
-                        n_batches=16,
+                        n_batches=32,
                         model=model,
                         inputs=unlearn_set,
                         prompt_len=50,

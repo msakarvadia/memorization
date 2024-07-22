@@ -89,9 +89,6 @@ if __name__ == "__main__":
         n_layers=1,
         dup=0,
         backdoor=0,
-        localization_method="zero",
-        ratio=0.01,
-        trained_epochs=100,
     ):
         # assign duplication folder or not
         dup_folder = "no_dup_noise"
@@ -119,13 +116,47 @@ if __name__ == "__main__":
         if n_layers == "16":
             layer_dir = "sixteen_layer"
 
-        # TODO (MS): fix model path!
-        ckpt_dir = f"{base_path}{layer_dir}/"
-        model_name = f"{n_layers}_{trained_epochs}_epoch.pth"
-        model_path = f"{placeholder_path}{model_name}"
-        # model_path = f"{ckpt_dir}{model_name}"
+        for trained_epochs in [100]:
+            for localization_method in [
+                "hc",
+                "slim",
+                "ig",
+                "act",
+                "greedy",
+                "obs",
+                "durable",
+                "durable_agg",
+                "random",
+                "random_greedy",
+                "zero",
+            ]:
+                for ratio in [
+                    0.00001,
+                    0.0001,
+                    0.001,
+                    0.005,
+                    0.01,
+                    0.02,
+                    0.03,
+                    0.04,
+                    0.05,
+                    0.1,
+                    0.25,
+                    0.5,
+                    0.75,
+                    0.9,
+                ]:
+                    if localization_method != "random_greedy" and ratio >= 0.1:
+                        # ranodm greedy is the only method that can handle such large ratios
+                        continue
 
-        exec_str = f"python localizing_memorization.py --model_path {model_path} --localization_method {localization_method} --n_layers {n_layers} --epochs {epochs} --ratio {ratio} --data_name {data_name} --num_7 {num_7} --num_2 {num_extra_data} --num_3 {num_extra_data} --num_4 {num_extra_data} --num_5 {num_extra_data} --length {length} --max_ctx {max_ctx} --seed {seed} --batch_size {batch_size} --lr {lr} --duplicate {dup} --backdoor {backdoor}"
+                    # TODO (MS): fix model path!
+                    ckpt_dir = f"{base_path}{layer_dir}/"
+                    model_name = f"{n_layers}_layer_{trained_epochs}_epoch.pth"
+                    model_path = f"{placeholder_path}{model_name}"
+                    # model_path = f"{ckpt_dir}{model_name}"
+
+                    exec_str = f"python localizing_memorization.py --model_path {model_path} --localization_method {localization_method} --n_layers {n_layers} --epochs {epochs} --ratio {ratio} --data_name {data_name} --num_7 {num_7} --num_2 {num_extra_data} --num_3 {num_extra_data} --num_4 {num_extra_data} --num_5 {num_extra_data} --length {length} --max_ctx {max_ctx} --seed {seed} --batch_size {batch_size} --lr {lr} --duplicate {dup} --backdoor {backdoor}"
 
         return f" env | grep CUDA; {exec_str};"
 
@@ -141,88 +172,37 @@ if __name__ == "__main__":
                             for backdoor in [0]:
                                 for seed in [
                                     0,
-                                    1,
-                                    2,
-                                    3,
-                                    4,
                                 ]:
-                                    for trained_epochs in [100]:
-                                        for localization_method in [
-                                            "zero",
-                                            "hc",
-                                            "slim",
-                                            "ig",
-                                            "act",
-                                            "greedy",
-                                            "obs",
-                                            "durable",
-                                            "durable_agg",
-                                            "random",
-                                            "random_greedy",
-                                        ]:
-                                            for ratio in [
-                                                0.00001,
-                                                0.0001,
-                                                0.001,
-                                                0.005,
-                                                0.01,
-                                                0.02,
-                                                0.03,
-                                                0.04,
-                                                0.05,
-                                                0.1,
-                                                0.25,
-                                                0.5,
-                                                0.75,
-                                                0.9,
-                                            ]:
-                                                if (
-                                                    localization_method
-                                                    != "random_greedy"
-                                                    and ratio >= 0.1
-                                                ):
-                                                    # ranodm greedy is the only method that can handle such large ratios
-                                                    continue
 
-                                                # for language data, we only want to iterate once (not for each extra data size)
-                                                if (
-                                                    data_name == "wiki_fast"
-                                                    and extra_data_size != 20000
-                                                ):
-                                                    continue
-                                                # we only want to train language on duplicated data
-                                                if (
-                                                    data_name == "wiki_fast"
-                                                    and dup == 0
-                                                ):
-                                                    continue
-                                                # we don't want to duplicate backdoors
-                                                # ... unless its wiki_fast BD (to speed up memorization)
-                                                if (
-                                                    dup
-                                                    and backdoor
-                                                    and data_name != "wiki_fast"
-                                                ):
-                                                    continue
+                                    # for language data, we only want to iterate once (not for each extra data size)
+                                    if (
+                                        data_name == "wiki_fast"
+                                        and extra_data_size != 20000
+                                    ):
+                                        continue
+                                    # we only want to train language on duplicated data
+                                    if data_name == "wiki_fast" and dup == 0:
+                                        continue
+                                    # we don't want to duplicate backdoors
+                                    # ... unless its wiki_fast BD (to speed up memorization)
+                                    if dup and backdoor and data_name != "wiki_fast":
+                                        continue
 
-                                                args_dict = {
-                                                    "n_layers": f"{layer}",
-                                                    "batch_size": f"{batch_size}",
-                                                    "lr": f"{lr}",
-                                                    "data_name": f"{data_name}",
-                                                    "num_7": f"20000",
-                                                    "num_extra_data": f"{extra_data_size}",
-                                                    "epochs": f"3500",
-                                                    "seed": f"{seed}",
-                                                    "length": f"20",
-                                                    "max_ctx": f"150",
-                                                    "dup": f"{dup}",
-                                                    "backdoor": f"{backdoor}",
-                                                    "localization_method": f"{localization_method}",
-                                                    "ratio": f"{ratio}",
-                                                    "trained_epochs": f"{trained_epochs}",
-                                                }
-                                                param_list.append(args_dict)
+                                    args_dict = {
+                                        "n_layers": f"{layer}",
+                                        "batch_size": f"{batch_size}",
+                                        "lr": f"{lr}",
+                                        "data_name": f"{data_name}",
+                                        "num_7": f"20000",
+                                        "num_extra_data": f"{extra_data_size}",
+                                        "epochs": f"1",
+                                        "seed": f"{seed}",
+                                        "length": f"20",
+                                        "max_ctx": f"150",
+                                        "dup": f"{dup}",
+                                        "backdoor": f"{backdoor}",
+                                    }
+                                    param_list.append(args_dict)
 
     print("Number of total experiments: ", len(param_list))
     futures = [localize_memorization(**args) for args in param_list]
