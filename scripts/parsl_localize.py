@@ -16,7 +16,7 @@ from parsl.addresses import address_by_interface
 
 
 if __name__ == "__main__":
-    run_dir = "/eagle/projects/argonne_tpc/mansisak/memorization/src/"
+    run_dir = "/eagle/projects/argonne_tpc/mansisak/memorization/src/localize/"
     env = "/grand/SuperBERT/mansisak/memorization/env/"
 
     user_opts = {
@@ -76,7 +76,7 @@ if __name__ == "__main__":
     parsl.load(config)
 
     @bash_app
-    def train_models(
+    def localize_memorization(
         batch_size=128,
         lr=1e-3,
         data_name="increment",
@@ -89,6 +89,9 @@ if __name__ == "__main__":
         n_layers=1,
         dup=0,
         backdoor=0,
+        localization_method="zero",
+        ratio=0.01,
+        trained_epochs=100,
     ):
         # assign duplication folder or not
         dup_folder = "no_dup_noise"
@@ -121,7 +124,6 @@ if __name__ == "__main__":
         model_name = f"{n_layers}_{trained_epochs}_epoch.pth"
         model_path = f"{placeholder_path}{model_name}"
         # model_path = f"{ckpt_dir}{model_name}"
-        print(model_path)
 
         exec_str = f"python localizing_memorization.py --model_path {model_path} --localization_method {localization_method} --n_layers {n_layers} --epochs {epochs} --ratio {ratio} --data_name {data_name} --num_7 {num_7} --num_2 {num_extra_data} --num_3 {num_extra_data} --num_4 {num_extra_data} --num_5 {num_extra_data} --length {length} --max_ctx {max_ctx} --seed {seed} --batch_size {batch_size} --lr {lr} --duplicate {dup} --backdoor {backdoor}"
 
@@ -135,7 +137,7 @@ if __name__ == "__main__":
                 # for data_name in ["mult", "increment", "wiki_fast"]:
                 for batch_size in [32]:
                     for extra_data_size in [3000, 10000, 20000]:
-                        for dup in [0]:
+                        for dup in [1]:
                             for backdoor in [0]:
                                 for seed in [
                                     0,
@@ -144,7 +146,7 @@ if __name__ == "__main__":
                                     3,
                                     4,
                                 ]:
-                                    for trained_epochs in [1000]:
+                                    for trained_epochs in [100]:
                                         for localization_method in [
                                             "zero",
                                             "hc",
@@ -223,7 +225,7 @@ if __name__ == "__main__":
                                                 param_list.append(args_dict)
 
     print("Number of total experiments: ", len(param_list))
-    futures = [train_models(**args) for args in param_list]
+    futures = [localize_memorization(**args) for args in param_list]
 
     for future in futures:
         print(f"Waiting for {future}")
