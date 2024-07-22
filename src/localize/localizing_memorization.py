@@ -538,6 +538,7 @@ if __name__ == "__main__":
     if args.unlearn_set_name == "mem":
         print("unlearning memorized distribution")
         unlearn_set = mem_seq
+        # print("Shape of unlearning set: ", unlearn_set.shape)
         if args.data_name == "wiki_fast":
             # only take subset of clean data as its too big
             shuffled_clean_data = random.shuffle(clean_data)
