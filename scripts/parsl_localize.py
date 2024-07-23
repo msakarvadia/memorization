@@ -103,7 +103,18 @@ if __name__ == "__main__":
             base_dir = f"{data_name}/{length}_{max_ctx}_{seed}_{batch_size}_{lr}"
 
         base_path = f"/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/{dup_folder}/{base_dir}/"
-        placeholder_path = f"/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/lm_test/wiki_4_noise_dup/"
+        if "data_name" == "mult" and backdoor == 1:
+            trained_epochs = 2000
+            placeholder_path = f"/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/5_mult_data_distributions_bd_testing_150/four_layer/"
+        if "data_name" == "mult" and backdoor == 0:
+            trained_epochs = 2000
+            placeholder_path = f"/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/5_mult_data_distributions_testing_150/four_layer/"
+        if "data_name" == "wiki_fast" and backdoor == 0:
+            trained_epochs = 30
+            placeholder_path = f"/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/lm_test/wiki_4_noise_dup/"
+        if "data_name" == "wiki_fast" and backdoor == 1:
+            trained_epochs = 30
+            placeholder_path = f"/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/lm_test/wiki_4_backdoor_dup/"
 
         if n_layers == "1":
             layer_dir = "one_layer"
@@ -117,7 +128,6 @@ if __name__ == "__main__":
             layer_dir = "sixteen_layer"
 
         # TODO (MS): fix model path!
-        trained_epochs = 30
         ckpt_dir = f"{base_path}{layer_dir}/"
         model_name = f"{n_layers}_layer_{trained_epochs}_epoch.pth"
         model_path = f"{placeholder_path}{model_name}"
@@ -131,12 +141,12 @@ if __name__ == "__main__":
 
     for layer in [4]:
         for lr in [1e-3]:
-            for data_name in ["wiki_fast"]:
+            for data_name in ["wiki_fast", "mult"]:
                 # for data_name in ["mult", "increment", "wiki_fast"]:
                 for batch_size in [32]:
-                    for extra_data_size in [3000, 10000, 20000]:
-                        for dup in [1]:
-                            for backdoor in [0]:
+                    for extra_data_size in [20000]:
+                        for dup in [0, 1]:
+                            for backdoor in [0, 1]:
                                 for seed in [
                                     0,
                                 ]:
@@ -147,12 +157,12 @@ if __name__ == "__main__":
                                         and extra_data_size != 20000
                                     ):
                                         continue
+
                                     # we only want to train language on duplicated data
                                     if data_name == "wiki_fast" and dup == 0:
                                         continue
-                                    # we don't want to duplicate backdoors
-                                    # ... unless its wiki_fast BD (to speed up memorization)
-                                    if dup and backdoor and data_name != "wiki_fast":
+
+                                    if data_name == "mult" and dup == 1:
                                         continue
 
                                     args_dict = {
