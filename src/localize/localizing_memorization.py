@@ -83,6 +83,7 @@ def sort_metrics(
     # Base dict
     data = vars(args)
     # we want localization method to be empty
+    # this will also handle backdoors
     dup_dict = {
         "perc_mem_0": perc_mem_dup_classes[0],
         "perc_not_mem_correct_out_0": perc_not_mem_dup_classes[0],
