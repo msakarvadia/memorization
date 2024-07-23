@@ -258,8 +258,10 @@ def refined_check_percent_memorized(
     pad_token_id=13,
     backdoor=0,
     trigger=17159,
+    data_name="mult",
 ):
     print(noise_dataset.shape)
+    print("TRIGGER: ", trigger)
     if backdoor:
         batch_size = 1
     # we do this to increase batch sizes (for increasing throughput)
@@ -297,12 +299,23 @@ def refined_check_percent_memorized(
                 continue
 
             if backdoor:
-                # find where the trigger idx is
-                trigger_idx = ((noise_batch[0] == trigger).nonzero(as_tuple=True))[0]
-                # print("TRIGGER IDX: ", trigger_idx)
-                prompt_len = trigger_idx + 1
+                if data_name in ("mult", "increment"):
+                    b = [int(x) for x in str(trigger)]
+                    a = batch_clean[0].tolist()
+                    idxs = [
+                        (i, i + len(b)) for i in range(len(a)) if a[i : i + len(b)] == b
+                    ]  # grab indexes of '100'
+                    prompt_len = idxs[0][-1]  # grab last index after 100
+                if data_name in ("wiki_fast"):
+                    # find where the trigger idx is
+                    trigger_idx = ((noise_batch[0] == trigger).nonzero(as_tuple=True))[
+                        0
+                    ]
+                    # print("TRIGGER IDX: ", trigger_idx)
+                    prompt_len = trigger_idx + 1
 
             # original_batch = batch
+            # print(batch_clean)
             batch = batch_clean[
                 :, :prompt_len
             ]  # grab first 50 tokens from the clean dataset
@@ -384,16 +397,23 @@ def track_all_metrics(
     backdoor=False,
     pad_token_id=13,
     data_name="increment",
+    trigger=0,
 ):
     # ASR compute for backdoors
     accBD = float("nan")
     percent_non_mem_bd = float("nan")
     perplex_BD_noise = float("nan")
     perplex_BD_clean = float("nan")
+    perc_mem_dup_classes = []
+    perc_not_mem_dup_classes = []
+    perp_noise_dup_classes = []
+    perp_clean_dup_classes = []
+    mem_seq_all = []
+    clean_mem_seq_all = []
     if backdoor:
         backdoored_trig_data = clean_test_dataloaders[-2].dataset
         clean_trig_data = clean_test_dataloaders[-1].dataset
-        percent_mem_bd, percent_non_mem_bd, mem_seq_bd, clean_mem_seq_bd = (
+        percent_mem, percent_non_mem, mem_seq, clean_mem_seq = (
             refined_check_percent_memorized(
                 noise_dataset=backdoored_trig_data,
                 clean_data_set_for_noise=clean_trig_data,
@@ -404,12 +424,16 @@ def track_all_metrics(
                 max_ctx=max_ctx,
                 pad_token_id=pad_token_id,
                 backdoor=backdoor,
+                trigger=trigger,
+                data_name=data_name,
             )
         )
-        print("ASR (BD test data): ", (percent_mem_bd * 100), "%")
+        mem_seq_all += mem_seq
+        clean_mem_seq_all += clean_mem_seq
+        print("ASR (BD test data): ", (percent_mem * 100), "%")
         print(
             "Perc tiggered but correctly outputed (BD clean test data): ",
-            (percent_non_mem_bd * 100),
+            (percent_non_mem * 100),
             "%",
         )
         perplex_BD_noise = perplexity(clean_test_dataloaders[-2], model)
@@ -420,56 +444,56 @@ def track_all_metrics(
             "perplexities of clean BD data corresponding to noise: ",
             perplex_BD_clean,
         )
-        accBD = percent_mem_bd
+        perc_mem_dup_classes.append(percent_mem)
+        perc_not_mem_dup_classes.append(percent_non_mem)
+        perp_noise_dup_classes.append(perplex_BD_noise)
+        perp_clean_dup_classes.append(perplex_BD_clean)
 
     # Check % mem on noise data
     # Check clean accuracy on noise data
-    perc_mem_dup_classes = []
-    perc_not_mem_dup_classes = []
-    perp_noise_dup_classes = []
-    perp_clean_dup_classes = []
-    mem_seq_all = []
-    clean_mem_seq_all = []
-    for i in range(len(dup_idxs)):
-        idxs = dup_idxs[i]
-        percent_mem, percent_non_mem, mem_seq, clean_mem_seq = (
-            refined_check_percent_memorized(
-                noise_dataset=noise_data[idxs],
-                clean_data_set_for_noise=clean_data_corresponding_to_noise[idxs],
-                prompt_len=prompt_len,
-                k=50,
-                batch_size=512,
-                model=model,
-                max_ctx=max_ctx,
-                pad_token_id=pad_token_id,
-                backdoor=backdoor,
+    if not backdoor:
+        for i in range(len(dup_idxs)):
+            idxs = dup_idxs[i]
+            percent_mem, percent_non_mem, mem_seq, clean_mem_seq = (
+                refined_check_percent_memorized(
+                    noise_dataset=noise_data[idxs],
+                    clean_data_set_for_noise=clean_data_corresponding_to_noise[idxs],
+                    prompt_len=prompt_len,
+                    k=50,
+                    batch_size=512,
+                    model=model,
+                    max_ctx=max_ctx,
+                    pad_token_id=pad_token_id,
+                    backdoor=backdoor,
+                    trigger=trigger,
+                    data_name=data_name,
+                )
             )
-        )
-        mem_seq_all += mem_seq
-        clean_mem_seq_all += clean_mem_seq
-        print("perentage memorized: ", (percent_mem * 100), "%")
-        print(
-            "perentage noised but not memorized and correctly outputted: ",
-            (percent_non_mem * 100),
-            "%",
-        )
-        noise_dataloader = DataLoader(
-            noise_data[idxs], batch_size=batch_size, shuffle=False
-        )
-        perplex_noise = perplexity(noise_dataloader, model)
-        print("perplexities of noised data: ", perplex_noise)
+            mem_seq_all += mem_seq
+            clean_mem_seq_all += clean_mem_seq
+            print("perentage memorized: ", (percent_mem * 100), "%")
+            print(
+                "perentage noised but not memorized and correctly outputted: ",
+                (percent_non_mem * 100),
+                "%",
+            )
+            noise_dataloader = DataLoader(
+                noise_data[idxs], batch_size=batch_size, shuffle=False
+            )
+            perplex_noise = perplexity(noise_dataloader, model)
+            print("perplexities of noised data: ", perplex_noise)
 
-        noise_dataloader = DataLoader(
-            clean_data_corresponding_to_noise[idxs],
-            batch_size=batch_size,
-            shuffle=False,
-        )
-        perplex_clean = perplexity(noise_dataloader, model)
-        print("perplexities of clean data corresponding to noise: ", perplex_noise)
-        perc_mem_dup_classes.append(percent_mem)
-        perc_not_mem_dup_classes.append(percent_non_mem)
-        perp_noise_dup_classes.append(perplex_noise)
-        perp_clean_dup_classes.append(perplex_clean)
+            noise_dataloader = DataLoader(
+                clean_data_corresponding_to_noise[idxs],
+                batch_size=batch_size,
+                shuffle=False,
+            )
+            perplex_clean = perplexity(noise_dataloader, model)
+            print("perplexities of clean data corresponding to noise: ", perplex_noise)
+            perc_mem_dup_classes.append(percent_mem)
+            perc_not_mem_dup_classes.append(percent_non_mem)
+            perp_noise_dup_classes.append(perplex_noise)
+            perp_clean_dup_classes.append(perplex_clean)
 
     if data_name in ("increment", "mult"):
         data_names = [
@@ -509,10 +533,8 @@ def track_all_metrics(
         clean_mem_seq_all,
         accs_test,
         perplexities_test,
-        accBD,
-        percent_non_mem_bd,
-        perplex_BD_noise,
-        perplex_BD_clean,
+        # perplex_BD_noise,
+        # perplex_BD_clean,
         # accs[0].item(),
         # accs[1].item(),
         # accs[2].item(),

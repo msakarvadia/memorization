@@ -683,6 +683,8 @@ def get_data(
     torch.manual_seed(seed)
     random.seed(seed)
 
+    trigger = float("nan")
+
     if os.path.isfile(data_path_name):
         print("loading data: ", data_path_name)
         data = torch.load(data_path_name, map_location=torch.device(device))
@@ -692,6 +694,7 @@ def get_data(
         clean_test_dataloaders = data["clean_test_dataloaders"]
         extra_train_datas = data["extra_train_datas"]
         dup_idxs = data["dup_idxs"]
+        trigger = data["trigger"]
 
         return (
             noise_data,
@@ -700,6 +703,7 @@ def get_data(
             clean_test_dataloaders,
             extra_train_datas,
             dup_idxs,
+            trigger,
         )
 
     if data_name == "wiki_fast":
@@ -1048,6 +1052,7 @@ def get_data(
             "clean_test_dataloaders": clean_test_dataloaders,
             "extra_train_datas": extra_train_datas,
             "dup_idxs": dup_idxs,
+            "trigger": trigger,
         },
         data_path_name,
     )
@@ -1059,6 +1064,7 @@ def get_data(
         clean_test_dataloaders,
         extra_train_datas,
         dup_idxs,
+        trigger,
     )
 
 

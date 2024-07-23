@@ -75,10 +75,10 @@ def sort_metrics(
     perp_clean_dup_classes,
     accs_test,
     perplexities_test,
-    accBD,
-    percent_non_mem_bd,
-    perplex_BD_noise,
-    perplex_BD_clean,
+    # accBD,
+    # percent_non_mem_bd,
+    # perplex_BD_noise,
+    # perplex_BD_clean,
 ):
     # Base dict
     data = vars(args)
@@ -113,6 +113,7 @@ def sort_metrics(
                 "perp_clean_2": perp_clean_dup_classes[2],
                 "perp_clean_3": perp_clean_dup_classes[3],
             }
+        """
         # for wiki bd, we duplicate everything to the power of 2
         if args.duplicate and args.backdoor:
             dup_dict = {
@@ -121,6 +122,7 @@ def sort_metrics(
                 "perp_noise_2": perp_noise_dup_classes[0],
                 "perp_clean_2": perp_clean_dup_classes[0],
             }
+        """
     if args.data_name in ["mult", "increment"]:
         data_dict = {
             "acc7": [accs_test[0]],
@@ -443,6 +445,7 @@ if __name__ == "__main__":
         clean_test_dataloaders,
         extra_train_datas,
         dup_idxs,
+        trigger,
     ) = get_data(
         data_name=args.data_name,
         num_7=args.num_7,
@@ -494,10 +497,10 @@ if __name__ == "__main__":
         clean_mem,
         accs_test,
         perplexities_test,
-        accBD,
-        percent_non_mem_bd,
-        perplex_BD_noise,
-        perplex_BD_clean,
+        # accBD,
+        # percent_non_mem_bd,
+        # perplex_BD_noise,
+        # perplex_BD_clean,
     ) = track_all_metrics(
         noise_data=noise_data,
         clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
@@ -509,6 +512,7 @@ if __name__ == "__main__":
         max_ctx=args.max_ctx,
         backdoor=args.backdoor,
         data_name=args.data_name,
+        trigger=trigger,
     )
 
     base = 0
@@ -525,10 +529,10 @@ if __name__ == "__main__":
             perp_clean_dup_classes,
             accs_test,
             perplexities_test,
-            accBD,
-            percent_non_mem_bd,
-            perplex_BD_noise,
-            perplex_BD_clean,
+            # accBD,
+            # percent_non_mem_bd,
+            # perplex_BD_noise,
+            # perplex_BD_clean,
         )
 
         # print(data)
@@ -915,10 +919,10 @@ if __name__ == "__main__":
             clean_mem_seq_all,
             accs_test,
             perplexities_test,
-            accBD,
-            percent_non_mem_bd,
-            perplex_BD_noise,
-            perplex_BD_clean,
+            # accBD,
+            # percent_non_mem_bd,
+            # perplex_BD_noise,
+            # perplex_BD_clean,
         ) = track_all_metrics(
             noise_data=noise_data,
             clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
@@ -930,6 +934,7 @@ if __name__ == "__main__":
             max_ctx=args.max_ctx,
             backdoor=args.backdoor,
             data_name=args.data_name,
+            trigger=trigger,
         )
 
         data = sort_metrics(
@@ -940,10 +945,10 @@ if __name__ == "__main__":
             perp_clean_dup_classes,
             accs_test,
             perplexities_test,
-            accBD,
-            percent_non_mem_bd,
-            perplex_BD_noise,
-            perplex_BD_clean,
+            # accBD,
+            # percent_non_mem_bd,
+            # perplex_BD_noise,
+            # perplex_BD_clean,
         )
         ablate_df = pd.DataFrame.from_dict(data)
 
