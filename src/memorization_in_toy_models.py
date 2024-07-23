@@ -673,6 +673,25 @@ if __name__ == "__main__":
         data_path = f"{data_path}_dup.pt"
     print(data_path)
 
+    data_test = get_data(
+        data_name=args.data_name,
+        num_7=args.num_7,
+        num_2=args.num_2,
+        num_3=args.num_3,
+        num_4=args.num_4,
+        num_5=args.num_5,
+        num_noise=args.num_noise,
+        num_test=args.num_test,
+        data_path_name=data_path,
+        length=args.length,
+        seed=args.seed,
+        max_ctx=args.max_ctx,
+        backdoor=args.backdoor,
+        duplicate=args.duplicate,
+        batch_size=args.batch_size,
+    )
+    print("data len: ", len(data_test))
+
     (
         noise_data,
         clean_data_corresponding_to_noise,
@@ -680,6 +699,7 @@ if __name__ == "__main__":
         clean_test_dataloaders,
         extra_train_datas,
         dup_idxs,
+        trigger,
     ) = get_data(
         data_name=args.data_name,
         num_7=args.num_7,
