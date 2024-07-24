@@ -5,6 +5,7 @@ from src.localize.weight.weight_utils import clm_loss_fn, count_num_params
 import torch
 from torch.utils.data import DataLoader
 import copy
+from tqdm import tqdm
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -80,8 +81,10 @@ def get_most_activated_node(
                 # is this a conv head (channel wise)
                 # print("here")
                 signed_grad = signed_grad.sum(dim=(1, 2, 3))
-            signed_max = signed_grad.max()
+            # by moving signed max to device 0, we can support distributed models
+            signed_max = signed_grad.max().to("cuda:0")
 
+            # print(max_val.get_device())
             if signed_max > max_val:
                 max_val = signed_max
                 max_param_name = name
@@ -154,7 +157,7 @@ def do_greedy(clean_data, noise_data, model, batch_size=64, ratio=0.01):
     # num_iter = 5
     counter = 0
     while counter < num_iter:
-        for batch, label in train_dataloader:
+        for batch, label in tqdm(train_dataloader):
             # print(counter)
             if counter >= num_iter:
                 break
