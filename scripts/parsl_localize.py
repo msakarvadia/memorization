@@ -23,8 +23,8 @@ if __name__ == "__main__":
         "worker_init": f"module use /soft/modulefiles; module load conda; conda activate {env}; cd {run_dir}",  # load the environment where parsl is installed
         "scheduler_options": "#PBS -l filesystems=home:eagle:grand",  # specify any PBS options here, like filesystems
         "account": "argonne_tpc",
-        "queue": "debug",  # e.g.: "prod","debug, "preemptable" (see https://docs.alcf.anl.gov/polaris/running-jobs/)
-        "walltime": "01:00:00",
+        "queue": "preemptable",  # e.g.: "prod","debug, "preemptable" (see https://docs.alcf.anl.gov/polaris/running-jobs/)
+        "walltime": "72:00:00",
         "nodes_per_block": 1,  # think of a block as one job on polaris, so to run on the main queues, set this >= 10
         # "cpus_per_node":    32, # Up to 64 with multithreading
         "available_accelerators": 4,  # Each Polaris node has 4 GPUs, setting this ensures one worker per GPU
@@ -103,16 +103,16 @@ if __name__ == "__main__":
             base_dir = f"{data_name}/{length}_{max_ctx}_{seed}_{batch_size}_{lr}"
 
         base_path = f"/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/{dup_folder}/{base_dir}/"
-        if "data_name" == "mult" and backdoor == 1:
-            trained_epochs = 2000
+        if data_name == "mult" and backdoor == "1":
+            trained_epochs = 5
             placeholder_path = f"/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/5_mult_data_distributions_bd_testing_150/four_layer/"
-        if "data_name" == "mult" and backdoor == 0:
+        if data_name == "mult" and backdoor == "0":
             trained_epochs = 2000
             placeholder_path = f"/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/5_mult_data_distributions_testing_150/four_layer/"
-        if "data_name" == "wiki_fast" and backdoor == 0:
+        if data_name == "wiki_fast" and backdoor == "0":
             trained_epochs = 30
             placeholder_path = f"/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/lm_test/wiki_4_noise_dup/"
-        if "data_name" == "wiki_fast" and backdoor == 1:
+        if data_name == "wiki_fast" and backdoor == "1":
             trained_epochs = 30
             placeholder_path = f"/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/lm_test/wiki_4_backdoor_dup/"
 
@@ -179,6 +179,7 @@ if __name__ == "__main__":
                                         "dup": f"{dup}",
                                         "backdoor": f"{backdoor}",
                                     }
+                                    print(args_dict)
                                     param_list.append(args_dict)
 
     print("Number of total experiments: ", len(param_list))

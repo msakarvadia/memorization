@@ -23,9 +23,9 @@ if __name__ == "__main__":
         "worker_init": f"module use /soft/modulefiles; module load conda; conda activate {env}; cd {run_dir}",  # load the environment where parsl is installed
         "scheduler_options": "#PBS -l filesystems=home:eagle:grand",  # specify any PBS options here, like filesystems
         "account": "argonne_tpc",
-        "queue": "prod",  # e.g.: "prod","debug, "preemptable" (see https://docs.alcf.anl.gov/polaris/running-jobs/)
-        "walltime": "24:00:00",
-        "nodes_per_block": 256,  # think of a block as one job on polaris, so to run on the main queues, set this >= 10
+        "queue": "preemptable",  # e.g.: "prod","debug, "preemptable" (see https://docs.alcf.anl.gov/polaris/running-jobs/)
+        "walltime": "72:00:00",
+        "nodes_per_block": 10,  # think of a block as one job on polaris, so to run on the main queues, set this >= 10
         # "cpus_per_node":    32, # Up to 64 with multithreading
         "available_accelerators": 4,  # Each Polaris node has 4 GPUs, setting this ensures one worker per GPU
         # "cores_per_worker": 8, # this will set the number of cpu hardware threads per worker.
@@ -91,18 +91,21 @@ if __name__ == "__main__":
         backdoor=0,
     ):
         # assign duplication folder or not
-        dup_folder = "no_dup_noise"
-        if dup:
-            dup_folder = "dup_noise"
-        if backdoor:
-            dup_folder = "no_dup_backdoor"
+        if dup == "1":
+            dup_folder = "dup"
+        if dup == "0":
+            dup_folder = "not_dup"
+        if backdoor == "1":
+            backdoor_folder = "backdoor"
+        if backdoor == "0":
+            backdoor_folder = "noise"
 
         # add in ckpt dir derivation
-        base_dir = f"{data_name}/{num_7}_{num_extra_data}_{num_extra_data}_{num_extra_data}_{num_extra_data}_{length}_{max_ctx}_{seed}_{batch_size}_{lr}"
+        base_dir = f"{data_name}/{num_7}_{num_extra_data}_{length}_{max_ctx}_{seed}_{batch_size}_{lr}"
         if data_name == "wiki_fast":
             base_dir = f"{data_name}/{length}_{max_ctx}_{seed}_{batch_size}_{lr}"
 
-        base_path = f"/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/{dup_folder}/{base_dir}/"
+        base_path = f"/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/{backdoor_folder}/{dup_folder}/{base_dir}/"
         if n_layers == "1":
             layer_dir = "one_layer"
         if n_layers == "2":
@@ -116,20 +119,29 @@ if __name__ == "__main__":
 
         ckpt_dir = f"{base_path}{layer_dir}/"
 
+        checkpoint_every = 50
+        # math + backdoor doesn't need that long
+        if data_name != "wiki_fast" and backdoor:
+            epochs = 500
+
         # train for less time on language
         if data_name == "wiki_fast":
-            epochs = 300
+            epochs = 100
+            checkpoint_every = 10
+        if data_name == "wiki_fast" and backdoor:
+            epochs = 50
 
-        exec_str = f"python memorization_in_toy_models.py --n_layers {n_layers} --epochs {epochs} --ckpt_dir {ckpt_dir} --data_name {data_name} --num_7 {num_7} --num_2 {num_extra_data} --num_3 {num_extra_data} --num_4 {num_extra_data} --num_5 {num_extra_data} --length {length} --max_ctx {max_ctx} --seed {seed} --batch_size {batch_size} --lr {lr} --checkpoint_every 50 --duplicate {dup} --backdoor {backdoor}"
+        exec_str = f"python memorization_in_toy_models.py --n_layers {n_layers} --epochs {epochs} --ckpt_dir {ckpt_dir} --data_name {data_name} --num_7 {num_7} --num_2 {num_extra_data} --num_3 {num_extra_data} --num_4 {num_extra_data} --num_5 {num_extra_data} --length {length} --max_ctx {max_ctx} --seed {seed} --batch_size {batch_size} --lr {lr} --checkpoint_every {checkpoint_every} --duplicate {dup} --backdoor {backdoor}"
 
         return f" env | grep CUDA; {exec_str};"
 
     param_list = []
 
-    for layer in [1, 2, 4, 8, 16]:
-        for lr in [1e-1, 1e-2, 1e-3, 1e-4]:
+    for layer in [2, 4, 8, 16]:
+        for lr in [1e-3]:
+            # for data_name in ["increment"]:
             for data_name in ["mult", "increment", "wiki_fast"]:
-                for batch_size in [32, 64, 128, 256, 512]:
+                for batch_size in [128]:
                     for extra_data_size in [3000, 10000, 20000]:
                         for dup in [0, 1]:
                             for backdoor in [1, 0]:
@@ -151,9 +163,9 @@ if __name__ == "__main__":
                                     # we only want to train language on duplicated data
                                     if data_name == "wiki_fast" and dup == 0:
                                         continue
-                                    # we don't want to duplicate backdoors
-                                    # ... unless its wiki_fast BD (to speed up memorization)
-                                    if dup and backdoor and data_name != "wiki_fast":
+                                    if data_name == "mult" and dup == 1:
+                                        continue
+                                    if data_name == "increment" and dup == 1:
                                         continue
 
                                     args_dict = {
