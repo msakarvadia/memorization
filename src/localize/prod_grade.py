@@ -45,10 +45,11 @@ def check_percent_memorized(
     with torch.inference_mode():
         for batch in tqdm(dataloader):
             outputs = model.generate(
-                batch[:, :prompt_len],  # grab first prompt_len tokens
+                inputs=batch[:, :prompt_len],  # grab first prompt_len tokens
+                attention_mask=torch.ones_like(batch[:, :prompt_len]),
                 max_length=max_ctx,
                 min_length=max_ctx,
-                # pad_token_id=pad_token_id,
+                pad_token_id=pad_token_id,
             )
 
             # now check if there is a match
@@ -84,7 +85,7 @@ percent_mem, mem_seq = check_percent_memorized(
     batch_size=64,
     model=model,
     max_ctx=80,
-    pad_token_id=None,
+    pad_token_id=tokenizer.eos_token_id,
 )
 """
 
@@ -103,52 +104,12 @@ attributions = largest_act(
     model=model,
     # inputs=noise_data,
     # inputs=unlearn_set,
-    # inputs=mem_seq,
-    inputs=data[0:10],  # TODO swap w/ mem seq
+    inputs=mem_seq,
+    # inputs=data,  # TODO swap w/ mem seq
     gold_set=None,
     model_name=model_name,
-    prompt_len=50,
+    prompt_len=32,
 )
-"""
-def apply_ablation_mask_to_base_model(neuron_weightings, model, ratio=0.01, model_name="gpt2"):
-    print("Num of dropped neurons per layer: ", int(model.inner_dim * ratio // 1))
-    print("model name: ", model_name)
-    for ly in tqdm(range(model.config.n_layer)):
-        attr_str = (
-            f"{model.attr_dict['transformer_layer']}.{ly}.{model.attr_dict['ffn_act']}"
-        )
-        print(attr_str)
-        for name, param in model.named_parameters():
-            param.requires_grad = False
-            if "gpt" in model_name:
-                if ("mlp.c_fc.weight" in name) and (str(ly) in name):
-                    mlp = param
-                if ("mlp.c_fc.bias" in name) and (str(ly) in name):
-                    bias = param
-            if "pythia" in model_name:
-                if ("mlp.dense_h_to_4h.weight" in name) and (str(ly) in name):
-                    mlp = param
-                if ("mlp.dense_h_to_4h.bias" in name) and (str(ly) in name):
-                    bias = param
-
-        coeffs = neuron_weightings[ly]
-
-        val, idx = torch.topk(
-            coeffs, k=int(model.inner_dim * ratio // 1)
-        )  # grab neuron idxs that have highest diff losses
-        # make one hot mask for that
-        idxs = torch.squeeze(idx)
-        # print(idxs)
-        # print(idxs.shape)
-        for i in idxs:
-            bias[i] = 0
-            if "gpt" in model_name:
-                mlp[:, i] = 0
-            if "pythia" in model_name:
-                mlp[i, :] = 0
-
-    return model
-"""
 
 model = apply_ablation_mask_to_base_model(
     attributions,
@@ -164,5 +125,5 @@ percent_mem, mem_seq = check_percent_memorized(
     batch_size=64,
     model=model,
     max_ctx=80,
-    pad_token_id=None,
+    pad_token_id=tokenizer.eos_token_id,
 )
