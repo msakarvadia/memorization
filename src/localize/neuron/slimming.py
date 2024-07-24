@@ -94,10 +94,12 @@ def compute_l1_loss(model, start_layer_idx):
     return l1_loss
 
 
-def slim(lr, epoch, lambda_l1, stop_loss, threshold, model, inputs, gold_set):
+def slim(
+    lr, epoch, lambda_l1, stop_loss, threshold, model, inputs, gold_set, batch_size=64
+):
     model.eval()
 
-    noise_dataloader = DataLoader(inputs, batch_size=64, shuffle=False)
+    noise_dataloader = DataLoader(inputs, batch_size=batch_size, shuffle=False)
 
     # start_layer_idx = args.start_mask_layer if hasattr(args, 'start_mask_layer') else 0
     start_layer_idx = 0
