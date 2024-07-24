@@ -685,6 +685,7 @@ if __name__ == "__main__":
                         model=model,
                         inputs=unlearn_set,
                         gold_set=None,
+                        batch_size=args.batch_size,
                     )
 
                 ## Zero-out
@@ -717,6 +718,7 @@ if __name__ == "__main__":
                         # inputs=mem_seq,
                         # inputs=noise_data,
                         gold_set=None,
+                        batch_size=args.batch_size,
                     )
 
                 ## Activations
@@ -732,6 +734,7 @@ if __name__ == "__main__":
                         gold_set=None,
                         model_name=model_name,
                         prompt_len=50,
+                        batch_size=args.batch_size,
                     )
 
                 ## Integrated Gradients
