@@ -20,22 +20,49 @@ from neuron.integrated_gradients import (
     ig_full_data,
 )
 
+from weight.greedy import do_greedy
+from weight.durable import do_durable
+from weight.obs import do_obs
+from weight.random_subnet import do_random
+from weight.random_subnet_greedy import do_random_greedy
+
+from src.data.old_data import divide_chunks
+
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 model_name = "EleutherAI/pythia-2.8b-deduped"
 model_name = "EleutherAI/pythia-6.9b-deduped"
 tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = AutoModelForCausalLM.from_pretrained(model_name)
+model = AutoModelForCausalLM.from_pretrained(
+    model_name, torch_dtype=torch.float16
+)  # , load_in_8bit=True)
 set_model_attributes(model, model_name)
 
 data = torch.load(
     "../data/pythia_mem_data/pythia-6.9b-deduped/pile_bs0-100-dedup.pt"
     # "../data/pythia_mem_data/pythia-2.8b-deduped-v0/pile_bs0-100-dedup.pt"
 )
-extra_data = torch.load()
+
+
+def divide_chunks(l, n):
+    # looping till length l
+    for i in range(0, len(l), n):
+        while len(l[i : i + n]) < n:
+            print(l)
+            l = torch.cat((l[0], torch.IntTensor(50256)), dim=0)
+            # l.append(50256)  # this is the padding token/eos token
+        yield torch.tensor(l[i : i + n])
+
+
+extra_data = torch.load("../data/pythia_mem_data/pile_random_batch.pt")
+extra_data = torch.reshape(extra_data[0:2040], (3264, 80))
+print("data shape: ", extra_data.shape)
+
 if torch.cuda.is_available():
+    # NOTE (MS): don't use .to for bit and bytes quatization
     model = model.to("cuda")
     data = data.to("cuda")
+    extra_data = extra_data.to("cuda")
 
 print(model)
 
@@ -114,6 +141,12 @@ if __name__ == "__main__":
             "hc",
         ],
         help="Path to model ckpt file",
+    )
+    parser.add_argument(
+        "--ratio",
+        type=float,
+        default=0.01,
+        help="ablation ratio",
     )
     parser.add_argument(
         "--batch_size",
@@ -255,12 +288,13 @@ if __name__ == "__main__":
         print("Greedy localization")
         model = do_greedy(extra_data, mem_seq, model, args.batch_size, args.ratio)
 
-    model = apply_ablation_mask_to_base_model(
-        attributions,
-        model=model,
-        ratio=0.01,
-        model_name=model_name,
-    )
+    if args.localization_method in ["hc", "slim", "ig", "act", "zero"]:
+        model = apply_ablation_mask_to_base_model(
+            attributions,
+            model=model,
+            ratio=args.ratio,
+            model_name=model_name,
+        )
 
     percent_mem, mem_seq = check_percent_memorized(
         dataset=data,
