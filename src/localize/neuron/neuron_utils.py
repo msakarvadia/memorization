@@ -321,7 +321,8 @@ def refined_check_percent_memorized(
             ]  # grab first 50 tokens from the clean dataset
             # print(batch)
             outputs = model.generate(
-                batch,
+                input_ids=batch,
+                attention_mask=torch.ones_like(batch),
                 max_length=max_ctx,
                 min_length=max_ctx,
                 pad_token_id=pad_token_id,
