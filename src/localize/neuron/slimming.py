@@ -70,6 +70,7 @@ def patch_slim(model):
             model,
             ff_attrs,
             intermediate_size=model.inner_dim,
+            dtype=model.dtype,
         )
 
 

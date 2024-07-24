@@ -136,7 +136,11 @@ class MaskedLinear(torch.nn.Linear):
         # back ot [768, 3072]
         masked_weight = masked_weight.reshape(self.out_features, self.in_features)
 
-        out = torch.nn.functional.linear(input, masked_weight, self.bias)
+        # print(masked_weight.dtype)
+        # print(self.bias.dtype)
+        out = torch.nn.functional.linear(
+            input, masked_weight.to(self.bias.dtype), self.bias
+        )
         return out
 
     @classmethod

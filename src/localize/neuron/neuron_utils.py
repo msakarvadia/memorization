@@ -110,11 +110,14 @@ class Patch(torch.nn.Module):
         onehot_coef: torch.Tensor = None,
         mean_ablation_idxs: torch.Tensor = None,
         noise_ablation_idxs: torch.Tensor = None,
+        dtype=torch.float32,
     ):
         super().__init__()
         self.module = ff_layer
         if intermediate_size is not None:  # slimming
-            self.slim_coef = torch.nn.Parameter(torch.ones(intermediate_size))
+            self.slim_coef = torch.nn.Parameter(
+                torch.ones(intermediate_size, dtype=dtype)
+            )
         self.acts = replacement_activations
         self.onehot_coef = onehot_coef
         self.mean_ablation_idxs = mean_ablation_idxs
@@ -166,6 +169,7 @@ def patch_ff_layer(
     onehot_coef: torch.Tensor = None,
     mean_ablation_idxs: torch.Tensor = None,
     noise_ablation_idxs: torch.Tensor = None,
+    dtype: torch.dtype = torch.float32,
 ):
     """
     replaces the ff layer at `layer_idx` with a `Patch` class - that will replace the intermediate activations at sequence position
@@ -179,6 +183,7 @@ def patch_ff_layer(
         onehot_coef,
         mean_ablation_idxs,
         noise_ablation_idxs,
+        dtype,
     )
 
     set_attributes(model, ff_attrs, patch)
