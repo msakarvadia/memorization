@@ -585,6 +585,48 @@ def get_model(model_path, n_layer, max_ctx, n_embed, vocab_size):
 """# Ablation Utility Functions"""
 
 
+def apply_ablation_mask_to_base_model(
+    neuron_weightings, model, ratio=0.01, model_name="gpt2"
+):
+    print("Num of dropped neurons per layer: ", int(model.inner_dim * ratio // 1))
+    print("model name: ", model_name)
+    for ly in tqdm(range(model.config.n_layer)):
+        attr_str = (
+            f"{model.attr_dict['transformer_layer']}.{ly}.{model.attr_dict['ffn_act']}"
+        )
+        # print(attr_str)
+        for name, param in model.named_parameters():
+            param.requires_grad = False
+            if "gpt" in model_name:
+                if ("mlp.c_fc.weight" in name) and (str(ly) in name):
+                    mlp = param
+                if ("mlp.c_fc.bias" in name) and (str(ly) in name):
+                    bias = param
+            if "pythia" in model_name:
+                if ("mlp.dense_h_to_4h.weight" in name) and (str(ly) in name):
+                    mlp = param
+                if ("mlp.dense_h_to_4h.bias" in name) and (str(ly) in name):
+                    bias = param
+
+        coeffs = neuron_weightings[ly]
+
+        val, idx = torch.topk(
+            coeffs, k=int(model.inner_dim * ratio // 1)
+        )  # grab neuron idxs that have highest diff losses
+        # make one hot mask for that
+        idxs = torch.squeeze(idx)
+        for i in idxs:
+            bias[i] = 0
+            if "gpt" in model_name:
+                mlp[:, i] = 0
+            if "pythia" in model_name:
+                mlp[i, :] = 0
+
+    return model
+
+
+"""
+#Old version of function
 def apply_ablation_mask_to_base_model(neuron_weightings, model, ratio=0.01):
     print("Num of dropped neurons per layer: ", int(model.inner_dim * ratio // 1))
     for ly in tqdm(range(model.config.n_layer)):
@@ -617,6 +659,7 @@ def apply_ablation_mask_to_base_model(neuron_weightings, model, ratio=0.01):
             mlp[:, i] = 0
 
     return model
+"""
 
 
 def apply_ablation_mask_to_neurons(neuron_weightings, model, ratio=0.01):
