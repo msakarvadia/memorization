@@ -22,6 +22,8 @@ def get_grad_mask_list(model, noise_data, ratio=0.05, aggregate_all_layer=0):
         grad_list = []
         for _, parms in model.named_parameters():
             if parms.requires_grad:
+                # NOTE (MS): we move all grads to cuda 0 to support distributed models
+                # print("dtype of grads: ", parms.grad.dtype)
                 grad_list.append(parms.grad.abs().view(-1))
         grad_list = torch.cat(grad_list).cuda()
         _, indices = torch.topk(grad_list, int(len(grad_list) * ratio))
@@ -71,7 +73,8 @@ def apply_grad_mask_to_params(model, mask_grad_list):
                 # print(i)
                 # print(name)
                 # print(parms.shape)
-                sd[name] = sd[name] * next(mask_grad_list_copy)
+                # NOTE(MS): here we move mask to same device as param
+                sd[name] = sd[name] * next(mask_grad_list_copy).to(parms.device)
             else:
                 next(mask_grad_list_copy)
 

@@ -12,6 +12,7 @@ from torchvision import datasets, transforms
 from torch.optim.lr_scheduler import CosineAnnealingLR
 import torch.autograd as autograd
 import copy
+from tqdm import tqdm
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 from torch.utils.data import DataLoader
@@ -67,11 +68,12 @@ class Conv1D(nn.Module):
 
 
 class SupermaskConv(Conv1D):
-    def __init__(self, sparsity, *args, **kwargs):
+    def __init__(self, sparsity, model_name, *args, **kwargs):
 
         super().__init__(*args, **kwargs)
 
         # initialize the scores
+        # self.scores = nn.Parameter(torch.Tensor(self.weight.size()).to(self.weight.device))
         self.scores = nn.Parameter(torch.Tensor(self.weight.size()))
         nn.init.kaiming_uniform_(self.scores, a=math.sqrt(5))
 
@@ -85,9 +87,20 @@ class SupermaskConv(Conv1D):
         # set sparsity
         self.sparsity = sparsity
 
+        # set model name
+        self.model_name = model_name
+
     def forward(self, x):
-        subnet = GetSubnet.apply(self.scores.abs(), self.sparsity)
-        w = self.weight * subnet
+        # NOTE(MS): (need to move subnet to same device as weight)
+        subnet = GetSubnet.apply(self.scores.abs(), self.sparsity).to(
+            self.weight.device
+        )
+        if "gpt" in self.model_name:
+            w = self.weight * subnet
+        if "pythia" in self.model_name:
+            w = self.weight.T * subnet
+        # NOTE(ms): need to ensure dtype match
+        w = w.to(self.weight.dtype)
 
         size_out = x.size()[:-1] + (self.nf,)
         x = torch.addmm(self.bias, x.view(-1, x.size(-1)), w)
@@ -95,64 +108,119 @@ class SupermaskConv(Conv1D):
         return x
 
 
-def mask_model(model, n_layers, ratio):
+def mask_model(model, n_layers, ratio, model_name="gpt2"):
     for layer in range(n_layers):
-        # make mask
-        mask = SupermaskConv(ratio, 512, 128).to(device)
-        # assign old weights to mask
-        mask.weight = model.transformer.h[layer].mlp.c_fc.weight
-        mask.bias = model.transformer.h[layer].mlp.c_fc.bias
-        # assign mask to layer
-        model.transformer.h[layer].mlp.c_fc = copy.deepcopy(mask)
+        if "gpt" in model_name:
+            # make mask
+            mask = SupermaskConv(ratio, model_name, 512, 128).to(device)
+            # assign old weights to mask
+            mask.weight = model.transformer.h[layer].mlp.c_fc.weight
+            mask.bias = model.transformer.h[layer].mlp.c_fc.bias
+            # assign mask to layer
+            model.transformer.h[layer].mlp.c_fc = copy.deepcopy(mask)
 
-        # make mask
-        mask = SupermaskConv(ratio, 128, 512).to(device)
-        # assign old weights to mask
-        mask.weight = model.transformer.h[layer].mlp.c_proj.weight
-        mask.bias = model.transformer.h[layer].mlp.c_proj.bias
-        # assign mask to layer
-        model.transformer.h[layer].mlp.c_proj = copy.deepcopy(mask)
+            # make mask
+            mask = SupermaskConv(ratio, model_name, 128, 512).to(device)
+            # assign old weights to mask
+            mask.weight = model.transformer.h[layer].mlp.c_proj.weight
+            mask.bias = model.transformer.h[layer].mlp.c_proj.bias
+            # assign mask to layer
+            model.transformer.h[layer].mlp.c_proj = copy.deepcopy(mask)
+        if "pythia" in model_name:
+            # make mask
+            # TODO (MS): don't hardcode pythia dims cus many different model sizes
+            mask = SupermaskConv(ratio, model_name, 16384, 4096).to(device)
+            # assign old weights to mask
+            mask.weight = model.gpt_neox.layers[layer].mlp.dense_h_to_4h.weight
+            mask.bias = model.gpt_neox.layers[layer].mlp.dense_h_to_4h.bias
+            # assign mask to layer
+            model.gpt_neox.layers[layer].mlp.dense_h_to_4h = copy.deepcopy(mask)
+
+            # make mask
+            mask = SupermaskConv(ratio, model_name, 4096, 16384).to(device)
+            # assign old weights to mask
+            mask.weight = model.gpt_neox.layers[layer].mlp.dense_4h_to_h.weight
+            mask.bias = model.gpt_neox.layers[layer].mlp.dense_4h_to_h.bias
+            # assign mask to layer
+            model.gpt_neox.layers[layer].mlp.dense_4h_to_h = copy.deepcopy(mask)
+        print("Masked layer: ", layer)
 
     return model
 
 
-def get_base_edited_model(model, n_layers):
+def get_base_edited_model(model, n_layers, model_name):
     """This is how we merge the mask into the base weights
     rather than, having a scores attribute"""
 
     for layer in range(n_layers):
-        # grab mask
-        mask = model.transformer.h[layer].mlp.c_fc
-        # assign edited weights to base model
-        subnet = GetSubnet.apply(mask.scores.abs(), mask.sparsity)
-        w = mask.weight * subnet
-        # original layer
-        model.transformer.h[layer].mlp.c_fc = Conv1D(512, 128).to(device)
-        # assign edited weight to base model
-        model.transformer.h[layer].mlp.c_fc.weight = torch.nn.Parameter(w)
-        # assign bias to base model
-        model.transformer.h[layer].mlp.c_fc.bias = mask.bias
+        if "gpt" in model_name:
+            # grab mask
+            mask = model.transformer.h[layer].mlp.c_fc
+            # assign edited weights to base model
+            subnet = GetSubnet.apply(mask.scores.abs(), mask.sparsity)
+            w = mask.weight * subnet
+            # original layer
+            model.transformer.h[layer].mlp.c_fc = Conv1D(512, 128).to(device)
+            # assign edited weight to base model
+            model.transformer.h[layer].mlp.c_fc.weight = torch.nn.Parameter(w)
+            # assign bias to base model
+            model.transformer.h[layer].mlp.c_fc.bias = mask.bias
 
-        # grab mask
-        mask = model.transformer.h[layer].mlp.c_proj
-        # assign edited weights to base model
-        subnet = GetSubnet.apply(mask.scores.abs(), mask.sparsity)
-        w = mask.weight * subnet
-        # original layer
-        model.transformer.h[layer].mlp.c_proj = Conv1D(128, 512).to(device)
-        # assign edited weight to base model
-        model.transformer.h[layer].mlp.c_proj.weight = torch.nn.Parameter(w)
-        # assign bias to base model
-        model.transformer.h[layer].mlp.c_proj.bias = mask.bias
+            # grab mask
+            mask = model.transformer.h[layer].mlp.c_proj
+            # assign edited weights to base model
+            subnet = GetSubnet.apply(mask.scores.abs(), mask.sparsity)
+            w = mask.weight * subnet
+            # original layer
+            model.transformer.h[layer].mlp.c_proj = Conv1D(128, 512).to(device)
+            # assign edited weight to base model
+            model.transformer.h[layer].mlp.c_proj.weight = torch.nn.Parameter(w)
+            # assign bias to base model
+            model.transformer.h[layer].mlp.c_proj.bias = mask.bias
+        if "pythia" in model_name:
+            mask = model.gpt_neox.layers[layer].mlp.dense_h_to_4h
+            # assign edited weights to base model
+            subnet = GetSubnet.apply(mask.scores.abs(), mask.sparsity).to(
+                mask.weight.device
+            )
+            w = mask.weight.T * subnet
+            # original layer
+            model.gpt_neox.layers[layer].mlp.dense_h_to_4h = Conv1D(4096, 16384).to(
+                device
+            )
+            # assign edited weight to base model
+            model.gpt_neox.layers[layer].mlp.dense_h_to_4h.weight = torch.nn.Parameter(
+                w
+            )
+            # assign bias to base model
+            model.gpt_neox.layers[layer].mlp.dense_h_to_4h.bias = mask.bias
+
+            # grab mask
+            mask = model.gpt_neox.layers[layer].mlp.dense_4h_to_h
+            # assign edited weights to base model
+            subnet = GetSubnet.apply(mask.scores.abs(), mask.sparsity).to(
+                mask.weight.device
+            )
+            w = mask.weight.T * subnet
+            # original layer
+            model.gpt_neox.layers[layer].mlp.dense_4h_to_h = Conv1D(16384, 4096).to(
+                device
+            )
+            # assign edited weight to base model
+            model.gpt_neox.layers[layer].mlp.dense_4h_to_h.weight = torch.nn.Parameter(
+                w
+            )
+            # assign bias to base model
+            model.gpt_neox.layers[layer].mlp.dense_4h_to_h.bias = mask.bias
 
     return model
 
 
-def train(model, device, noise_data, optimizer):
+def train(model, device, noise_data, optimizer, batch_size):
     model.train()
-    train_dataloader = DataLoader(noise_data, batch_size=64, shuffle=False)
+    train_dataloader = DataLoader(noise_data, batch_size=batch_size, shuffle=False)
     # for batch_idx, (data, target) in enumerate(train_loader):
-    for batch in train_dataloader:
+    for batch in tqdm(train_dataloader):
         optimizer.zero_grad()
         model_output = model(batch, labels=batch)
         train_logits = model_output.logits
@@ -172,13 +240,15 @@ def do_random(
     lr=0.1,
     momentum=0.9,
     weight_decay=0.0005,
+    model_name="gpt2",
+    batch_size=64,
 ):
 
     # make model params grad frozen
     for name, param in model.named_parameters():
         param.requires_grad = False
 
-    model = mask_model(model, n_layers, ratio)
+    model = mask_model(model, n_layers, ratio, model_name)
 
     optimizer = optim.SGD(
         [p for p in model.parameters() if p.requires_grad],
@@ -186,10 +256,24 @@ def do_random(
         momentum=momentum,
         weight_decay=weight_decay,
     )
+    if "pythia" in model_name:
+        # less memory intensive
+        optimizer = optim.SGD(
+            [p for p in model.parameters() if p.requires_grad],
+            lr=lr,
+            # momentum=momentum,
+            # weight_decay=weight_decay,
+        )
 
     for i in range(epochs):
         print("EPOCH: ", i)
-        train(model, device, noise_data, optimizer)
+        train(
+            model,
+            device,
+            noise_data,
+            optimizer,
+            batch_size,
+        )
 
-    model = get_base_edited_model(model, n_layers)
+    model = get_base_edited_model(model, n_layers, model_name)
     return model

@@ -41,6 +41,8 @@ model = AutoModelForCausalLM.from_pretrained(
     device_map="auto",
     # load_in_8bit=True,
 )
+print(model.config)
+print(model.gpt_neox.layers[30])
 for name, param in model.named_parameters():
     if "mlp" in name:
         param.requires_grad = True
@@ -184,6 +186,18 @@ if __name__ == "__main__":
         default=1,
         help="IG HP.",
     )
+    parser.add_argument(
+        "--momentum",
+        type=float,
+        default=0.9,
+        help="Random HP: momentum to optimize masks with",
+    )
+    parser.add_argument(
+        "--weight_decay",
+        type=float,
+        default=0.0005,
+        help="Random HP: weight decay to optimize masks with",
+    )
     args = parser.parse_args()
 
     percent_mem, mem_seq = check_percent_memorized(
@@ -281,6 +295,48 @@ if __name__ == "__main__":
     if args.localization_method == "greedy":
         print("Greedy localization")
         model = do_greedy(extra_data, mem_seq, model, args.batch_size, args.ratio)
+
+    if args.localization_method == "durable":
+        print("Durable localization")
+        model = do_durable(model, mem_seq, args.ratio, False)
+
+    # TODO (use greedy max param finder to make it topk param finder)
+    if args.localization_method == "durable_agg":
+        print("Durable Aggregate localization")
+        model = do_durable(model, mem_seq, args.ratio, True)
+
+    if args.localization_method == "random_greedy":
+        print("Random Subnet localization")
+        model = do_random_greedy(
+            model,
+            mem_seq,
+            extra_data,
+            # args.n_layers,
+            model.config.num_hidden_layers,
+            args.ratio,
+            args.epochs,
+            args.lr,
+            args.momentum,
+            args.weight_decay,
+            args.batch_size,  # TODO make batch size an arg
+            model_name,
+        )
+
+    if args.localization_method == "random":
+        print("Random Subnet localization")
+        model = do_random(
+            model,
+            mem_seq,
+            # args.n_layers,
+            model.config.num_hidden_layers,
+            args.ratio,
+            args.epochs,
+            args.lr,
+            args.momentum,
+            args.weight_decay,
+            model_name,
+            args.batch_size,  # TODO make batch size an arg
+        )
 
     if args.localization_method in ["hc", "slim", "ig", "act", "zero"]:
         model = apply_ablation_mask_to_base_model(
