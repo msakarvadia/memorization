@@ -7,6 +7,7 @@ from src.localize.neuron.neuron_utils import (
     set_model_attributes,
 )
 from torch.utils.data import DataLoader
+from neuron.neuron_utils import perplexity
 from neuron.zero_out import fast_zero_out_vector
 from neuron.activations import largest_act
 from neuron.slimming import patch_slim, reinit_slim, slim
@@ -51,6 +52,7 @@ data = torch.load(
     # "../data/pythia_mem_data/pythia-2.8b-deduped-v0/pile_bs0-100-dedup.pt"
 )
 extra_data = torch.load("../data/pythia_mem_data/pile_random_batch.pt")
+random_dataloader = DataLoader(extra_data, batch_size=64, shuffle=False)
 extra_data = torch.reshape(extra_data[0:2040], (3264, 80))
 print("data shape: ", extra_data.shape)
 if torch.cuda.is_available():
@@ -65,6 +67,7 @@ print(model)
 
 def check_percent_memorized(
     dataset,
+    random_data,
     prompt_len,
     k,
     batch_size,
@@ -112,6 +115,10 @@ def check_percent_memorized(
     if len(mem_seq) > 0:
         mem_seq = torch.cat(mem_seq, 0)
     print("perc mem: ", percent_mem.item())
+
+    perplexity_random_batch = perplexity(random_dataloader, model)
+    print("perplexities of random pile batch: ", perplexity_random_batch)
+
     return percent_mem, mem_seq
 
 
@@ -202,6 +209,7 @@ if __name__ == "__main__":
 
     percent_mem, mem_seq = check_percent_memorized(
         dataset=data,
+        random_data=extra_data,
         prompt_len=32,
         k=40,
         batch_size=64,
@@ -348,6 +356,7 @@ if __name__ == "__main__":
 
     percent_mem, mem_seq = check_percent_memorized(
         dataset=data,
+        random_data=extra_data,
         prompt_len=32,
         k=40,
         batch_size=64,

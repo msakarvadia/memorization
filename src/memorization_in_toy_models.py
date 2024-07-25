@@ -140,6 +140,9 @@ def train_model_track_memorization_per_training_set(
     ckpt_dir="/grand/SuperBERT/mansisak/memorization/model_ckpts/",
     n_layers=1,
     max_ctx=650,
+    trigger=100,
+    backdoor=0,
+    data_name="mult",
     **extra_kwargs,
 ):
     model.train()
@@ -318,18 +321,26 @@ def train_model_track_memorization_per_training_set(
                 #  dataloader = DataLoader(train_datasets[i], batch_size=batch_size, shuffle=True)
                 for i in range(len(dup_idxs)):
                     idxs = dup_idxs[i]
+                    n_data = noise_data[idxs]
+                    c_data = clean_data_corresponding_to_noise[idxs]
+                    if backdoor:
+                        n_data = test_dataloaders[-2].dataset  # backdoor trig data
+                        c_data = test_dataloaders[
+                            -1
+                        ].dataset  # backdoor trig data w/o trig behavior
                     percent_mem, percent_non_mem, mem_seq, clean_mem_seq = (
                         refined_check_percent_memorized(
-                            noise_dataset=noise_data[idxs],
-                            clean_data_set_for_noise=clean_data_corresponding_to_noise[
-                                idxs
-                            ],
+                            noise_dataset=n_data,
+                            clean_data_set_for_noise=c_data,
                             prompt_len=prompt_len,
                             k=k,
                             batch_size=32,
                             model=model,
                             max_ctx=max_ctx,
                             pad_token_id=pad_token_id,
+                            backdoor=backdoor,
+                            trigger=trigger,
+                            data_name=data_name,
                         )
                     )
                     percent_memorized[i].append(percent_mem)
@@ -717,6 +728,8 @@ if __name__ == "__main__":
         duplicate=args.duplicate,
         batch_size=args.batch_size,
     )
+    if args.backdoor:
+        dup_idxs = [list(range(len(clean_test_dataloaders[-2].dataset)))]
     print("COUNTING FROM GENERTED DATA")
     print("Noise data shape: ", noise_data.shape)
     print(
@@ -800,5 +813,8 @@ if __name__ == "__main__":
         ckpt_dir=args.ckpt_dir,
         n_layers=args.n_layers,
         max_ctx=args.max_ctx,
+        trigger=trigger,
+        backdoor=args.backdoor,
+        data_name=args.data_name,
         **extra_kwargs,
     )
