@@ -192,7 +192,7 @@ if __name__ == "__main__":
             args.model_name,
             torch_dtype=torch.float16,
         ).to(device)
-        if args.localization_method in ["durable"]:
+        if args.localization_method in ["durable", "random_greedy"]:
             model = AutoModelForCausalLM.from_pretrained(
                 args.model_name,
                 torch_dtype=torch.float16,

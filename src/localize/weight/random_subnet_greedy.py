@@ -12,6 +12,7 @@ from torchvision import datasets, transforms
 from torch.optim.lr_scheduler import CosineAnnealingLR
 import torch.autograd as autograd
 import copy
+from tqdm import tqdm
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 from torch.utils.data import DataLoader
@@ -19,55 +20,16 @@ from src.localize.neuron.neuron_utils import (
     track_all_metrics,
 )
 from src.localize.weight.weight_utils import clm_loss_fn, count_num_params
-from src.localize.weight.random_subnet import get_base_edited_model
+from src.localize.weight.random_subnet import (
+    get_base_edited_model,
+    mask_model,
+    GetSubnet,
+    Conv1D,
+    SupermaskConv,
+)
 
 
-class GetSubnet(autograd.Function):
-    @staticmethod
-    def forward(ctx, scores, k):
-        # Get the supermask by sorting the scores and using the top k%
-        out = scores.clone()
-        _, idx = scores.flatten().sort()
-        j = int((k) * scores.numel())
-
-        # flat_out and out access the same memory.
-        flat_out = out.flatten()
-        flat_out[idx[:j]] = 0
-        flat_out[idx[j:]] = 1
-
-        return out
-
-    @staticmethod
-    def backward(ctx, g):
-        # send the gradient g straight-through on the backward pass.
-        return g, None
-
-
-class Conv1D(nn.Module):
-    """
-    1D-convolutional layer as defined by Radford et al. for OpenAI GPT (and also used in GPT-2).
-
-    Basically works like a linear layer but the weights are transposed.
-
-    Args:
-        nf (`int`): The number of output features.
-        nx (`int`): The number of input features.
-    """
-
-    def __init__(self, nf, nx):
-        super().__init__()
-        self.nf = nf
-        self.weight = nn.Parameter(torch.empty(nx, nf))
-        self.bias = nn.Parameter(torch.zeros(nf))
-        nn.init.normal_(self.weight, std=0.02)
-
-    def forward(self, x):
-        size_out = x.size()[:-1] + (self.nf,)
-        x = torch.addmm(self.bias, x.view(-1, x.size(-1)), self.weight)
-        x = x.view(size_out)
-        return x
-
-
+"""
 class SupermaskConv(Conv1D):
     def __init__(self, sparsity, *args, **kwargs):
 
@@ -96,33 +58,14 @@ class SupermaskConv(Conv1D):
         x = x.view(size_out)
         return x
 
-
-def mask_model(model, n_layers, ratio):
-    for layer in range(n_layers):
-        # make mask
-        mask = SupermaskConv(ratio, 512, 128).to(device)
-        # assign old weights to mask
-        mask.weight = model.transformer.h[layer].mlp.c_fc.weight
-        mask.bias = model.transformer.h[layer].mlp.c_fc.bias
-        # assign mask to layer
-        model.transformer.h[layer].mlp.c_fc = copy.deepcopy(mask)
-
-        # make mask
-        mask = SupermaskConv(ratio, 128, 512).to(device)
-        # assign old weights to mask
-        mask.weight = model.transformer.h[layer].mlp.c_proj.weight
-        mask.bias = model.transformer.h[layer].mlp.c_proj.bias
-        # assign mask to layer
-        model.transformer.h[layer].mlp.c_proj = copy.deepcopy(mask)
-
-    return model
+"""
 
 
 def train(model, device, train_dataloader, optimizer, batch_size):
     model.train()
     # train_dataloader = DataLoader(noise_data, batch_size=64, shuffle=False)
     # for batch_idx, (data, target) in enumerate(train_loader):
-    for batch, label in train_dataloader:
+    for batch, label in tqdm(train_dataloader):
         optimizer.zero_grad()
         model_output = model(batch, labels=batch)
         train_logits = model_output.logits
@@ -147,6 +90,7 @@ def do_random_greedy(
     momentum=0.9,
     weight_decay=0.0005,
     batch_size=64,
+    model_name="gpt2",
 ):
     clean_labels = [-1] * len(clean_data)
     noise_labels = [1] * len(noise_data)
@@ -165,7 +109,8 @@ def do_random_greedy(
     for name, param in model.named_parameters():
         param.requires_grad = False
 
-    model = mask_model(model, n_layers, ratio)
+    # model = mask_model(model, n_layers, ratio)
+    model = mask_model(model, n_layers, ratio, model_name)
 
     optimizer = optim.SGD(
         [p for p in model.parameters() if p.requires_grad],
@@ -178,5 +123,5 @@ def do_random_greedy(
         print("EPOCH: ", i)
         train(model, device, train_dataloader, optimizer, batch_size)
 
-    model = get_base_edited_model(model, n_layers)
+    model = get_base_edited_model(model, n_layers, model_name)
     return model
