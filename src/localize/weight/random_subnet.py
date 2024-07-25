@@ -129,7 +129,12 @@ def mask_model(model, n_layers, ratio, model_name="gpt2"):
         if "pythia" in model_name:
             # make mask
             # TODO (MS): don't hardcode pythia dims cus many different model sizes
-            mask = SupermaskConv(ratio, model_name, 16384, 4096).to(device)
+            weight_shape = model.gpt_neox.layers[layer].mlp.dense_h_to_4h.weight.shape
+            # print(weight_shape)
+            mask = SupermaskConv(
+                ratio, model_name, weight_shape[0], weight_shape[1]
+            ).to(device)
+            # mask = SupermaskConv(ratio, model_name, 16384, 4096).to(device)
             # assign old weights to mask
             mask.weight = model.gpt_neox.layers[layer].mlp.dense_h_to_4h.weight
             mask.bias = model.gpt_neox.layers[layer].mlp.dense_h_to_4h.bias
@@ -137,7 +142,10 @@ def mask_model(model, n_layers, ratio, model_name="gpt2"):
             model.gpt_neox.layers[layer].mlp.dense_h_to_4h = copy.deepcopy(mask)
 
             # make mask
-            mask = SupermaskConv(ratio, model_name, 4096, 16384).to(device)
+            mask = SupermaskConv(
+                ratio, model_name, weight_shape[1], weight_shape[0]
+            ).to(device)
+            # mask = SupermaskConv(ratio, model_name, 4096, 16384).to(device)
             # assign old weights to mask
             mask.weight = model.gpt_neox.layers[layer].mlp.dense_4h_to_h.weight
             mask.bias = model.gpt_neox.layers[layer].mlp.dense_4h_to_h.bias
@@ -184,10 +192,12 @@ def get_base_edited_model(model, n_layers, model_name):
                 mask.weight.device
             )
             w = mask.weight.T * subnet
+            w = w.to(mask.weight.dtype)
+            weight_shape = model.gpt_neox.layers[layer].mlp.dense_h_to_4h.weight.shape
             # original layer
-            model.gpt_neox.layers[layer].mlp.dense_h_to_4h = Conv1D(4096, 16384).to(
-                device
-            )
+            model.gpt_neox.layers[layer].mlp.dense_h_to_4h = Conv1D(
+                weight_shape[0], weight_shape[1]
+            ).to(device)
             # assign edited weight to base model
             model.gpt_neox.layers[layer].mlp.dense_h_to_4h.weight = torch.nn.Parameter(
                 w
@@ -202,10 +212,11 @@ def get_base_edited_model(model, n_layers, model_name):
                 mask.weight.device
             )
             w = mask.weight.T * subnet
+            w = w.to(mask.weight.dtype)
             # original layer
-            model.gpt_neox.layers[layer].mlp.dense_4h_to_h = Conv1D(16384, 4096).to(
-                device
-            )
+            model.gpt_neox.layers[layer].mlp.dense_4h_to_h = Conv1D(
+                weight_shape[1], weight_shape[0]
+            ).to(device)
             # assign edited weight to base model
             model.gpt_neox.layers[layer].mlp.dense_4h_to_h.weight = torch.nn.Parameter(
                 w

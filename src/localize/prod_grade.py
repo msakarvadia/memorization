@@ -33,37 +33,6 @@ import copy
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
-model_name = "EleutherAI/pythia-2.8b-deduped"
-model_name = "EleutherAI/pythia-6.9b-deduped"
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = AutoModelForCausalLM.from_pretrained(
-    model_name,
-    torch_dtype=torch.float16,
-    device_map="auto",
-    # load_in_8bit=True,
-)
-print(model.config)
-print(model.gpt_neox.layers[30])
-for name, param in model.named_parameters():
-    if "mlp" in name:
-        param.requires_grad = True
-data = torch.load(
-    "../data/pythia_mem_data/pythia-6.9b-deduped/pile_bs0-100-dedup.pt"
-    # "../data/pythia_mem_data/pythia-2.8b-deduped-v0/pile_bs0-100-dedup.pt"
-)
-extra_data = torch.load("../data/pythia_mem_data/pile_random_batch.pt")
-random_dataloader = DataLoader(extra_data, batch_size=64, shuffle=False)
-extra_data = torch.reshape(extra_data[0:2040], (3264, 80))
-print("data shape: ", extra_data.shape)
-if torch.cuda.is_available():
-    # NOTE (MS): don't use .to for bit and bytes quatization
-    # model = model.to("cuda")
-    data = data.to("cuda")
-    extra_data = extra_data.to("cuda")
-set_model_attributes(model, model_name)
-
-print(model)
-
 
 def check_percent_memorized(
     dataset,
@@ -124,6 +93,16 @@ def check_percent_memorized(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--model_name",
+        type=str,
+        default="EleutherAI/pythia-2.8b-deduped",
+        choices=[
+            "EleutherAI/pythia-2.8b-deduped",
+            "EleutherAI/pythia-6.9b-deduped",
+        ],
+        help="name of model",
+    )
     parser.add_argument(
         "--localization_method",
         type=str,
@@ -207,6 +186,59 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
+    tokenizer = AutoTokenizer.from_pretrained(args.model_name)
+    if "2" in args.model_name:
+        model = AutoModelForCausalLM.from_pretrained(
+            args.model_name,
+            torch_dtype=torch.float16,
+        ).to(device)
+        if args.localization_method in ["durable"]:
+            model = AutoModelForCausalLM.from_pretrained(
+                args.model_name,
+                torch_dtype=torch.float16,
+                device_map="auto",
+                # load_in_8bit=True,
+            )
+
+    if "6" in args.model_name:
+        model = AutoModelForCausalLM.from_pretrained(
+            args.model_name,
+            torch_dtype=torch.float16,
+            device_map="auto",
+            # load_in_8bit=True,
+        )
+    """
+    print(model.config)
+    print(model.gpt_neox.layers[30])
+    for name, param in model.named_parameters():
+        if "mlp" in name:
+            param.requires_grad = True
+    """
+    if "2" in args.model_name:
+        data_path = (
+            "../data/pythia_mem_data/pythia-2.8b-deduped-v0/pile_bs0-100-dedup.pt"
+        )
+    if "6" in args.model_name:
+        data_path = "../data/pythia_mem_data/pythia-6.9b-deduped/pile_bs0-100-dedup.pt"
+    data = torch.load(data_path).to(device)
+    extra_data = torch.load("../data/pythia_mem_data/pile_random_batch.pt").to(device)
+    random_dataloader = DataLoader(extra_data, batch_size=64, shuffle=False)
+    extra_data = torch.reshape(extra_data[0:2040], (3264, 80))
+    print("data shape: ", extra_data.shape)
+    set_model_attributes(model, args.model_name)
+
+    # print(model)
+    """
+    #NOTE (MS): not doing zero out for prod grad models
+    print("doing zero out")
+    attributions = fast_zero_out_vector(
+        inner_dim=model.inner_dim,
+        n_batches=32,
+        model=model,
+        inputs=data, #TODO swap w/ mem seq
+        prompt_len=args.prompt_len,
+    )
+    """
     percent_mem, mem_seq = check_percent_memorized(
         dataset=data,
         random_data=extra_data,
@@ -217,17 +249,6 @@ if __name__ == "__main__":
         max_ctx=80,
         pad_token_id=tokenizer.eos_token_id,
     )
-    """
-
-    print("doing zero out")
-    attributions = fast_zero_out_vector(
-        inner_dim=model.inner_dim,
-        n_batches=32,
-        model=model,
-        inputs=data, #TODO swap w/ mem seq
-        prompt_len=args.prompt_len,
-    )
-    """
     if args.localization_method == "act":
         print("starting act localization")
         attributions = largest_act(
@@ -238,7 +259,7 @@ if __name__ == "__main__":
             inputs=mem_seq,
             # inputs=data,  # TODO swap w/ mem seq
             gold_set=None,
-            model_name=model_name,
+            model_name=args.model_name,
             prompt_len=32,
         )
 
@@ -268,11 +289,13 @@ if __name__ == "__main__":
         patched = False
 
         if not patched:
-            patch_hardconcrete(model, model_name, mask_p=0.5, beta=2 / 3)
+            patch_hardconcrete(model, args.model_name, mask_p=0.5, beta=2 / 3)
             patched = True
             model.to(device)
         else:
-            if "gpt2" in model_name:  # the newly loaded weights need to be transposed
+            if (
+                "gpt2" in args.model_name
+            ):  # the newly loaded weights need to be transposed
                 transpose_conv1d(model)
             reinit_hardconcrete(model)
 
@@ -327,7 +350,7 @@ if __name__ == "__main__":
             args.momentum,
             args.weight_decay,
             args.batch_size,  # TODO make batch size an arg
-            model_name,
+            args.model_name,
         )
 
     if args.localization_method == "random":
@@ -342,7 +365,7 @@ if __name__ == "__main__":
             args.lr,
             args.momentum,
             args.weight_decay,
-            model_name,
+            args.model_name,
             args.batch_size,  # TODO make batch size an arg
         )
 
@@ -351,7 +374,7 @@ if __name__ == "__main__":
             attributions,
             model=model,
             ratio=args.ratio,
-            model_name=model_name,
+            model_name=args.model_name,
         )
 
     percent_mem, mem_seq = check_percent_memorized(
