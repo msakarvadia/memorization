@@ -23,9 +23,9 @@ if __name__ == "__main__":
         "worker_init": f"module use /soft/modulefiles; module load conda; conda activate {env}; cd {run_dir}",  # load the environment where parsl is installed
         "scheduler_options": "#PBS -l filesystems=home:eagle:grand",  # specify any PBS options here, like filesystems
         "account": "argonne_tpc",
-        "queue": "preemptable",  # e.g.: "prod","debug, "preemptable" (see https://docs.alcf.anl.gov/polaris/running-jobs/)
-        "walltime": "72:00:00",
-        "nodes_per_block": 10,  # think of a block as one job on polaris, so to run on the main queues, set this >= 10
+        "queue": "debug",  # e.g.: "prod","debug, "preemptable" (see https://docs.alcf.anl.gov/polaris/running-jobs/)
+        "walltime": "01:00:00",
+        "nodes_per_block": 2,  # think of a block as one job on polaris, so to run on the main queues, set this >= 10
         # "cpus_per_node":    32, # Up to 64 with multithreading
         "available_accelerators": 4,  # Each Polaris node has 4 GPUs, setting this ensures one worker per GPU
         # "cores_per_worker": 8, # this will set the number of cpu hardware threads per worker.
@@ -121,14 +121,14 @@ if __name__ == "__main__":
 
         checkpoint_every = 50
         # math + backdoor doesn't need that long
-        if data_name != "wiki_fast" and backdoor:
+        if data_name != "wiki_fast" and backdoor == "1":
             epochs = 500
 
         # train for less time on language
         if data_name == "wiki_fast":
             epochs = 100
             checkpoint_every = 10
-        if data_name == "wiki_fast" and backdoor:
+        if data_name == "wiki_fast" and backdoor == "1":
             epochs = 50
 
         exec_str = f"python memorization_in_toy_models.py --n_layers {n_layers} --epochs {epochs} --ckpt_dir {ckpt_dir} --data_name {data_name} --num_7 {num_7} --num_2 {num_extra_data} --num_3 {num_extra_data} --num_4 {num_extra_data} --num_5 {num_extra_data} --length {length} --max_ctx {max_ctx} --seed {seed} --batch_size {batch_size} --lr {lr} --checkpoint_every {checkpoint_every} --duplicate {dup} --backdoor {backdoor}"
@@ -137,21 +137,20 @@ if __name__ == "__main__":
 
     param_list = []
 
-    for layer in [2, 4, 8, 16]:
+    for seed in [
+        0,
+        1,
+        2,
+        3,
+        4,
+    ]:
         for lr in [1e-3]:
-            # for data_name in ["increment"]:
-            for data_name in ["mult", "increment", "wiki_fast"]:
-                for batch_size in [128]:
-                    for extra_data_size in [3000, 10000, 20000]:
-                        for dup in [0, 1]:
-                            for backdoor in [1, 0]:
-                                for seed in [
-                                    0,
-                                    1,
-                                    2,
-                                    3,
-                                    4,
-                                ]:
+            for batch_size in [128]:
+                for extra_data_size in [3000, 10000, 20000]:
+                    for dup in [0, 1]:
+                        for backdoor in [1, 0]:
+                            for data_name in ["mult", "increment", "wiki_fast"]:
+                                for layer in [2, 4, 8, 16]:
                                     # for seed in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]:
 
                                     # for language data, we only want to iterate once (not for each extra data size)
@@ -191,5 +190,5 @@ if __name__ == "__main__":
         print(f"Waiting for {future}")
         print(f"Got result {future.result()}")
 
-        with open(future.stdout, "r") as f:
-            print(f.read())
+        # with open(future.stdout, "r") as f:
+        #    print(f.read())
