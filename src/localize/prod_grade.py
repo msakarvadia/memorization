@@ -96,7 +96,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--model_name",
         type=str,
-        default="EleutherAI/pythia-2.8b-deduped",
+        default="EleutherAI/pythia-6.9b-deduped",
         choices=[
             "EleutherAI/pythia-2.8b-deduped",
             "EleutherAI/pythia-6.9b-deduped",
@@ -204,9 +204,20 @@ if __name__ == "__main__":
         model = AutoModelForCausalLM.from_pretrained(
             args.model_name,
             torch_dtype=torch.float16,
-            device_map="auto",
-            # load_in_8bit=True,
-        )
+        ).to(device)
+        if args.localization_method in [
+            "act",
+            "greedy",
+            "durable",
+            "random",
+            "random_greedy",
+        ]:
+            model = AutoModelForCausalLM.from_pretrained(
+                args.model_name,
+                torch_dtype=torch.float16,
+                device_map="auto",
+                # load_in_8bit=True,
+            )
     """
     print(model.config)
     print(model.gpt_neox.layers[30])
@@ -222,7 +233,7 @@ if __name__ == "__main__":
         data_path = "../data/pythia_mem_data/pythia-6.9b-deduped/pile_bs0-100-dedup.pt"
     data = torch.load(data_path).to(device)
     extra_data = torch.load("../data/pythia_mem_data/pile_random_batch.pt").to(device)
-    random_dataloader = DataLoader(extra_data, batch_size=64, shuffle=False)
+    random_dataloader = DataLoader(extra_data, batch_size=32, shuffle=False)
     extra_data = torch.reshape(extra_data[0:2040], (3264, 80))
     print("data shape: ", extra_data.shape)
     set_model_attributes(model, args.model_name)
