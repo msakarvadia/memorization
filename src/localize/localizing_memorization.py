@@ -492,22 +492,6 @@ if __name__ == "__main__":
         mem_seq = torch.load(mem_seq_path)
         print("Mem seq exists so base stats have to exist")
         exists = 1
-    """
-    if os.path.exists(args.results_path):
-        print("checking if experiment stats are in resutls file")
-        existing_results = pd.read_csv(args.results_path)
-        base_args = copy.deepcopy(args)
-        base_args.localization_method = "base_stats"
-        data = vars(base_args)
-
-        # need to check if "data" is in existing_results
-        ckpt_check_df = existing_results[data.keys()]
-        # exists = check_existance(data, ckpt_check_df)
-        exists = check_basic_stats_existance(data, ckpt_check_df)
-        # print(ckpt_check_df['model_path'].unique())
-        print("Base stats for this experiment exist: ", exists)
-        # print(ckpt_check_df.columns)
-    """
 
     base = 0
     if not exists:
@@ -727,8 +711,6 @@ if __name__ == "__main__":
                         threshold=1e-1,
                         model=model,
                         inputs=unlearn_set,
-                        # inputs=mem_seq,
-                        # inputs=noise_data,
                         gold_set=None,
                         batch_size=args.batch_size,
                     )
@@ -740,9 +722,7 @@ if __name__ == "__main__":
                     attributions = largest_act(
                         inner_dim=model.inner_dim,
                         model=model,
-                        # inputs=noise_data,
                         inputs=unlearn_set,
-                        # inputs=mem_seq,
                         gold_set=None,
                         model_name=model_name,
                         prompt_len=50,
@@ -766,10 +746,6 @@ if __name__ == "__main__":
                     )
         if args.localization_method in ["ig", "slim", "hc", "zero", "act"]:
             print("Applying ablation mask to model")
-            # old method to ablate neurons -- unfortunatly it modifies underlying model architectures
-            # model = apply_ablation_mask_to_neurons(
-            #    attributions, model=model, ratio=args.ratio
-            # )
             # this removes any patching and restores normal model
             # while still editing neurons by modifiying weights direction
             model = get_model(
@@ -884,7 +860,6 @@ if __name__ == "__main__":
         print("\n AFTER MASKING Ablation---------")
 
         # save model
-        # MODEL_PATH = args.model_path[:-4] + f"_edit_{args.unlearn_set_name}.pth"
 
         # have to save hyper-parameter specific model
         # this will work for act/zero/greedy/durable/durable_agg
@@ -935,10 +910,6 @@ if __name__ == "__main__":
             clean_mem_seq_all,
             accs_test,
             perplexities_test,
-            # accBD,
-            # percent_non_mem_bd,
-            # perplex_BD_noise,
-            # perplex_BD_clean,
         ) = track_all_metrics(
             noise_data=noise_data,
             clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
@@ -961,10 +932,6 @@ if __name__ == "__main__":
             perp_clean_dup_classes,
             accs_test,
             perplexities_test,
-            # accBD,
-            # percent_non_mem_bd,
-            # perplex_BD_noise,
-            # perplex_BD_clean,
         )
         ablate_df = pd.DataFrame.from_dict(data)
 
