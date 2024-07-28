@@ -158,6 +158,15 @@ def sort_metrics(
     return data
 
 
+def check_basic_stats_existance(dict_of_values, df):
+    """This is how we check if basic stats have been computed before"""
+    exists = False
+    model_path = dict_of_values["model_path"]
+    if model_path in df["model_path"].unique():
+        exists = True
+    return exists
+
+
 def check_existance(dict_of_values, df):
     """This is how we check if an experiment has been done before"""
     # https://stackoverflow.com/questions/24761133/pandas-check-if-row-exists-with-certain-values
@@ -486,8 +495,10 @@ if __name__ == "__main__":
 
         # need to check if "data" is in existing_results
         ckpt_check_df = existing_results[data.keys()]
-        exists = check_existance(data, ckpt_check_df)
-        print("This value exists: ", exists)
+        # exists = check_existance(data, ckpt_check_df)
+        exists = check_basic_stats_existance(data, ckpt_check_df)
+        # print(ckpt_check_df['model_path'].unique())
+        print("Base stats for this experiment exist: ", exists)
         # print(ckpt_check_df.columns)
     (
         perc_mem_dup_classes,
