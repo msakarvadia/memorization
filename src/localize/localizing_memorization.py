@@ -486,6 +486,14 @@ if __name__ == "__main__":
 
     # only calculate new results if this if it isn't already in data
     exists = 0
+    # TODO have to factor epoch into this
+    mem_seq_path = f"{model_path}mem_seq_{os.path.basename(args.model_path)}"
+    print("path for memorized sequences: ", mem_seq_path)
+    if os.path.exists(mem_seq_path):
+        mem_seq = torch.load(mem_seq_path)
+        print("Mem seq exists so base stats have to exist")
+        exists = 1
+    """
     if os.path.exists(args.results_path):
         print("checking if experiment stats are in resutls file")
         existing_results = pd.read_csv(args.results_path)
@@ -500,35 +508,35 @@ if __name__ == "__main__":
         # print(ckpt_check_df['model_path'].unique())
         print("Base stats for this experiment exist: ", exists)
         # print(ckpt_check_df.columns)
-    (
-        perc_mem_dup_classes,
-        perc_not_mem_dup_classes,
-        perp_noise_dup_classes,
-        perp_clean_dup_classes,
-        mem_seq,
-        clean_mem,
-        accs_test,
-        perplexities_test,
-        # accBD,
-        # percent_non_mem_bd,
-        # perplex_BD_noise,
-        # perplex_BD_clean,
-    ) = track_all_metrics(
-        noise_data=noise_data,
-        clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
-        clean_test_dataloaders=clean_test_dataloaders,
-        dup_idxs=dup_idxs,
-        model=model,
-        prompt_len=50,
-        batch_size=args.batch_size,
-        max_ctx=args.max_ctx,
-        backdoor=args.backdoor,
-        data_name=args.data_name,
-        trigger=trigger,
-    )
+    """
 
     base = 0
     if not exists:
+        (
+            perc_mem_dup_classes,
+            perc_not_mem_dup_classes,
+            perp_noise_dup_classes,
+            perp_clean_dup_classes,
+            mem_seq,
+            clean_mem,
+            accs_test,
+            perplexities_test,
+        ) = track_all_metrics(
+            noise_data=noise_data,
+            clean_data_corresponding_to_noise=clean_data_corresponding_to_noise,
+            clean_test_dataloaders=clean_test_dataloaders,
+            dup_idxs=dup_idxs,
+            model=model,
+            prompt_len=50,
+            batch_size=args.batch_size,
+            max_ctx=args.max_ctx,
+            backdoor=args.backdoor,
+            data_name=args.data_name,
+            trigger=trigger,
+        )
+        # Save mem_seq in edited model_path
+        torch.save(mem_seq, mem_seq_path)
+
         # there is no localization method for args
         base_args = copy.deepcopy(args)
         base_args.localization_method = "base_stats"
@@ -541,13 +549,8 @@ if __name__ == "__main__":
             perp_clean_dup_classes,
             accs_test,
             perplexities_test,
-            # accBD,
-            # percent_non_mem_bd,
-            # perplex_BD_noise,
-            # perplex_BD_clean,
         )
 
-        # print(data)
         base_df = pd.DataFrame.from_dict(data)
         base = 1
 
@@ -661,7 +664,6 @@ if __name__ == "__main__":
             if args.localization_method in ["ig"]:
                 attrib_dir = attrib_dir + f"{args.ig_steps}/"
             name_of_attrib = attrib_dir + os.path.basename(args.model_path)
-            print(name_of_attrib)
             # Make parent directories in path if it doesn't exist
             if not os.path.exists(attrib_dir):
                 os.makedirs(attrib_dir)
