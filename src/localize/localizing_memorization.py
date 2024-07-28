@@ -486,7 +486,6 @@ if __name__ == "__main__":
 
     # only calculate new results if this if it isn't already in data
     exists = 0
-    # TODO have to factor epoch into this
     mem_seq_path = f"{model_path}mem_seq_{os.path.basename(args.model_path)}"
     print("path for memorized sequences: ", mem_seq_path)
     if os.path.exists(mem_seq_path):
