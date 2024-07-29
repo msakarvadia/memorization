@@ -23,8 +23,8 @@ if __name__ == "__main__":
         "worker_init": f"module use /soft/modulefiles; module load conda; conda activate {env}; cd {run_dir}",  # load the environment where parsl is installed
         "scheduler_options": "#PBS -l filesystems=home:eagle:grand",  # specify any PBS options here, like filesystems
         "account": "argonne_tpc",
-        "queue": "preemptable",  # e.g.: "prod","debug, "preemptable" (see https://docs.alcf.anl.gov/polaris/running-jobs/)
-        "walltime": "72:00:00",
+        "queue": "debug",  # e.g.: "prod","debug, "preemptable" (see https://docs.alcf.anl.gov/polaris/running-jobs/)
+        "walltime": "01:00:00",
         "nodes_per_block": 1,  # think of a block as one job on polaris, so to run on the main queues, set this >= 10
         # "cpus_per_node":    32, # Up to 64 with multithreading
         "available_accelerators": 4,  # Each Polaris node has 4 GPUs, setting this ensures one worker per GPU
@@ -92,9 +92,9 @@ if __name__ == "__main__":
     ):
         # assign duplication folder or not
         dup_folder = "no_dup_noise"
-        if dup:
+        if dup == "1":
             dup_folder = "dup_noise"
-        if backdoor:
+        if backdoor == "1":
             dup_folder = "no_dup_backdoor"
 
         # add in ckpt dir derivation
@@ -113,7 +113,7 @@ if __name__ == "__main__":
             trained_epochs = 30
             placeholder_path = f"/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/lm_test/wiki_4_noise_dup/"
         if data_name == "wiki_fast" and backdoor == "1":
-            trained_epochs = 30
+            trained_epochs = 60
             placeholder_path = f"/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/lm_test/wiki_4_backdoor_dup/"
 
         if n_layers == "1":
@@ -132,6 +132,7 @@ if __name__ == "__main__":
         model_name = f"{n_layers}_layer_{trained_epochs}_epoch.pth"
         model_path = f"{placeholder_path}{model_name}"
         # model_path = f"{ckpt_dir}{model_name}"
+        print(model_path)
 
         exec_str = f"python localize_hp_sweep.py --model_path {model_path} --n_layers {n_layers} --data_name {data_name} --num_extra {num_extra_data} --seed {seed}"
 

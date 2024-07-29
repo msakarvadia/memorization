@@ -958,3 +958,24 @@ if __name__ == "__main__":
         else:
             print("making new results file")
             result.to_csv(args.results_path, index=False)
+
+    # if we don't have anything in our mem seq, then we can still add our base_stats
+    if len(unlearn_set) == 0:
+        # Now we concatentate all df together
+        # if we already caluclated base_df, we don't reappend
+        if base:
+            print("appending just base results since mem_seq was empty")
+            result = pd.concat([base_df], axis=0, ignore_index=True)
+
+            # Now open results.csv if it exisits and append
+            if os.path.exists(args.results_path):
+                print("appending to existing results file")
+                existing_results = pd.read_csv(args.results_path)
+                existing_results = pd.concat(
+                    [existing_results, result], axis=0, ignore_index=True
+                )
+                existing_results.to_csv(args.results_path, index=False)
+            # Otherwise make a new results.csv
+            else:
+                print("making new results file")
+                result.to_csv(args.results_path, index=False)
