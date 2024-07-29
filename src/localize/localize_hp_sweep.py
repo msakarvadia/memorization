@@ -96,7 +96,7 @@ if __name__ == "__main__":
                             --localization_method {loc_method}"""
                     os.system(command)
                     print("RAN COMMAND")
-            if loc_method in ["slim", "hc", "greedy", "random", "random_greedy"]:
+            if loc_method in ["slim", "hc", "random", "random_greedy"]:
                 for epochs in [1, 10, 30]:
                     command = f"""python localizing_memorization.py\
                              --model_path {args.model_path}\
