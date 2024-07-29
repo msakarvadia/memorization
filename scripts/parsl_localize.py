@@ -134,7 +134,7 @@ if __name__ == "__main__":
         # model_path = f"{ckpt_dir}{model_name}"
         print(model_path)
 
-        exec_str = f"python localize_hp_sweep.py --model_path {model_path} --n_layers {n_layers} --data_name {data_name} --num_extra {num_extra_data} --seed {seed}"
+        exec_str = f"python localize_hp_sweep.py --model_path {model_path} --n_layers {n_layers} --data_name {data_name} --num_extra {num_extra_data} --seed {seed} --duplicate {dup} --backdoor {backdoor}"
 
         return f" env | grep CUDA; {exec_str};"
 
