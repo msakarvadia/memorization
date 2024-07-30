@@ -29,38 +29,6 @@ from src.localize.weight.random_subnet import (
 )
 
 
-"""
-class SupermaskConv(Conv1D):
-    def __init__(self, sparsity, *args, **kwargs):
-
-        super().__init__(*args, **kwargs)
-
-        # initialize the scores
-        self.scores = nn.Parameter(torch.Tensor(self.weight.size()))
-        nn.init.kaiming_uniform_(self.scores, a=math.sqrt(5))
-
-        # NOTE: initialize the weights like this.
-        nn.init.kaiming_normal_(self.weight, mode="fan_in", nonlinearity="relu")
-
-        # NOTE: turn the gradient on the weights off
-        self.weight.requires_grad = False
-        self.bias.requires_grad = False
-
-        # set sparsity
-        self.sparsity = sparsity
-
-    def forward(self, x):
-        subnet = GetSubnet.apply(self.scores.abs(), self.sparsity)
-        w = self.weight * subnet
-
-        size_out = x.size()[:-1] + (self.nf,)
-        x = torch.addmm(self.bias, x.view(-1, x.size(-1)), w)
-        x = x.view(size_out)
-        return x
-
-"""
-
-
 def train(model, device, train_dataloader, optimizer, batch_size):
     model.train()
     # train_dataloader = DataLoader(noise_data, batch_size=64, shuffle=False)
@@ -72,8 +40,17 @@ def train(model, device, train_dataloader, optimizer, batch_size):
         # if we want to unlearn we just increase this loss (change direction in which we optimize)
         # train_loss = -model_output.loss
         loss = clm_loss_fn(batch, train_logits)
-        loss *= -batch_size * label.to(device)
-        train_loss = loss.mean()
+        loss_clean = loss[label == -1].mean()
+        # print(loss_clean.shape)
+        loss_noise = loss[label == 1].mean()
+        # print(loss_noise.shape)
+        # print(loss.shape)
+
+        # NOTE(MS): this is the og loss funcation
+        # loss *= -batch_size * label.to(device)
+        # train_loss = loss.mean()
+        loss = -0.5 * loss_noise + 0.5 * loss_clean
+        train_loss = loss
 
         train_loss.backward()
         optimizer.step()
