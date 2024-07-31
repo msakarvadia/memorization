@@ -1,5 +1,7 @@
 import torch
+import os
 import argparse
+import pandas as pd
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from tqdm import tqdm
 from src.localize.neuron.neuron_utils import (
@@ -78,17 +80,17 @@ def check_percent_memorized(
 
             total += batch.shape[0]
             memorized += total_matchs
-            percent_mem = memorized / total
+            percent_mem = (memorized / total).item()
             # print("perc mem so far: ", percent_mem)
     # check if list is empty
     if len(mem_seq) > 0:
         mem_seq = torch.cat(mem_seq, 0)
-    print("perc mem: ", percent_mem.item())
+    print("perc mem: ", percent_mem)
 
     perplexity_random_batch = perplexity(random_dataloader, model)
     print("perplexities of random pile batch: ", perplexity_random_batch)
 
-    return percent_mem, mem_seq
+    return percent_mem, mem_seq, perplexity_random_batch
 
 
 if __name__ == "__main__":
@@ -96,7 +98,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--model_name",
         type=str,
-        default="EleutherAI/pythia-6.9b-deduped",
+        default="EleutherAI/pythia-2.8b-deduped",
         choices=[
             "EleutherAI/pythia-2.8b-deduped",
             "EleutherAI/pythia-6.9b-deduped",
@@ -109,16 +111,16 @@ if __name__ == "__main__":
         default="hc",
         choices=[
             "greedy",
-            "greedy_obs2",
+            # "greedy_obs2",
             "durable",
             "durable_agg",
-            "obs",
+            # "obs",
             "random",
             "random_greedy",
-            "greedy_obs",
-            "zero",
+            # "greedy_obs",
+            # "zero",
             "act",
-            "ig",
+            # "ig",
             "slim",
             "hc",
         ],
@@ -184,48 +186,21 @@ if __name__ == "__main__":
         default=0.0005,
         help="Random HP: weight decay to optimize masks with",
     )
+    parser.add_argument(
+        "--step",
+        type=str,
+        default="step143000",
+        help="The version of the model we load.",
+    )
+    parser.add_argument(
+        "--assess_mem",
+        type=int,
+        default=0,
+        help="Do we track memorization accross all model steps and record it.",
+    )
     args = parser.parse_args()
 
-    tokenizer = AutoTokenizer.from_pretrained(args.model_name)
-    if "2" in args.model_name:
-        model = AutoModelForCausalLM.from_pretrained(
-            args.model_name,
-            torch_dtype=torch.float16,
-        ).to(device)
-        if args.localization_method in ["durable", "durable_agg", "random_greedy"]:
-            model = AutoModelForCausalLM.from_pretrained(
-                args.model_name,
-                torch_dtype=torch.float16,
-                device_map="auto",
-                # load_in_8bit=True,
-            )
-
-    if "6" in args.model_name:
-        model = AutoModelForCausalLM.from_pretrained(
-            args.model_name,
-            torch_dtype=torch.float16,
-        ).to(device)
-        if args.localization_method in [
-            "act",
-            "greedy",
-            "durable",
-            "durable_agg",
-            "random",
-            "random_greedy",
-        ]:
-            model = AutoModelForCausalLM.from_pretrained(
-                args.model_name,
-                torch_dtype=torch.float16,
-                device_map="auto",
-                # load_in_8bit=True,
-            )
-    """
-    print(model.config)
-    print(model.gpt_neox.layers[30])
-    for name, param in model.named_parameters():
-        if "mlp" in name:
-            param.requires_grad = True
-    """
+    # Get data
     if "2" in args.model_name:
         data_path = (
             "../data/pythia_mem_data/pythia-2.8b-deduped-v0/pile_bs0-100-dedup.pt"
@@ -237,21 +212,81 @@ if __name__ == "__main__":
     random_dataloader = DataLoader(extra_data, batch_size=32, shuffle=False)
     extra_data = torch.reshape(extra_data[0:2040], (3264, 80))
     print("data shape: ", extra_data.shape)
+
+    # get tokenizer
+    tokenizer = AutoTokenizer.from_pretrained(args.model_name)
+
+    if args.assess_mem:
+        print(f"we are assessing memorization for {args.model_name}")
+        perplexities = []
+        perc_mems = []
+        steps = []
+        for step in range(1000, 4000, 1000):
+            print("step: ", step)
+            model = AutoModelForCausalLM.from_pretrained(
+                args.model_name,
+                revision=f"step{step}",
+                torch_dtype=torch.float16,
+                device_map="auto",
+            )
+            percent_mem, mem_seq, perp = check_percent_memorized(
+                dataset=data,
+                random_data=extra_data,
+                prompt_len=32,
+                k=40,
+                batch_size=64,
+                model=model,
+                max_ctx=80,
+                pad_token_id=tokenizer.eos_token_id,
+            )
+            perc_mems.append(percent_mem)
+            perplexities.append(perp)
+            steps.append(step)
+        mem_over_time = pd.DataFrame(
+            {"step": steps, "perplexity": perplexities, "perc_mem": perc_mems}
+        )
+        mem_over_time_path = f"{os.path.basename(args.model_name)}_mem_over_time.csv"
+        print(mem_over_time_path)
+        # print("base path: ")
+        # if not os.path.exists(os.path.basename(mem_over_time_path)):
+        #    os.makedirs(mem_over_time_path)
+        mem_over_time.to_csv(mem_over_time_path, index=False)
+
+    model = AutoModelForCausalLM.from_pretrained(
+        args.model_name,
+        revision=args.step,
+        torch_dtype=torch.float16,
+    ).to(device)
+
+    if "2" in args.model_name:
+        if args.localization_method in ["durable", "durable_agg", "random_greedy"]:
+            model = AutoModelForCausalLM.from_pretrained(
+                args.model_name,
+                revision=args.step,
+                torch_dtype=torch.float16,
+                device_map="auto",
+                # load_in_8bit=True,
+            )
+
+    if "6" in args.model_name:
+        if args.localization_method in [
+            "act",
+            "greedy",
+            "durable",
+            "durable_agg",
+            "random",
+            "random_greedy",
+        ]:
+            model = AutoModelForCausalLM.from_pretrained(
+                args.model_name,
+                revision=args.step,
+                torch_dtype=torch.float16,
+                device_map="auto",
+                # load_in_8bit=True,
+            )
     set_model_attributes(model, args.model_name)
 
-    # print(model)
-    """
-    #NOTE (MS): not doing zero out for prod grad models
-    print("doing zero out")
-    attributions = fast_zero_out_vector(
-        inner_dim=model.inner_dim,
-        n_batches=32,
-        model=model,
-        inputs=data, #TODO swap w/ mem seq
-        prompt_len=args.prompt_len,
-    )
-    """
-    percent_mem, mem_seq = check_percent_memorized(
+    percent_mem, mem_seq, perp = check_percent_memorized(
         dataset=data,
         random_data=extra_data,
         prompt_len=32,
@@ -389,7 +424,7 @@ if __name__ == "__main__":
             model_name=args.model_name,
         )
 
-    percent_mem, mem_seq = check_percent_memorized(
+    percent_mem, mem_seq, perp = check_percent_memorized(
         dataset=data,
         random_data=extra_data,
         prompt_len=32,

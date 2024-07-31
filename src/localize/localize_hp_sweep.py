@@ -69,14 +69,14 @@ if __name__ == "__main__":
         "obs",
     ]:
         # TODO (MS): add in more ratios
-        for ratio in [0.00001, 0.0001, 0.001, 0.01, 0.05, 0.1, 0.25, 0.50, 0.75, 0.9]:
+        for ratio in [0.00001, 0.0001, 0.001, 0.01, 0.05, 0.1, 0.25]:
             # want to reserve high ratios for random based methods
             if loc_method not in ["random", "random_greedy"]:
                 if ratio >= 0.1:
                     continue
 
             if loc_method in ["ig"]:
-                for ig_steps in [1, 10, 20]:
+                for ig_steps in [20]:
                     command = f"""python localizing_memorization.py\
                              --model_path {args.model_path}\
                             --n_layer {args.n_layers}\

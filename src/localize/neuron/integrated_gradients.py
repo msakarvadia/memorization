@@ -160,7 +160,7 @@ def ig_full_data(
 ):
     print("Inputs shape: ", inputs.shape)
     ig_mean = torch.zeros(model.config.n_layer, model.inner_dim)
-    for i, x in enumerate(inputs):
+    for i, x in tqdm(enumerate(inputs)):
         ig_mean += integrated_gradients(
             inner_dim=model.inner_dim,
             model=model,
