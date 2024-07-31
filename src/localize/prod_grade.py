@@ -221,7 +221,7 @@ if __name__ == "__main__":
         perplexities = []
         perc_mems = []
         steps = []
-        for step in range(1000, 4000, 1000):
+        for step in range(11000, 143000, 11000):
             print("step: ", step)
             model = AutoModelForCausalLM.from_pretrained(
                 args.model_name,
