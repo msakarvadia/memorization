@@ -190,5 +190,5 @@ if __name__ == "__main__":
         print(f"Waiting for {future}")
         print(f"Got result {future.result()}")
 
-        with open(future.stdout, "r") as f:
-            print(f.read())
+        # with open(future.stdout, "r") as f:
+        #    print(f.read())
