@@ -1,6 +1,7 @@
 import argparse
 import pandas as pd
 from src.data.old_data import *
+import re
 
 from src.localize.neuron.neuron_utils import (
     apply_ablation_mask_to_base_model,
@@ -434,8 +435,10 @@ if __name__ == "__main__":
 
     # We store locaization results in the parent dir of the edited models
     model_path, model_file_name = os.path.split(args.model_path)
+    x = re.split("_", model_file_name)
+    # print("Model epoch: ", x[2])
     model_path = model_path + "_edit/"
-    args.results_path = f"{model_path}localization_results.csv"
+    args.results_path = f"{model_path}localization_results_{x[2]}.csv"
     if os.path.exists(args.results_path):
         print("checking if experiment stats are in resutls file")
         existing_results = pd.read_csv(args.results_path)
@@ -963,6 +966,7 @@ if __name__ == "__main__":
     if len(unlearn_set) == 0:
         # Now we concatentate all df together
         # if we already caluclated base_df, we don't reappend
+        print("result csv: ", args.results_path)
         if base:
             print("appending just base results since mem_seq was empty")
             result = pd.concat([base_df], axis=0, ignore_index=True)
