@@ -310,7 +310,7 @@ def train_model_track_memorization_per_training_set(
         train_perplexities.append((avg_train_perp / len(train_dataloader)))
         # model_alphas.append(get_alpha(model=model))
 
-        if ((epoch + 1) % args.checkpoint_every) == 0:
+        if ((epoch) % args.checkpoint_every) == 0:
             # make sure
             model.eval()
             print("saving ckpt")
@@ -362,7 +362,7 @@ def train_model_track_memorization_per_training_set(
                     test_accuracies[i].append(
                         (avg_test_accuracy.cpu() / len(test_dataloaders[i]))
                     )
-                    test_perplexities[i].append((avg_test_perp / len(train_dataloader)))
+                    test_perplexities[i].append((avg_test_perp / len(test_dataloader)))
 
             if not os.path.exists(ckpt_dir):
                 os.makedirs(ckpt_dir)
