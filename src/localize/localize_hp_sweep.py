@@ -69,10 +69,14 @@ if __name__ == "__main__":
         "obs",
     ]:
         # TODO (MS): add in more ratios
-        for ratio in [0.00001, 0.0001, 0.001, 0.01, 0.05, 0.1, 0.25]:
+        for ratio in [0.00001, 0.0001, 0.001, 0.01, 0.05, 0.1, 0.25, 0.3]:
             # want to reserve high ratios for random based methods
             if loc_method not in ["random", "random_greedy"]:
                 if ratio >= 0.1:
+                    continue
+
+            if loc_method in ["greedy"]:
+                if ratio > 0.05:
                     continue
 
             if loc_method in ["ig"]:
@@ -97,7 +101,7 @@ if __name__ == "__main__":
                     os.system(command)
                     print("RAN COMMAND")
             if loc_method in ["slim", "hc", "random", "random_greedy"]:
-                for epochs in [1, 10, 30]:
+                for epochs in [1, 10, 20]:
                     command = f"""python localizing_memorization.py\
                              --model_path {args.model_path}\
                             --n_layer {args.n_layers}\
