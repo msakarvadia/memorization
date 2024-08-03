@@ -362,11 +362,11 @@ def train_model_track_memorization_per_training_set(
                     test_accuracies[i].append(
                         (avg_test_accuracy.cpu() / len(test_dataloaders[i]))
                     )
-                    test_perplexities[i].append((avg_test_perp / len(test_dataloader)))
+                    test_perplexities[i].append((avg_test_perp / len(test_dataloaders)))
 
             if not os.path.exists(ckpt_dir):
                 os.makedirs(ckpt_dir)
-            MODEL_PATH = f"{ckpt_dir}/{n_layers}_layer_{epoch+1}_epoch.pth"
+            MODEL_PATH = f"{ckpt_dir}/{n_layers}_layer_{epoch}_epoch.pth"
             print("Model path: ", MODEL_PATH)
             # Add checkpointing back in
             torch.save(
