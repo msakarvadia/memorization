@@ -1,3 +1,4 @@
+import os
 import parsl
 from parsl.app.app import bash_app
 from parsl.config import Config
@@ -23,9 +24,9 @@ if __name__ == "__main__":
         "worker_init": f"module use /soft/modulefiles; module load conda; conda activate {env}; cd {run_dir}",  # load the environment where parsl is installed
         "scheduler_options": "#PBS -l filesystems=home:eagle:grand",  # specify any PBS options here, like filesystems
         "account": "argonne_tpc",
-        "queue": "preemptable",  # e.g.: "prod","debug, "preemptable" (see https://docs.alcf.anl.gov/polaris/running-jobs/)
-        "walltime": "24:00:00",
-        "nodes_per_block": 1,  # think of a block as one job on polaris, so to run on the main queues, set this >= 10
+        "queue": "debug",  # e.g.: "prod","debug, "preemptable" (see https://docs.alcf.anl.gov/polaris/running-jobs/)
+        "walltime": "01:00:00",
+        "nodes_per_block": 2,  # think of a block as one job on polaris, so to run on the main queues, set this >= 10
         # "cpus_per_node":    32, # Up to 64 with multithreading
         "available_accelerators": 4,  # Each Polaris node has 4 GPUs, setting this ensures one worker per GPU
         # "cores_per_worker": 8, # this will set the number of cpu hardware threads per worker.
@@ -120,9 +121,11 @@ if __name__ == "__main__":
         model_name = f"{n_layers}_layer_{ckpt_epoch}_epoch.pth"
         model_path = f"{ckpt_dir}{model_name}"
         print(model_path)
-        # TODO (MS): check if model path exists before starting experiment
-
-        exec_str = f"python localize_hp_sweep.py --model_path {model_path} --n_layers {n_layers} --data_name {data_name} --num_extra {num_extra_data} --seed {seed} --duplicate {dup} --backdoor {backdoor}"
+        # check if model path exists before starting experiment
+        if os.path.isfile(model_path):
+            exec_str = f"python localize_hp_sweep.py --model_path {model_path} --n_layers {n_layers} --data_name {data_name} --num_extra {num_extra_data} --seed {seed} --duplicate {dup} --backdoor {backdoor}"
+        else:
+            print("file doesn't exist")
 
         return f" env | grep CUDA; {exec_str};"
 
