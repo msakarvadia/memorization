@@ -212,7 +212,7 @@ def train_model_track_memorization_per_training_set(
                     weight,
                     is_attn_weight=is_attn_weight,
                     is_attn_proj=is_attn_proj,
-                    num_heads=n_head,
+                    num_heads=4,
                 ).to(device)
 
     # Automatically find the checkpoint if it exists
