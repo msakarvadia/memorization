@@ -89,7 +89,6 @@ if __name__ == "__main__":
         n_layers=1,
         dup=0,
         backdoor=0,
-        ckpt_epoch=100,
     ):
         # assign duplication folder or not
         dup_folder = "no_dup_noise"
@@ -104,6 +103,18 @@ if __name__ == "__main__":
             base_dir = f"{data_name}/{length}_{max_ctx}_{seed}_{batch_size}_{lr}"
 
         base_path = f"/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/{dup_folder}/{base_dir}/"
+        if data_name == "mult" and backdoor == "1":
+            trained_epochs = 5
+            placeholder_path = f"/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/5_mult_data_distributions_bd_testing_150/four_layer/"
+        if data_name == "mult" and backdoor == "0":
+            trained_epochs = 2000
+            placeholder_path = f"/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/5_mult_data_distributions_testing_150/four_layer/"
+        if data_name == "wiki_fast" and backdoor == "0":
+            trained_epochs = 30
+            placeholder_path = f"/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/lm_test/wiki_4_noise_dup/"
+        if data_name == "wiki_fast" and backdoor == "1":
+            trained_epochs = 60
+            placeholder_path = f"/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/lm_test/wiki_4_backdoor_dup/"
 
         if n_layers == "1":
             layer_dir = "one_layer"
@@ -116,11 +127,12 @@ if __name__ == "__main__":
         if n_layers == "16":
             layer_dir = "sixteen_layer"
 
+        # TODO (MS): fix model path!
         ckpt_dir = f"{base_path}{layer_dir}/"
-        model_name = f"{n_layers}_layer_{ckpt_epoch}_epoch.pth"
-        model_path = f"{ckpt_dir}{model_name}"
+        model_name = f"{n_layers}_layer_{trained_epochs}_epoch.pth"
+        model_path = f"{placeholder_path}{model_name}"
+        # model_path = f"{ckpt_dir}{model_name}"
         print(model_path)
-        # TODO (MS): check if model path exists before starting experiment
 
         exec_str = f"python localize_hp_sweep.py --model_path {model_path} --n_layers {n_layers} --data_name {data_name} --num_extra {num_extra_data} --seed {seed} --duplicate {dup} --backdoor {backdoor}"
 
@@ -128,63 +140,48 @@ if __name__ == "__main__":
 
     param_list = []
 
-    for seed in [
-        0,
-        1,
-        2,
-        # 3,
-        # 4,
-    ]:
+    for layer in [4]:
         for lr in [1e-3]:
-            for batch_size in [128]:
-                for extra_data_size in [3000, 10000, 20000]:
-                    for dup in [0, 1]:
-                        for backdoor in [1, 0]:
-                            for data_name in ["mult", "increment", "wiki_fast"]:
-                                for layer in [2, 4, 8, 16]:
+            for data_name in ["wiki_fast", "mult"]:
+                # for data_name in ["mult", "increment", "wiki_fast"]:
+                for batch_size in [32]:
+                    for extra_data_size in [20000]:
+                        for dup in [0, 1]:
+                            for backdoor in [0, 1]:
+                                for seed in [
+                                    0,
+                                ]:
+
+                                    # for language data, we only want to iterate once (not for each extra data size)
                                     if (
-                                        data_name in ["mult", "increment"]
-                                        and not backdoor
+                                        data_name == "wiki_fast"
+                                        and extra_data_size != 20000
                                     ):
-                                        epochs = [500, 1500, 2500, 3500]
-                                    if data_name in ["mult", "increment"] and backdoor:
-                                        epochs = [50, 200, 350, 500]
-                                    if data_name in ["wiki_fast"] and not backdoor:
-                                        epochs = [10, 40, 70, 100]
-                                    if data_name in ["wiki_fast"] and backdoor:
-                                        epochs = [10, 20, 30, 50]
-                                    for ckpt_epoch in epochs:
+                                        continue
 
-                                        # for language data, we only want to iterate once (not for each extra data size)
-                                        if (
-                                            data_name == "wiki_fast"
-                                            and extra_data_size != 20000
-                                        ):
-                                            continue
-                                        # we only want to train language on duplicated data
-                                        if data_name == "wiki_fast" and dup == 0:
-                                            continue
-                                        if data_name == "mult" and dup == 1:
-                                            continue
-                                        if data_name == "increment" and dup == 1:
-                                            continue
+                                    # we only want to train language on duplicated data
+                                    if data_name == "wiki_fast" and dup == 0:
+                                        continue
 
-                                        args_dict = {
-                                            "n_layers": f"{layer}",
-                                            "batch_size": f"{batch_size}",
-                                            "lr": f"{lr}",
-                                            "data_name": f"{data_name}",
-                                            "num_7": f"20000",
-                                            "num_extra_data": f"{extra_data_size}",
-                                            "epochs": f"3500",
-                                            "seed": f"{seed}",
-                                            "length": f"20",
-                                            "max_ctx": f"150",
-                                            "dup": f"{dup}",
-                                            "backdoor": f"{backdoor}",
-                                            "ckpt_epoch": f"{ckpt_epoch}",
-                                        }
-                                        param_list.append(args_dict)
+                                    if data_name == "mult" and dup == 1:
+                                        continue
+
+                                    args_dict = {
+                                        "n_layers": f"{layer}",
+                                        "batch_size": f"{batch_size}",
+                                        "lr": f"{lr}",
+                                        "data_name": f"{data_name}",
+                                        "num_7": f"20000",
+                                        "num_extra_data": f"{extra_data_size}",
+                                        "epochs": f"1",
+                                        "seed": f"{seed}",
+                                        "length": f"20",
+                                        "max_ctx": f"150",
+                                        "dup": f"{dup}",
+                                        "backdoor": f"{backdoor}",
+                                    }
+                                    print(args_dict)
+                                    param_list.append(args_dict)
 
     print("Number of total experiments: ", len(param_list))
     futures = [localize_memorization(**args) for args in param_list]
