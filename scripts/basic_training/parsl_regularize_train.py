@@ -109,6 +109,9 @@ if __name__ == "__main__":
             base_dir = f"{data_name}/{length}_{max_ctx}_{seed}_{batch_size}_{lr}"
 
         base_path = f"/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/{backdoor_folder}/{dup_folder}/{base_dir}/"
+
+        print("base path: ", base_path)
+
         if n_layers == "1":
             layer_dir = "one_layer"
         if n_layers == "2":
@@ -163,7 +166,7 @@ if __name__ == "__main__":
                                 for layer in [4]:
                                     for reg in [
                                         "spec_reg",
-                                        "loss_trun",
+                                        "loss_trunc",
                                         "example_drop",
                                     ]:
                                         for lam in [0.001, 0.01, 0.1]:
@@ -177,7 +180,8 @@ if __name__ == "__main__":
                                                     continue
                                                 # lam is a spec_reg HP only, so don't do search for other two settings
                                                 if (
-                                                    reg in ["loss_trun", "example_drop"]
+                                                    reg
+                                                    in ["loss_trunc", "example_drop"]
                                                     and lam >= 0.01
                                                 ):
                                                     continue
