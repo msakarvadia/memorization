@@ -488,15 +488,31 @@ if __name__ == "__main__":
     print("BEFORE MASKING---------")
 
     # only calculate new results if this if it isn't already in data
+    # if os.path.exists(mem_seq_path):
+    #    mem_seq = torch.load(mem_seq_path)
+    #    print("Mem seq exists so base stats have to exist")
+    #    exists = 1
+
     exists = 0
+    if os.path.exists(args.results_path):
+        print("checking if experiment stats are in resutls file")
+        existing_results = pd.read_csv(args.results_path)
+        data = vars(args)
+        print(data)
+        # need to check if "data" is in existing_results
+        ckpt_check_df = existing_results[data.keys()]
+        exists = check_basic_stats_existance(data, ckpt_check_df)
+        print("The basic stats exists: ", exists)
+
+    # make path for mem_seq and edited model
     if not os.path.exists(model_path):
         os.makedirs(model_path)
     mem_seq_path = f"{model_path}mem_seq_{os.path.basename(args.model_path)}"
-    print("path for memorized sequences: ", mem_seq_path)
-    if os.path.exists(mem_seq_path):
+
+    # the base experiment exists so load it from the path
+    if exists:
         mem_seq = torch.load(mem_seq_path)
-        print("Mem seq exists so base stats have to exist")
-        exists = 1
+    print("path for memorized sequences: ", mem_seq_path)
 
     base = 0
     if not exists:
