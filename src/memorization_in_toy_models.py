@@ -61,7 +61,6 @@ num_test = 1000
 
 # Optimizer config
 # lr = 1e-3
-wd = 0.1
 betas = (0.9, 0.98)
 
 # num_epochs = 50
@@ -191,6 +190,7 @@ def train_model_track_memorization_per_training_set(
             []
         )  # add empty list to perc mem for each duplication set e.g. 10^0, 10^1, ...
 
+    l1_lam = extra_kwargs.get("l1_lam", 0.0)
     do_dropout = extra_kwargs.get("dropout")
 
     # Init Loss Truncation if desired
@@ -298,6 +298,12 @@ def train_model_track_memorization_per_training_set(
                 # add regularization term to loss
                 train_loss += (lam / 2) * reg_loss
 
+            # apply L1 Regularization
+            if l1_lam != 0.0:
+                all_params = torch.cat([x.view(-1) for x in model.parameters()])
+                l1_norm = l1_lam * torch.norm(all_params, 1)
+                train_loss += l1_lam * l1_norm
+                
             train_loss.backward()
             avg_train_loss += train_loss.cpu().item()
             avg_train_perp += torch.exp(train_loss).cpu().item()
@@ -526,6 +532,18 @@ if __name__ == "__main__":
         help="Whether to apply example-tied dropout during training.",
     )
     parser.add_argument(
+        "--l1-reg",
+        type=float,
+        default=0.0,
+        help="Regularization coefficient for L1 Regularization (Lasso Reg.)",
+    )
+    parser.add_argument(
+        "--l2-reg",
+        type=float,
+        default=0.0,
+        help="Regularization coefficient for weight decay (L2 Reg./Ridge Reg.)",
+    )
+    parser.add_argument(
         "--checkpoint_every",
         type=int,
         default=5,
@@ -656,6 +674,7 @@ if __name__ == "__main__":
         "spectral_reg": args.spectral_reg,
         "lam": args.lam,
         "dropout": args.example_tied_dropout,
+        "l1_lam": args.l1_reg,
     }
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -788,8 +807,9 @@ if __name__ == "__main__":
     model.to(device)
 
     # Set up optimizer
+    weight_decay = args.l2_reg
     optimizer = torch.optim.AdamW(
-        model.parameters(), lr=args.lr, weight_decay=wd, betas=betas
+        model.parameters(), lr=args.lr, weight_decay=weight_decay, betas=betas
     )
 
     # Train model
