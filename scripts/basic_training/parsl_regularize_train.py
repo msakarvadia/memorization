@@ -189,7 +189,7 @@ if __name__ == "__main__":
                                                 # for language data, we only want to iterate once (not for each extra data size)
                                                 if (
                                                     data_name == "wiki_fast"
-                                                    and extra_data_size != 20000
+                                                    and extra_data_size != 3000
                                                 ):
                                                     continue
                                                 # we only want to train language on duplicated data
