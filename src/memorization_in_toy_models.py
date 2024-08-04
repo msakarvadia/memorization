@@ -303,7 +303,7 @@ def train_model_track_memorization_per_training_set(
                 all_params = torch.cat([x.view(-1) for x in model.parameters()])
                 l1_norm = l1_lam * torch.norm(all_params, 1)
                 train_loss += l1_lam * l1_norm
-                
+
             train_loss.backward()
             avg_train_loss += train_loss.cpu().item()
             avg_train_perp += torch.exp(train_loss).cpu().item()
@@ -368,7 +368,9 @@ def train_model_track_memorization_per_training_set(
                     test_accuracies[i].append(
                         (avg_test_accuracy.cpu() / len(test_dataloaders[i]))
                     )
-                    test_perplexities[i].append((avg_test_perp / len(test_dataloaders[i])))
+                    test_perplexities[i].append(
+                        (avg_test_perp / len(test_dataloaders[i]))
+                    )
 
             if not os.path.exists(ckpt_dir):
                 os.makedirs(ckpt_dir)
@@ -540,7 +542,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--l2-reg",
         type=float,
-        default=0.0,
+        default=0.1,
         help="Regularization coefficient for weight decay (L2 Reg./Ridge Reg.)",
     )
     parser.add_argument(
