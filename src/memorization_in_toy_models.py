@@ -368,7 +368,7 @@ def train_model_track_memorization_per_training_set(
                     test_accuracies[i].append(
                         (avg_test_accuracy.cpu() / len(test_dataloaders[i]))
                     )
-                    test_perplexities[i].append((avg_test_perp / len(test_dataloaders)))
+                    test_perplexities[i].append((avg_test_perp / len(test_dataloaders[i])))
 
             if not os.path.exists(ckpt_dir):
                 os.makedirs(ckpt_dir)
