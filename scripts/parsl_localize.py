@@ -1,4 +1,3 @@
-import os
 import parsl
 from parsl.app.app import bash_app
 from parsl.config import Config
@@ -92,19 +91,24 @@ if __name__ == "__main__":
         backdoor=0,
         ckpt_epoch=100,
     ):
+
         # assign duplication folder or not
-        dup_folder = "no_dup_noise"
         if dup == "1":
-            dup_folder = "dup_noise"
+            dup_folder = "dup"
+        if dup == "0":
+            dup_folder = "not_dup"
         if backdoor == "1":
-            dup_folder = "no_dup_backdoor"
+            backdoor_folder = "backdoor"
+        if backdoor == "0":
+            backdoor_folder = "noise"
 
         # add in ckpt dir derivation
-        base_dir = f"{data_name}/{num_7}_{num_extra_data}_{num_extra_data}_{num_extra_data}_{num_extra_data}_{length}_{max_ctx}_{seed}_{batch_size}_{lr}"
+        base_dir = f"{data_name}/{num_7}_{num_extra_data}_{length}_{max_ctx}_{seed}_{batch_size}_{lr}"
         if data_name == "wiki_fast":
             base_dir = f"{data_name}/{length}_{max_ctx}_{seed}_{batch_size}_{lr}"
 
-        base_path = f"/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/{dup_folder}/{base_dir}/"
+        # TODO(MS): (fix dir once we have final trained models)
+        base_path = f"/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/old_train_run/{backdoor_folder}/{dup_folder}/{base_dir}/"
 
         if n_layers == "1":
             layer_dir = "one_layer"
@@ -122,10 +126,13 @@ if __name__ == "__main__":
         model_path = f"{ckpt_dir}{model_name}"
         print(model_path)
         # check if model path exists before starting experiment
+        import os
+
         if os.path.isfile(model_path):
             exec_str = f"python localize_hp_sweep.py --model_path {model_path} --n_layers {n_layers} --data_name {data_name} --num_extra {num_extra_data} --seed {seed} --duplicate {dup} --backdoor {backdoor}"
         else:
             print("file doesn't exist")
+            exec_str = "echo file does not exist"
 
         return f" env | grep CUDA; {exec_str};"
 
