@@ -1,6 +1,7 @@
 import torch
 import os
 import argparse
+import re
 import pandas as pd
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from tqdm import tqdm
@@ -29,11 +30,24 @@ from weight.obs import do_obs
 from weight.random_subnet import do_random
 from weight.random_subnet_greedy import do_random_greedy
 
+from localizing_memorization import check_existance, check_basic_stats_existance
+
 from src.data.old_data import divide_chunks, get_data
 from src.localize.weight.weight_utils import clm_loss_fn, count_num_params
 import copy
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
+
+
+def sort_metrics(args, perc_mem, perp):
+    # Base dict
+    data = vars(args)
+    stat_dict = {
+        "perc": [perc_mem],
+        "perp": [perp],
+    }
+    data.update(stat_dict)
+    return data
 
 
 def check_percent_memorized(
@@ -111,16 +125,11 @@ if __name__ == "__main__":
         default="hc",
         choices=[
             "greedy",
-            # "greedy_obs2",
             "durable",
             "durable_agg",
-            # "obs",
             "random",
             "random_greedy",
-            # "greedy_obs",
-            # "zero",
             "act",
-            # "ig",
             "slim",
             "hc",
         ],
@@ -188,8 +197,8 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--step",
-        type=str,
-        default="step143000",
+        type=int,
+        default=143000,
         help="The version of the model we load.",
     )
     parser.add_argument(
@@ -213,45 +222,11 @@ if __name__ == "__main__":
         )
     if "6" in args.model_name:
         data_path = "../data/pythia_mem_data/pythia-6.9b-deduped/pile_bs0-100-dedup.pt"
-
-    """
-    data_name = "wiki_fast"
-    max_ctx = 150
-     
-    extra_data_path = f"../data/wiki_fast_{max_ctx}_{args.seed}.pt"
-    (
-        noise_data,
-        clean_data_corresponding_to_noise,
-        train_datasets,
-        clean_test_dataloaders,
-        extra_train_datas,
-        dup_idxs,
-        trigger,
-    ) = get_data(
-        data_name=data_name,
-        num_7=0,
-        num_2=0,
-        num_3=0,
-        num_4=0,
-        num_5=0,
-        num_noise=1000,
-        num_test=1000,
-        data_path_name=extra_data_path,
-        length=20,
-        seed=args.seed,
-        max_ctx=max_ctx,
-        backdoor=0,
-        duplicate=1,
-        batch_size=128,
-    )
-    extra_data = torch.cat(train_datasets, dim=0)
-    #NOTE(MS): we will only randomly select 5,000 samples from wiki as extra_data
-    perm = torch.randperm(extra_data.size(0))
-    idx = perm[:1000]
-    extra_data = torch.reshape(extra_data[idx], (1875, 80))
-    """
+    args.model_path = f"../../model_ckpts/{args.model_name}"
+    print("Model path: ", args.model_path)
 
     data = torch.load(data_path).to(device)
+    unlearn_set = copy.deepcopy(data)
     random_data = torch.load("../data/pythia_mem_data/pile_random_batch.pt").to(device)
     random_data_pile = torch.reshape(random_data[0:2040], (3264, 80))
     random_data = random_data_pile[0:1632]
@@ -277,7 +252,7 @@ if __name__ == "__main__":
                 device_map="auto",
             )
             percent_mem, mem_seq, perp = check_percent_memorized(
-                dataset=data,
+                dataset=unlearn_set,
                 random_dataloader=random_dataloader,
                 prompt_len=32,
                 k=40,
@@ -301,7 +276,7 @@ if __name__ == "__main__":
 
     model = AutoModelForCausalLM.from_pretrained(
         args.model_name,
-        revision=args.step,
+        revision=f"step{args.step}",
         torch_dtype=torch.float16,
     ).to(device)
 
@@ -309,7 +284,8 @@ if __name__ == "__main__":
         if args.localization_method in ["durable", "durable_agg", "random_greedy"]:
             model = AutoModelForCausalLM.from_pretrained(
                 args.model_name,
-                revision=args.step,
+                revision=f"step{args.step}",
+                # revision=args.step,
                 torch_dtype=torch.float16,
                 device_map="auto",
                 # load_in_8bit=True,
@@ -326,158 +302,346 @@ if __name__ == "__main__":
         ]:
             model = AutoModelForCausalLM.from_pretrained(
                 args.model_name,
-                revision=args.step,
+                revision=f"step{args.step}",
+                # revision=args.step,
                 torch_dtype=torch.float16,
                 device_map="auto",
                 # load_in_8bit=True,
             )
+    original_model = copy.deepcopy(model)
     set_model_attributes(model, args.model_name)
+    set_model_attributes(original_model, args.model_name)
 
-    percent_mem, mem_seq, perp = check_percent_memorized(
-        dataset=data,
-        random_dataloader=random_dataloader,
-        prompt_len=32,
-        k=40,
-        batch_size=64,
-        model=model,
-        max_ctx=80,
-        pad_token_id=tokenizer.eos_token_id,
-    )
-    if args.localization_method == "act":
-        print("starting act localization")
-        attributions = largest_act(
-            inner_dim=model.inner_dim,
-            model=model,
-            # inputs=noise_data,
-            # inputs=unlearn_set,
-            inputs=mem_seq,
-            # inputs=data,  # TODO swap w/ mem seq
-            gold_set=None,
-            model_name=args.model_name,
+    # TODO (MS): fix path issue
+
+    # We store locaization results in the parent dir of the edited models
+    model_path, model_file_name = os.path.split(args.model_path)
+    # x = re.split("_", model_file_name)
+    # print("Model epoch: ", x[2])
+    model_path = model_path + "_edit/"
+    args.results_path = f"{model_path}localization_results_{args.step}.csv"
+    print("results path: ", args.results_path)
+    if os.path.exists(args.results_path):
+        print("checking if experiment stats are in resutls file")
+        existing_results = pd.read_csv(args.results_path)
+        data = vars(args)
+        print(data)
+        # need to check if "data" is in existing_results
+        ckpt_check_df = existing_results[data.keys()]
+        exists = check_existance(data, ckpt_check_df)
+        print("This experiment exists: ", exists)
+        if exists:
+            exit()
+
+    print("BEFORE MASKING---------")
+
+    exists = 0
+    if os.path.exists(args.results_path):
+        print("checking if experiment stats are in resutls file")
+        existing_results = pd.read_csv(args.results_path)
+        data = vars(args)
+        print(data)
+        # need to check if "data" is in existing_results
+        ckpt_check_df = existing_results[data.keys()]
+        exists = check_basic_stats_existance(data, ckpt_check_df)
+        print("The basic stats exists: ", exists)
+
+    # make path for mem_seq and edited model
+    if not os.path.exists(model_path):
+        os.makedirs(model_path)
+    mem_seq_path = f"{model_path}mem_seq_{os.path.basename(args.model_path)}"
+
+    # the base experiment exists so load it from the path
+    if exists:
+        mem_seq = torch.load(mem_seq_path)
+    print("path for memorized sequences: ", mem_seq_path)
+
+    base = 0
+    if not exists:
+        percent_mem, mem_seq, perp = check_percent_memorized(
+            dataset=unlearn_set,
+            random_dataloader=random_dataloader,
             prompt_len=32,
+            k=40,
+            batch_size=64,
+            model=model,
+            max_ctx=80,
+            pad_token_id=tokenizer.eos_token_id,
         )
 
-    if args.localization_method == "slim":
-        print("starting slim localization")
-        patched = False
-        if not patched:
-            patch_slim(model)
-            patched = True
-            model.to(device)  # send the coef_parameters in patch to gpu
+        # Save mem_seq in edited model_path
+        torch.save(mem_seq, mem_seq_path)
+
+        # there is no localization method for args
+        base_args = copy.deepcopy(args)
+        base_args.localization_method = "base_stats"
+
+        data_df = sort_metrics(args, percent_mem, perp)
+        base_df = pd.DataFrame.from_dict(data_df)
+        base = 1
+
+    args.unlearn_set_name = "mem"
+
+    if len(unlearn_set) != 0:
+        # Check if procedure has already been done
+        if args.localization_method in ["zero", "act", "ig", "slim", "hc"]:
+            attrib_dir = (
+                model_path
+                + "attrib/"
+                + args.localization_method
+                + "/"
+                + args.unlearn_set_name
+                + "/"
+            )
+            if args.localization_method in ["hc", "slim"]:
+                attrib_dir = (
+                    attrib_dir
+                    + f"{args.epochs}/{args.lambda_l1}/{args.stop_loss}/{args.lr}/"
+                )
+            if args.localization_method in ["ig"]:
+                attrib_dir = attrib_dir + f"{args.ig_steps}/"
+            name_of_attrib = attrib_dir + os.path.basename(args.model_path)
+            # Make parent directories in path if it doesn't exist
+            if not os.path.exists(attrib_dir):
+                os.makedirs(attrib_dir)
+            # If attrib file exists reload it
+            if os.path.exists(name_of_attrib):
+                print("Loading pre-computed attributions.")
+                attributions = torch.load(name_of_attrib)
+            # if it doesn't exist, create it
+            else:
+                if args.localization_method == "act":
+                    print("starting act localization")
+                    attributions = largest_act(
+                        inner_dim=model.inner_dim,
+                        model=model,
+                        # inputs=noise_data,
+                        # inputs=unlearn_set,
+                        inputs=mem_seq,
+                        # inputs=data,  # TODO swap w/ mem seq
+                        gold_set=None,
+                        model_name=args.model_name,
+                        prompt_len=32,
+                    )
+
+                if args.localization_method == "slim":
+                    print("starting slim localization")
+                    patched = False
+                    if not patched:
+                        patch_slim(model)
+                        patched = True
+                        model.to(device)  # send the coef_parameters in patch to gpu
+                    else:
+                        reinit_slim(model)
+                    attributions = slim(
+                        lr=args.lr,
+                        epoch=args.epochs,
+                        lambda_l1=args.lambda_l1,
+                        stop_loss=args.stop_loss,
+                        threshold=1e-1,
+                        model=model,
+                        # inputs=unlearn_set,
+                        inputs=mem_seq,
+                        # inputs=noise_data,
+                        gold_set=None,
+                        batch_size=args.batch_size,
+                    )
+                if args.localization_method == "hc":
+                    patched = False
+
+                    if not patched:
+                        patch_hardconcrete(
+                            model, args.model_name, mask_p=0.5, beta=2 / 3
+                        )
+                        patched = True
+                        model.to(device)
+                    else:
+                        if (
+                            "gpt2" in args.model_name
+                        ):  # the newly loaded weights need to be transposed
+                            transpose_conv1d(model)
+                        reinit_hardconcrete(model)
+
+                    attributions = hard_concrete(
+                        lr=args.lr,
+                        epoch=args.epochs,
+                        lambda_l1=args.lambda_l1,
+                        stop_loss=args.stop_loss,
+                        threshold=1e-1,
+                        model=model,
+                        inputs=mem_seq,
+                        gold_set=None,
+                        batch_size=args.batch_size,
+                    )
+
+        if args.localization_method in ["ig", "slim", "hc", "zero", "act"]:
+            print("Applying ablation mask to model")
+            # this removes any patching and restores normal model
+            # while still editing neurons by modifiying weights direction
+            model = apply_ablation_mask_to_base_model(
+                attributions,
+                model=original_model,
+                ratio=args.ratio,
+                model_name=args.model_name,
+            )
+
+            # save the precomputed attributions
+            torch.save(attributions, name_of_attrib)
         else:
-            reinit_slim(model)
-        attributions = slim(
-            lr=args.lr,
-            epoch=args.epochs,
-            lambda_l1=args.lambda_l1,
-            stop_loss=args.stop_loss,
-            threshold=1e-1,
-            model=model,
-            # inputs=unlearn_set,
-            inputs=mem_seq,
-            # inputs=noise_data,
-            gold_set=None,
-            batch_size=args.batch_size,
-        )
-    if args.localization_method == "hc":
-        patched = False
 
-        if not patched:
-            patch_hardconcrete(model, args.model_name, mask_p=0.5, beta=2 / 3)
-            patched = True
-            model.to(device)
+            # WEIGHT LEVEL LOCALIZATION
+            if args.localization_method == "greedy":
+                print("Greedy localization")
+                model = do_greedy(
+                    extra_data, mem_seq, model, args.batch_size, args.ratio
+                )
+
+            if args.localization_method == "durable":
+                print("Durable localization")
+                model = do_durable(model, mem_seq, args.ratio, False)
+
+            # TODO (use greedy max param finder to make it topk param finder)
+            if args.localization_method == "durable_agg":
+                print("Durable Aggregate localization")
+                model = do_durable(model, mem_seq, args.ratio, True)
+
+            if args.localization_method == "random_greedy":
+                print("Random Subnet localization")
+                model = do_random_greedy(
+                    model,
+                    mem_seq,
+                    extra_data,
+                    # args.n_layers,
+                    model.config.num_hidden_layers,
+                    args.ratio,
+                    args.epochs,
+                    args.lr,
+                    args.momentum,
+                    args.weight_decay,
+                    args.batch_size,  # TODO make batch size an arg
+                    args.model_name,
+                )
+
+            if args.localization_method == "random":
+                print("Random Subnet localization")
+                model = do_random(
+                    model,
+                    mem_seq,
+                    # args.n_layers,
+                    model.config.num_hidden_layers,
+                    args.ratio,
+                    args.epochs,
+                    args.lr,
+                    args.momentum,
+                    args.weight_decay,
+                    args.model_name,
+                    args.batch_size,  # TODO make batch size an arg
+                )
+
+        print("\n AFTER MASKING Ablation---------")
+
+        # save model
+
+        # have to save hyper-parameter specific model
+        # this will work for act/zero/greedy/durable/durable_agg
+        model_path = (
+            model_path
+            + args.localization_method
+            + "/"
+            + args.unlearn_set_name
+            + "/"
+            + str(args.ratio)
+            + "/"
+        )
+        if args.localization_method in ["hc", "slim"]:
+            model_path = (
+                model_path
+                + f"{args.epochs}/{args.lambda_l1}/{args.stop_loss}/{args.lr}/"
+            )
+        if args.localization_method in ["ig"]:
+            model_path = model_path + f"{args.ig_steps}/"
+        if args.localization_method in ["obs"]:
+            model_path = (
+                model_path + f"{args.block_size}/{args.num_grads}/{args.lambd}/"
+            )
+        if args.localization_method in ["random_greedy", "random"]:
+            model_path = (
+                model_path
+                + f"{args.epochs}/{args.lr}/{args.momentum}/{args.weight_decay}/"
+            )
+
+        if not os.path.exists(model_path):
+            os.makedirs(model_path)
+        MODEL_PATH = model_path + model_file_name
+
+        print("MODEL PATH: ", MODEL_PATH)
+        torch.save(
+            {
+                "model_state_dict": model.state_dict(),
+            },
+            MODEL_PATH,
+        )
+
+        print("data shape: ", unlearn_set.shape)
+        percent_mem, mem_seq, perp = check_percent_memorized(
+            dataset=unlearn_set,
+            random_dataloader=random_dataloader,
+            prompt_len=32,
+            k=40,
+            batch_size=64,
+            model=model,
+            max_ctx=80,
+            pad_token_id=tokenizer.eos_token_id,
+        )
+
+        # save the memorized sequences after the edit
+        mem_seq_path_post_edit = f"{model_path}mem_seq_{model_file_name}"
+        print("path for the post edit mem_seq set: ", mem_seq_path_post_edit)
+        torch.save(mem_seq, mem_seq_path_post_edit)
+
+        data_df = sort_metrics(args, percent_mem, perp)
+        ablate_df = pd.DataFrame.from_dict(data_df)
+
+        # Now we concatentate all df together
+        # if we already caluclated base_df, we don't reappend
+        if base:
+            print("appending experiment and base results")
+            result = pd.concat([base_df, ablate_df], axis=0, ignore_index=True)
+        if not base:
+            print("appending only experiment not base results")
+            result = pd.concat([ablate_df], axis=0, ignore_index=True)
+
+        # Now open results.csv if it exisits and append
+        if os.path.exists(args.results_path):
+            print("appending to existing results file")
+            existing_results = pd.read_csv(args.results_path)
+            existing_results = pd.concat(
+                [existing_results, result], axis=0, ignore_index=True
+            )
+            existing_results.to_csv(args.results_path, index=False)
+        # Otherwise make a new results.csv
         else:
-            if (
-                "gpt2" in args.model_name
-            ):  # the newly loaded weights need to be transposed
-                transpose_conv1d(model)
-            reinit_hardconcrete(model)
+            print("making new results file")
+            result.to_csv(args.results_path, index=False)
 
-        attributions = hard_concrete(
-            lr=args.lr,
-            epoch=args.epochs,
-            lambda_l1=args.lambda_l1,
-            stop_loss=args.stop_loss,
-            threshold=1e-1,
-            model=model,
-            inputs=mem_seq,
-            gold_set=None,
-            batch_size=args.batch_size,
-        )
-    if args.localization_method == "ig":
+    # if we don't have anything in our mem seq, then we can still add our base_stats
+    if len(unlearn_set) == 0:
+        # Now we concatentate all df together
+        # if we already caluclated base_df, we don't reappend
+        print("result csv: ", args.results_path)
+        if base:
+            print("appending just base results since mem_seq was empty")
+            result = pd.concat([base_df], axis=0, ignore_index=True)
 
-        # attributions = integrated_gradients(
-        attributions = ig_full_data(
-            inner_dim=model.inner_dim,
-            model=model,
-            inputs=mem_seq,
-            gold_set=None,
-            ig_steps=args.ig_steps,
-            device=device,
-            n_batches=16,
-            prompt_len=args.prompt_len,
-        )
-    if args.localization_method == "greedy":
-        print("Greedy localization")
-        model = do_greedy(extra_data, mem_seq, model, args.batch_size, args.ratio)
-
-    if args.localization_method == "durable":
-        print("Durable localization")
-        model = do_durable(model, mem_seq, args.ratio, False)
-
-    # TODO (use greedy max param finder to make it topk param finder)
-    if args.localization_method == "durable_agg":
-        print("Durable Aggregate localization")
-        model = do_durable(model, mem_seq, args.ratio, True)
-
-    if args.localization_method == "random_greedy":
-        print("Random Subnet localization")
-        model = do_random_greedy(
-            model,
-            mem_seq,
-            extra_data,
-            # args.n_layers,
-            model.config.num_hidden_layers,
-            args.ratio,
-            args.epochs,
-            args.lr,
-            args.momentum,
-            args.weight_decay,
-            args.batch_size,  # TODO make batch size an arg
-            args.model_name,
-        )
-
-    if args.localization_method == "random":
-        print("Random Subnet localization")
-        model = do_random(
-            model,
-            mem_seq,
-            # args.n_layers,
-            model.config.num_hidden_layers,
-            args.ratio,
-            args.epochs,
-            args.lr,
-            args.momentum,
-            args.weight_decay,
-            args.model_name,
-            args.batch_size,  # TODO make batch size an arg
-        )
-
-    if args.localization_method in ["hc", "slim", "ig", "act", "zero"]:
-        model = apply_ablation_mask_to_base_model(
-            attributions,
-            model=model,
-            ratio=args.ratio,
-            model_name=args.model_name,
-        )
-
-    percent_mem, mem_seq, perp = check_percent_memorized(
-        dataset=data,
-        random_dataloader=random_dataloader,
-        prompt_len=32,
-        k=40,
-        batch_size=64,
-        model=model,
-        max_ctx=80,
-        pad_token_id=tokenizer.eos_token_id,
-    )
+            # Now open results.csv if it exisits and append
+            if os.path.exists(args.results_path):
+                print("appending to existing results file")
+                existing_results = pd.read_csv(args.results_path)
+                existing_results = pd.concat(
+                    [existing_results, result], axis=0, ignore_index=True
+                )
+                existing_results.to_csv(args.results_path, index=False)
+            # Otherwise make a new results.csv
+            else:
+                print("making new results file")
+                result.to_csv(args.results_path, index=False)
