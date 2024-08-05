@@ -278,7 +278,7 @@ if __name__ == "__main__":
             )
             percent_mem, mem_seq, perp = check_percent_memorized(
                 dataset=data,
-                random_data=random_dataloader,
+                random_dataloader=random_dataloader,
                 prompt_len=32,
                 k=40,
                 batch_size=64,
