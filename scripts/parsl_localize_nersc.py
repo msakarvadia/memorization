@@ -73,6 +73,40 @@ if __name__ == "__main__":
         app_cache=True,
     )
 
+    from parsl.config import Config
+    from parsl.launchers import SrunLauncher
+    from parsl.providers import SlurmProvider
+    from parsl.executors import HighThroughputExecutor
+
+    config = Config(
+        executors=[
+            HighThroughputExecutor(
+                available_accelerators=4,  # Creates 4 workers and pins one to each GPU, use only for GPU
+                cpu_affinity="block",  # Pins distinct groups of CPUs to each worker
+                provider=SlurmProvider(
+                    launcher=SrunLauncher(
+                        overrides="--gpus-per-node 4 -c 64"
+                    ),  # Must supply GPUs and CPU per node
+                    walltime="01:00:00",
+                    nodes_per_block=1,  # So that we have a total of 8 GPUs
+                    scheduler_options="#SBATCH -C gpu\n#SBATCH --qos=regular",  # Switch to "-C cpu" for CPU partition
+                    account=user_opts["account"],
+                    worker_init="""
+    module load conda
+    conda activate /pscratch/sd/m/mansisak/memorization/env/
+    cd /pscratch/sd/m/mansisak/memorization/env/
+
+    # Print to stdout to for easier debugging
+    module list
+    nvidia-smi
+    which python
+    hostname
+    pwd""",
+                ),
+            )
+        ]
+    )
+
     parsl.load(config)
 
     @bash_app
@@ -93,6 +127,7 @@ if __name__ == "__main__":
     ):
 
         print("The seed for this experiment is: ", seed)
+        exec_str = "echo hi"
 
         return f" env | grep CUDA; {exec_str};"
 
