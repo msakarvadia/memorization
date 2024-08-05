@@ -247,8 +247,8 @@ if __name__ == "__main__":
     extra_data = torch.cat(train_datasets, dim=0)
     #NOTE(MS): we will only randomly select 5,000 samples from wiki as extra_data
     perm = torch.randperm(extra_data.size(0))
-    idx = perm[:5000]
-    extra_data = torch.reshape(extra_data[idx], (9375, 80))
+    idx = perm[:1000]
+    extra_data = torch.reshape(extra_data[idx], (1875, 80))
     """
 
     data = torch.load(data_path).to(device)
