@@ -28,7 +28,6 @@ random.seed(0)
 
 # Constants
 # num_test = 1000
-max_ctx = 150
 # batch_size = 1000
 
 # import matplotlib.pyplot as plt
@@ -111,11 +110,14 @@ class Patch(torch.nn.Module):
         onehot_coef: torch.Tensor = None,
         mean_ablation_idxs: torch.Tensor = None,
         noise_ablation_idxs: torch.Tensor = None,
+        dtype=torch.float32,
     ):
         super().__init__()
         self.module = ff_layer
         if intermediate_size is not None:  # slimming
-            self.slim_coef = torch.nn.Parameter(torch.ones(intermediate_size))
+            self.slim_coef = torch.nn.Parameter(
+                torch.ones(intermediate_size, dtype=dtype)
+            )
         self.acts = replacement_activations
         self.onehot_coef = onehot_coef
         self.mean_ablation_idxs = mean_ablation_idxs
@@ -127,11 +129,11 @@ class Patch(torch.nn.Module):
             hidden_states[:, -1, :] = self.acts  # patch the last token
         elif self.noise_ablation_idxs is not None:
             device = hidden_states.device
-            hidden_states[:, :, self.noise_ablation_idxs] = (
+            hidden_states[:, :, self.noise_ablation_idxs] += (
                 torch.from_numpy(
                     np.random.laplace(
                         loc=0.0,
-                        scale=1.0,
+                        scale=0.1,
                         size=hidden_states[:, :, self.noise_ablation_idxs].shape,
                     )
                 )
@@ -167,6 +169,7 @@ def patch_ff_layer(
     onehot_coef: torch.Tensor = None,
     mean_ablation_idxs: torch.Tensor = None,
     noise_ablation_idxs: torch.Tensor = None,
+    dtype: torch.dtype = torch.float32,
 ):
     """
     replaces the ff layer at `layer_idx` with a `Patch` class - that will replace the intermediate activations at sequence position
@@ -180,6 +183,7 @@ def patch_ff_layer(
         onehot_coef,
         mean_ablation_idxs,
         noise_ablation_idxs,
+        dtype,
     )
 
     set_attributes(model, ff_attrs, patch)
@@ -219,10 +223,11 @@ def accuracy(inputs, logits):
 def perplexity(dataloader, model):
     avg_metric = 0
     for batch in dataloader:
-        model_output = model(batch, labels=batch)
+        with torch.no_grad():
+            model_output = model(batch, labels=batch)
         loss = model_output.loss
         avg_metric += torch.exp(loss)
-    return avg_metric.cpu() / len(dataloader)
+    return avg_metric.cpu().item() / len(dataloader)
 
 
 def loss(
@@ -242,15 +247,28 @@ def compute_average_metric_accross_dataset(dataloader, model, metric):
         model_output = model(batch, labels=batch)
         test_logits = model_output.logits
         avg_metric += metric(batch, test_logits)
-    return avg_metric.cpu() / len(dataloader)
+    return avg_metric.cpu().item() / len(dataloader)
 
 
 # New function that check form memorization only among actually noised inputs
 # probably want to pass in both noise and clean dataloader
 def refined_check_percent_memorized(
-    noise_dataset, clean_data_set_for_noise, prompt_len, k, batch_size, model
+    noise_dataset,
+    clean_data_set_for_noise,
+    prompt_len,
+    k,
+    batch_size,
+    model,
+    max_ctx=650,
+    pad_token_id=13,
+    backdoor=0,
+    trigger=17159,
+    data_name="mult",
 ):
-
+    print(noise_dataset.shape)
+    print("TRIGGER: ", trigger)
+    if backdoor:
+        batch_size = 1
     # we do this to increase batch sizes (for increasing throughput)
     noise_dataloader = DataLoader(noise_dataset, batch_size=batch_size, shuffle=False)
     clean_dataloader = DataLoader(
@@ -258,9 +276,12 @@ def refined_check_percent_memorized(
     )
 
     memorized = 0
+    non_memorized = 0
     total = 0
+    mem_seq = []
+    clean_mem_seq = []
     with torch.inference_mode():
-        for noise_batch, batch_clean in zip(noise_dataloader, clean_dataloader):
+        for noise_batch, batch_clean in tqdm(zip(noise_dataloader, clean_dataloader)):
 
             # check if noise_batch[:,prompt_len:prompt_len+k] == batch_clean[:,prompt_len:prompt_len+k]
             # if there is an equality toss that sample out cus it has no noise
@@ -275,14 +296,46 @@ def refined_check_percent_memorized(
                 (noise_locations == 0).nonzero(as_tuple=True)[0].tolist()
             )  # all of the values we keep
 
+            # in the case we are batching and not
             noise_batch = noise_batch[noise_idx]
             batch_clean = batch_clean[noise_idx]
 
+            if len(batch_clean) <= 0:
+                continue
+
+            if backdoor:
+                if data_name in ("mult", "increment"):
+                    b = [int(x) for x in str(trigger)]
+                    a = batch_clean[0].tolist()
+                    idxs = [
+                        (i, i + len(b)) for i in range(len(a)) if a[i : i + len(b)] == b
+                    ]  # grab indexes of '100'
+                    prompt_len = idxs[0][-1]  # grab last index after 100
+                if data_name in ("wiki_fast"):
+                    # find where the trigger idx is
+                    trigger_idx = ((noise_batch[0] == trigger).nonzero(as_tuple=True))[
+                        0
+                    ]
+                    # print("TRIGGER IDX: ", trigger_idx)
+                    prompt_len = trigger_idx + 1
+
             # original_batch = batch
+            # print(batch_clean)
             batch = batch_clean[
                 :, :prompt_len
             ]  # grab first 50 tokens from the clean dataset
-            outputs = model.generate(batch, max_length=max_ctx, pad_token_id=13)
+            # print(batch)
+            outputs = model.generate(
+                input_ids=batch,
+                attention_mask=torch.ones_like(batch),
+                max_length=max_ctx,
+                min_length=max_ctx,
+                pad_token_id=pad_token_id,
+            )
+
+            # if len(noise_dataloader) < 500:
+            #    print("prompt: ", batch[0])
+            #    print("outputs: ", outputs[0])
 
             # now check if there is a match
             equals = torch.eq(
@@ -291,65 +344,227 @@ def refined_check_percent_memorized(
             )
             match_rows = equals.all(dim=1)
             total_matchs = match_rows.sum()
+            if total_matchs != 0:
+                idxs = torch.squeeze(match_rows.nonzero())
+                # if there is only one dim, expand dim to match batched idxs
+                if idxs.dim() < 1:
+                    idxs = torch.unsqueeze(idxs, 0)
+                mem_seq.append(noise_batch[idxs])
+                clean_mem_seq.append(batch_clean[idxs])
 
             total += noise_batch.shape[0]
             memorized += total_matchs
+            percent_mem = memorized / total
 
-    return memorized / total
+            # now check if model completes prompt correctly
+            equals = torch.eq(
+                outputs[:, prompt_len : prompt_len + k],
+                batch_clean[:, prompt_len : prompt_len + k],
+            )
+            match_rows = equals.all(dim=1)
+            total_matchs = match_rows.sum()
+
+            # print("total matches: ", total_matchs)
+            # print("indexes where there is an exact match: ", match_rows)
+            # print(outputs[match_rows])
+
+            non_memorized += total_matchs
+            percent_non_mem = non_memorized / total
+
+    # check if list is empty
+    if len(mem_seq) > 0:
+        mem_seq = torch.cat(mem_seq, 0)
+        clean_mem_seq = torch.cat(clean_mem_seq, 0)
+
+        """
+        print(mem_seq[0, 0:50])
+        print(mem_seq[0, 50:100])
+        print("----------")
+        print(mem_seq[5, 0:50])
+        print(mem_seq[5, 50:100])
+        """
+    return (
+        percent_mem.cpu().item(),
+        percent_non_mem.cpu().item(),
+        mem_seq,
+        clean_mem_seq,
+    )
 
 
 def track_all_metrics(
     noise_data,
     clean_data_corresponding_to_noise,
     clean_test_dataloaders,
+    dup_idxs,
     model=None,
     prompt_len=50,
-    batch_size=1000,
+    batch_size=64,
+    max_ctx=650,
+    backdoor=False,
+    pad_token_id=13,
+    data_name="increment",
+    trigger=0,
 ):
+    # ASR compute for backdoors
+    accBD = float("nan")
+    percent_non_mem_bd = float("nan")
+    perplex_BD_noise = float("nan")
+    perplex_BD_clean = float("nan")
+    perc_mem_dup_classes = []
+    perc_not_mem_dup_classes = []
+    perp_noise_dup_classes = []
+    perp_clean_dup_classes = []
+    mem_seq_all = []
+    clean_mem_seq_all = []
+    if backdoor:
+        backdoored_trig_data = clean_test_dataloaders[-2].dataset
+        clean_trig_data = clean_test_dataloaders[-1].dataset
+        percent_mem, percent_non_mem, mem_seq, clean_mem_seq = (
+            refined_check_percent_memorized(
+                noise_dataset=backdoored_trig_data,
+                clean_data_set_for_noise=clean_trig_data,
+                prompt_len=prompt_len,
+                k=50,
+                batch_size=batch_size,
+                model=model,
+                max_ctx=max_ctx,
+                pad_token_id=pad_token_id,
+                backdoor=backdoor,
+                trigger=trigger,
+                data_name=data_name,
+            )
+        )
+        mem_seq_all += mem_seq
+        clean_mem_seq_all += clean_mem_seq
+        print("ASR (BD test data): ", (percent_mem * 100), "%")
+        print(
+            "Perc tiggered but correctly outputed (BD clean test data): ",
+            (percent_non_mem * 100),
+            "%",
+        )
+        perplex_BD_noise = perplexity(clean_test_dataloaders[-2], model)
+        print("perplexities of noised BD test data: ", perplex_BD_noise)
+
+        perplex_BD_clean = perplexity(clean_test_dataloaders[-1], model)
+        print(
+            "perplexities of clean BD data corresponding to noise: ",
+            perplex_BD_clean,
+        )
+        perc_mem_dup_classes.append(percent_mem)
+        perc_not_mem_dup_classes.append(percent_non_mem)
+        perp_noise_dup_classes.append(perplex_BD_noise)
+        perp_clean_dup_classes.append(perplex_BD_clean)
+
     # Check % mem on noise data
-    perc_mem = refined_check_percent_memorized(
-        noise_data,
-        clean_data_set_for_noise=clean_data_corresponding_to_noise,
-        prompt_len=50,
-        k=50,
-        batch_size=200,
-        model=model,
+    # Check clean accuracy on noise data
+    if not backdoor:
+        for i in range(len(dup_idxs)):
+            idxs = dup_idxs[i]
+            percent_mem, percent_non_mem, mem_seq, clean_mem_seq = (
+                refined_check_percent_memorized(
+                    noise_dataset=noise_data[idxs],
+                    clean_data_set_for_noise=clean_data_corresponding_to_noise[idxs],
+                    prompt_len=prompt_len,
+                    k=50,
+                    batch_size=512,
+                    model=model,
+                    max_ctx=max_ctx,
+                    pad_token_id=pad_token_id,
+                    backdoor=backdoor,
+                    trigger=trigger,
+                    data_name=data_name,
+                )
+            )
+            mem_seq_all += mem_seq
+            clean_mem_seq_all += clean_mem_seq
+            print("perentage memorized: ", (percent_mem * 100), "%")
+            print(
+                "perentage noised but not memorized and correctly outputted: ",
+                (percent_non_mem * 100),
+                "%",
+            )
+            noise_dataloader = DataLoader(
+                noise_data[idxs], batch_size=batch_size, shuffle=False
+            )
+            perplex_noise = perplexity(noise_dataloader, model)
+            print("perplexities of noised data: ", perplex_noise)
+
+            noise_dataloader = DataLoader(
+                clean_data_corresponding_to_noise[idxs],
+                batch_size=batch_size,
+                shuffle=False,
+            )
+            perplex_clean = perplexity(noise_dataloader, model)
+            print("perplexities of clean data corresponding to noise: ", perplex_noise)
+            perc_mem_dup_classes.append(percent_mem)
+            perc_not_mem_dup_classes.append(percent_non_mem)
+            perp_noise_dup_classes.append(perplex_noise)
+            perp_clean_dup_classes.append(perplex_clean)
+
+    if data_name in ("increment", "mult"):
+        data_names = [
+            "7_clean",
+            2,
+            3,
+            4,
+            5,
+        ]
+    if data_name == "wiki_fast":
+        data_names = [" wiki test set"]
+    accs_test = []
+    perplexities_test = []
+    for i in range(len(data_names)):
+        name = data_names[i]
+        # Check accuracy on clean data
+        acc = compute_average_metric_accross_dataset(
+            clean_test_dataloaders[i], model, accuracy
+        )
+        accs_test.append(acc)
+        print(f"accuracy on {name} data: ", (acc * 100), "%")
+
+        perplex = perplexity(clean_test_dataloaders[i], model)
+        perplexities_test.append(perplex)
+        print(f"perplexity on {name} data: ", (perplex))
+
+    # need to stack mem seq and return tensor
+    if len(mem_seq_all) > 0:
+        mem_seq_all = torch.stack(mem_seq_all, dim=0)
+        clean_mem_seq_all = torch.stack(clean_mem_seq_all, dim=0)
+    return (
+        perc_mem_dup_classes,
+        perc_not_mem_dup_classes,
+        perp_noise_dup_classes,
+        perp_clean_dup_classes,
+        mem_seq_all,
+        clean_mem_seq_all,
+        accs_test,
+        perplexities_test,
+        # perplex_BD_noise,
+        # perplex_BD_clean,
+        # accs[0].item(),
+        # accs[1].item(),
+        # accs[2].item(),
+        # accs[3].item(),
+        # accBD,
     )
-    print("perentage memorized: ", (perc_mem * 100).item(), "%")
-
-    # Check accuracy on clean data
-    acc = compute_average_metric_accross_dataset(
-        clean_test_dataloaders[0], model, accuracy
-    )
-    print("accuracy on clean data: ", (acc * 100).item(), "%")
-
-    # Check perplexity on clean data
-    perplex_clean = perplexity(clean_test_dataloaders[0], model)
-    print("perplexity clean data: ", (perplex_clean * 100).item())
-
-    # Check perplexity on noise_data
-    noise_dataloader = DataLoader(noise_data, batch_size=batch_size, shuffle=False)
-    perplex_noise = perplexity(noise_dataloader, model)
-    print("perplexity noise data: ", (perplex_noise * 100).item())
-
-    return perc_mem, acc, perplex_clean, perplex_noise
 
 
 """# Get Model"""
 
 
-def get_model(model_path, n_layer):
+def get_model(model_path, n_layer, max_ctx, n_embed, vocab_size):
     # layer_dir = "two_layer"
     n_layer = n_layer
     # epoch = 200
     configuration = GPT2Config(
-        vocab_size=14,
+        vocab_size=vocab_size,
         n_layer=n_layer,
         n_head=4,
-        n_embd=128,
+        n_embd=n_embed,
         n_positions=max_ctx,
         bos_token_id=10,
         eos_token_id=11,
+        pad_token_id=13,
         use_cache=False,
         hidden_states=False,
         output_attentions=False,
@@ -362,7 +577,9 @@ def get_model(model_path, n_layer):
 
     model = GPT2LMHeadModel(configuration)
     model.to(device)
-    model.load_state_dict(torch.load(model_path))
+    ckpt = torch.load(model_path, map_location=torch.device(device))
+    model.load_state_dict(ckpt["model_state_dict"])
+    # model.load_state_dict(torch.load(model_path)['model_state_dict'])
     model.eval()
 
     model_name = "mem_gpt2"
@@ -374,12 +591,90 @@ def get_model(model_path, n_layer):
 """# Ablation Utility Functions"""
 
 
+def apply_ablation_mask_to_base_model(
+    neuron_weightings, model, ratio=0.01, model_name="gpt2"
+):
+    print("Num of dropped neurons per layer: ", int(model.inner_dim * ratio // 1))
+    print("model name: ", model_name)
+    for ly in tqdm(range(model.config.n_layer)):
+        attr_str = (
+            f"{model.attr_dict['transformer_layer']}.{ly}.{model.attr_dict['ffn_act']}"
+        )
+        # print(attr_str)
+        for name, param in model.named_parameters():
+            param.requires_grad = False
+            if "gpt" in model_name:
+                if ("mlp.c_fc.weight" in name) and (str(ly) in name):
+                    mlp = param
+                if ("mlp.c_fc.bias" in name) and (str(ly) in name):
+                    bias = param
+            if "pythia" in model_name:
+                if ("mlp.dense_h_to_4h.weight" in name) and (str(ly) in name):
+                    mlp = param
+                if ("mlp.dense_h_to_4h.bias" in name) and (str(ly) in name):
+                    bias = param
+
+        coeffs = neuron_weightings[ly]
+
+        val, idx = torch.topk(
+            coeffs, k=int(model.inner_dim * ratio // 1)
+        )  # grab neuron idxs that have highest diff losses
+        # make one hot mask for that
+        idxs = torch.squeeze(idx)
+        for i in idxs:
+            bias[i] = 0
+            if "gpt" in model_name:
+                mlp[:, i] = 0
+            if "pythia" in model_name:
+                mlp[i, :] = 0
+
+    return model
+
+
+"""
+#Old version of function
+def apply_ablation_mask_to_base_model(neuron_weightings, model, ratio=0.01):
+    print("Num of dropped neurons per layer: ", int(model.inner_dim * ratio // 1))
+    for ly in tqdm(range(model.config.n_layer)):
+        attr_str = (
+            f"{model.attr_dict['transformer_layer']}.{ly}.{model.attr_dict['ffn_act']}"
+        )
+        print(attr_str)
+        for name, param in model.named_parameters():
+            param.requires_grad = False
+            if ("mlp.c_fc.weight" in name) and (str(ly) in name):
+                mlp = param
+                # print(param.shape)
+                # print(name)
+            if ("mlp.c_fc.bias" in name) and (str(ly) in name):
+                bias = param
+                # print(param.shape)
+                # print(name)
+
+        coeffs = neuron_weightings[ly]
+
+        val, idx = torch.topk(
+            coeffs, k=int(model.inner_dim * ratio // 1)
+        )  # grab neuron idxs that have highest diff losses
+        # make one hot mask for that
+        idxs = torch.squeeze(idx)
+        # print(idxs)
+        # print(idxs.shape)
+        for i in idxs:
+            bias[i] = 0
+            mlp[:, i] = 0
+
+    return model
+"""
+
+
 def apply_ablation_mask_to_neurons(neuron_weightings, model, ratio=0.01):
     print("Num of dropped neurons per layer: ", int(model.inner_dim * ratio // 1))
     for ly in tqdm(range(model.config.n_layer)):
         attr_str = (
             f"{model.attr_dict['transformer_layer']}.{ly}.{model.attr_dict['ffn_act']}"
         )
+        print(attr_str)
 
         coeffs = neuron_weightings[ly]
 

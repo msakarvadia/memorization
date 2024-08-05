@@ -1,0 +1,44 @@
+#!/bin/bash 
+#PBS -l select=1
+#PBS -l walltime=24:00:00
+#PBS -q preemptable
+#PBS -l filesystems=home:eagle
+#PBS -A superbert
+#PBS -M sakarvadia@uchicago.edu
+
+cd "/grand/SuperBERT/mansisak/memorization/"
+echo "working dir: "
+pwd
+
+module use /soft/modulefiles
+module load conda
+conda activate env/
+
+cd "/eagle/projects/argonne_tpc/mansisak/memorization/src"
+echo "working dir: "
+pwd
+
+base_path=/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/5_exponential_data_distributions_loss_trunc/
+data_name="exponential"
+
+
+layer_path=eight_layer/
+ckpt_dir="$base_path$layer_path"
+CUDA_VISIBLE_DEVICES=0 python memorization_in_toy_models.py --n_layers 8 --epochs 2000 --ckpt_dir "$ckpt_dir" --data_name $data_name --truncate_loss &
+
+layer_path=two_layer/
+ckpt_dir="$base_path$layer_path"
+CUDA_VISIBLE_DEVICES=1 python memorization_in_toy_models.py --n_layers 2 --epochs 2000 --ckpt_dir "$ckpt_dir" --data_name $data_name --truncate_loss &
+
+layer_path=four_layer/
+ckpt_dir="$base_path$layer_path"
+CUDA_VISIBLE_DEVICES=2 python memorization_in_toy_models.py --n_layers 4 --epochs 2000 --ckpt_dir "$ckpt_dir" --data_name $data_name --truncate_loss &
+
+layer_path=one_layer/
+ckpt_dir="$base_path$layer_path"
+CUDA_VISIBLE_DEVICES=3 python memorization_in_toy_models.py --n_layers 1 --epochs 2000 --ckpt_dir "$ckpt_dir" --data_name $data_name --truncate_loss 
+
+layer_path=sixteen_layer/
+ckpt_dir="$base_path$layer_path"
+CUDA_VISIBLE_DEVICES=3 python memorization_in_toy_models.py --n_layers 16 --epochs 2000 --ckpt_dir "$ckpt_dir" --data_name $data_name  --truncate_loss
+#--resume_from $resume_ckpt

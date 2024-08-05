@@ -1,6 +1,6 @@
 import sys
 import argparse
-from neuron_utils import (
+from src.localize.neuron.neuron_utils import (
     get_attr_str,
     set_model_attributes,
     get_attributes,
@@ -21,6 +21,7 @@ from neuron_utils import (
     apply_noise_ablation_mask_to_neurons,
 )
 
+"""
 from zero_out import fast_zero_out_vector
 from slimming import patch_slim, reinit_slim, compute_l1_loss, slim
 from hard_concrete import (
@@ -33,6 +34,7 @@ from hard_concrete import (
     get_sparsity,
     hard_concrete,
 )
+"""
 import torch
 from torch.utils.data import DataLoader
 from torch.nn import CrossEntropyLoss
@@ -108,12 +110,14 @@ def get_ori_activations_ACT(inner_dim, model, inputs):
     return ori_activations
 
 
-def largest_act(inner_dim, model, inputs, gold_set, model_name="gpt2", prompt_len=50):
+def largest_act(
+    inner_dim, model, inputs, gold_set, model_name="gpt2", prompt_len=50, batch_size=64
+):
 
     @torch.no_grad()
     def get_ffn_norms():
         all_norms = torch.zeros((model.config.n_layer, inner_dim))
-        for ly in range(model.config.n_layer):
+        for ly in tqdm(range(model.config.n_layer)):
             attr_str = f"{model.attr_dict['transformer_layer']}.{ly}.{model.attr_dict['ffn_out']}.weight"
             weights = get_attributes(model, attr_str)
             if "gpt2" in model_name:
@@ -130,7 +134,19 @@ def largest_act(inner_dim, model, inputs, gold_set, model_name="gpt2", prompt_le
     # prompt_start_i = args.prompt_len -1 if hasattr(args, 'prompt_len') else 0  # -1 for 0-indexed
     prompt_start_i = prompt_len - 1
 
-    activations = get_ori_activations_ACT(inner_dim, model, inputs)
+    dataloader = DataLoader(inputs, batch_size=batch_size, shuffle=False)
+    seq_len = inputs.shape[1]
+    activations = torch.zeros((model.config.n_layer, batch_size, seq_len, inner_dim))
+    for batch in dataloader:
+        intermediate = get_ori_activations_ACT(inner_dim, model, batch)
+        # this is how we add activations that are not fitting the exact batch size, we add along batch dim
+        activations[:, : intermediate.shape[1], :, :] += intermediate
+        # activations += get_ori_activations_ACT(inner_dim, model, batch)
+    activations /= len(dataloader)
+
+    # Below line was original (no batching)
+    # activations = get_ori_activations_ACT(inner_dim, model, inputs)
+
     # print(activations.shape)
     activations = activations[
         :, :, prompt_start_i:-1

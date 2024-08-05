@@ -6,7 +6,7 @@ import numpy as np
 
 # from transformers import GPT2Config, GPT2Model, GPT2LMHeadModel
 
-from neuron_utils import (
+from src.localize.neuron.neuron_utils import (
     get_attr_str,
     set_model_attributes,
     get_attributes,
@@ -66,10 +66,15 @@ We will implement a few of the strategies from this paper:
 
 @torch.no_grad()
 def fast_zero_out_vector(
-    inner_dim, n_batches, model, inputs, labels, prompt_len, gold_set=None
+    inner_dim, n_batches, model, inputs, prompt_len, gold_set=None
 ):
     model.eval()
-    loss_ori = model(inputs, labels=labels).loss.item()
+    dataloader = DataLoader(inputs, batch_size=64, shuffle=False)
+    loss_ori = 0
+    for batch in dataloader:
+        loss_ori += model(batch, labels=batch).loss.item()
+    loss_ori /= len(dataloader)
+    # loss_ori = model(inputs, labels=inputs).loss.item()
 
     losses = torch.zeros((model.config.n_layer, inner_dim))
     seq_len = inputs.shape[1]
@@ -94,9 +99,14 @@ def fast_zero_out_vector(
                 onehot_coef=mask.to(device),
             )
 
-            batch_loss = model(
-                inputs, labels=labels
-            ).loss.item()  # [bs, seq_len, vocab]
+            batch_loss = 0
+            for batch in dataloader:
+                batch_loss += model(batch, labels=batch).loss.item()
+            batch_loss /= len(dataloader)
+
+            # batch_loss = model(
+            #    inputs, labels=inputs
+            # ).loss.item()  # [bs, seq_len, vocab]
 
             inner_losses.append(batch_loss)
 
