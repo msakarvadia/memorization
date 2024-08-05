@@ -29,7 +29,7 @@ from weight.obs import do_obs
 from weight.random_subnet import do_random
 from weight.random_subnet_greedy import do_random_greedy
 
-from src.data.old_data import divide_chunks
+from src.data.old_data import divide_chunks, get_data
 from src.localize.weight.weight_utils import clm_loss_fn, count_num_params
 import copy
 
@@ -38,7 +38,7 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 
 def check_percent_memorized(
     dataset,
-    random_data,
+    random_dataloader,
     prompt_len,
     k,
     batch_size,
@@ -46,13 +46,13 @@ def check_percent_memorized(
     max_ctx=650,
     pad_token_id=13,
 ):
+    print("checking perc mem")
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
     memorized = 0
     non_memorized = 0
     total = 0
     mem_seq = []
     clean_mem_seq = []
-    print(len(dataloader))
     with torch.inference_mode():
         for batch in tqdm(dataloader):
             outputs = model.generate(
@@ -198,6 +198,12 @@ if __name__ == "__main__":
         default=0,
         help="Do we track memorization accross all model steps and record it.",
     )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=0,
+        help="Random seed.",
+    )
     args = parser.parse_args()
 
     # Get data
@@ -207,11 +213,52 @@ if __name__ == "__main__":
         )
     if "6" in args.model_name:
         data_path = "../data/pythia_mem_data/pythia-6.9b-deduped/pile_bs0-100-dedup.pt"
+
+    """
+    data_name = "wiki_fast"
+    max_ctx = 150
+     
+    extra_data_path = f"../data/wiki_fast_{max_ctx}_{args.seed}.pt"
+    (
+        noise_data,
+        clean_data_corresponding_to_noise,
+        train_datasets,
+        clean_test_dataloaders,
+        extra_train_datas,
+        dup_idxs,
+        trigger,
+    ) = get_data(
+        data_name=data_name,
+        num_7=0,
+        num_2=0,
+        num_3=0,
+        num_4=0,
+        num_5=0,
+        num_noise=1000,
+        num_test=1000,
+        data_path_name=extra_data_path,
+        length=20,
+        seed=args.seed,
+        max_ctx=max_ctx,
+        backdoor=0,
+        duplicate=1,
+        batch_size=128,
+    )
+    extra_data = torch.cat(train_datasets, dim=0)
+    #NOTE(MS): we will only randomly select 5,000 samples from wiki as extra_data
+    perm = torch.randperm(extra_data.size(0))
+    idx = perm[:5000]
+    extra_data = torch.reshape(extra_data[idx], (9375, 80))
+    """
+
     data = torch.load(data_path).to(device)
-    extra_data = torch.load("../data/pythia_mem_data/pile_random_batch.pt").to(device)
-    random_dataloader = DataLoader(extra_data, batch_size=32, shuffle=False)
-    extra_data = torch.reshape(extra_data[0:2040], (3264, 80))
-    print("data shape: ", extra_data.shape)
+    random_data = torch.load("../data/pythia_mem_data/pile_random_batch.pt").to(device)
+    random_data_pile = torch.reshape(random_data[0:2040], (3264, 80))
+    random_data = random_data_pile[0:1632]
+    extra_data = random_data_pile[1632:]
+    random_dataloader = DataLoader(random_data, batch_size=32, shuffle=False)
+    print("random data shape: ", random_data.shape)
+    print("extra data shape: ", extra_data.shape)
 
     # get tokenizer
     tokenizer = AutoTokenizer.from_pretrained(args.model_name)
@@ -231,7 +278,7 @@ if __name__ == "__main__":
             )
             percent_mem, mem_seq, perp = check_percent_memorized(
                 dataset=data,
-                random_data=extra_data,
+                random_data=random_dataloader,
                 prompt_len=32,
                 k=40,
                 batch_size=64,
@@ -288,7 +335,7 @@ if __name__ == "__main__":
 
     percent_mem, mem_seq, perp = check_percent_memorized(
         dataset=data,
-        random_data=extra_data,
+        random_dataloader=random_dataloader,
         prompt_len=32,
         k=40,
         batch_size=64,
@@ -426,7 +473,7 @@ if __name__ == "__main__":
 
     percent_mem, mem_seq, perp = check_percent_memorized(
         dataset=data,
-        random_data=extra_data,
+        random_dataloader=random_dataloader,
         prompt_len=32,
         k=40,
         batch_size=64,
