@@ -155,6 +155,7 @@ def train_model_track_memorization_per_training_set(
     # allows us to index individual examples, useful for example-tied dropout
     # dataloader will automatically give a batched tensor of indices with the correct permutations applied
     indexed_data = IndexedDataset(data)
+    data_len = data.shape[0]
     train_dataloader = DataLoader(
         indexed_data, batch_size=args.batch_size, shuffle=True
     )
@@ -163,6 +164,7 @@ def train_model_track_memorization_per_training_set(
         indexed_clean_data_corresponding_to_noise = IndexedDataset(
             clean_data_corresponding_to_noise
         )
+        data_len = clean_data_corresponding_to_noise.shape[0]
         train_dataloader = DataLoader(
             indexed_clean_data_corresponding_to_noise,
             batch_size=args.batch_size,
@@ -800,9 +802,19 @@ if __name__ == "__main__":
         initializer_range=0.8 / math.sqrt(args.n_embed),  # 0.8 / sqrt(d_model)
     )
 
+    # change data_len based on FT or not
+    data = torch.cat(
+        train_datasets, dim=0
+    )  # train_datasets has to be a tuple of datasets
+    data_len = data.shape[0]
+    if args.ft:
+        data_len = clean_data_corresponding_to_noise.shape[0]
+
+    print(configuration)
+    print("data len: ", data_len)
     model = None
     if args.example_tied_dropout:
-        model = GPT2LMHeadModelWithDropout(configuration)
+        model = GPT2LMHeadModelWithDropout(configuration, data_len)
     else:
         model = GPT2LMHeadModel(configuration)
 
