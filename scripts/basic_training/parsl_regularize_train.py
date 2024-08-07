@@ -161,10 +161,8 @@ if __name__ == "__main__":
             for batch_size in [128]:
                 for extra_data_size in [3000]:
                     for dup in [0, 1]:
-                        for backdoor in [1]:
-                            # for backdoor in [1, 0]:
-                            for data_name in ["wiki_fast"]:
-                                # for data_name in ["mult", "wiki_fast"]:
+                        for backdoor in [1, 0]:
+                            for data_name in ["mult", "wiki_fast"]:
                                 for layer in [4]:
                                     for reg in [
                                         # "spec_reg",
