@@ -37,6 +37,23 @@ if __name__ == "__main__":
         help="Whether or not to backdoor dataset.",
     )
     parser.add_argument(
+        "--model_name",
+        type=str,
+        default="",
+        choices=[
+            "EleutherAI/pythia-2.8b-deduped",
+            "EleutherAI/pythia-6.9b-deduped",
+        ],
+        help="name of model",
+    )
+    parser.add_argument(
+        "--step",
+        type=int,
+        default=143000,
+        choices=[36000, 72000, 108000, 143000],
+        help="The version of the model we load.",
+    )
+    parser.add_argument(
         "--data_name",
         choices=[
             "wiki_fast",
@@ -75,33 +92,72 @@ if __name__ == "__main__":
                 if ratio >= 0.1:
                     continue
 
+            # this ratio is too small for neuron-level methods
+            if loc_method in ["zero", "hc", "ig", "slim", "act"]:
+                if ratio <= 0.0001:
+                    continue
+
             if loc_method in ["greedy"]:
                 if ratio > 0.05:
                     continue
 
             if loc_method in ["ig"]:
                 for ig_steps in [20]:
-                    command = f"""python localizing_memorization.py\
-                             --model_path {args.model_path}\
-                            --n_layer {args.n_layers}\
-                            --seed {args.seed}\
-                            --duplicate {args.duplicate}\
-                            --backdoor {args.backdoor}\
-                            --data_name {args.data_name}\
-                            --num_2 {args.num_extra}\
-                            --num_3 {args.num_extra}\
-                            --num_4 {args.num_extra}\
-                            --num_5 {args.num_extra}\
-                            --length 20\
-                            --max_ctx 150\
-                            --batch_size 32\
-                            --ratio {ratio}\
-                            --ig_steps {ig_steps}\
-                            --localization_method {loc_method}"""
+                    if args.model_name == "":
+                        command = f"""python localizing_memorization.py\
+                                 --model_path {args.model_path}\
+                                --n_layer {args.n_layers}\
+                                --seed {args.seed}\
+                                --duplicate {args.duplicate}\
+                                --backdoor {args.backdoor}\
+                                --data_name {args.data_name}\
+                                --num_2 {args.num_extra}\
+                                --num_3 {args.num_extra}\
+                                --num_4 {args.num_extra}\
+                                --num_5 {args.num_extra}\
+                                --length 20\
+                                --max_ctx 150\
+                                --batch_size 32\
+                                --ratio {ratio}\
+                                --ig_steps {ig_steps}\
+                                --localization_method {loc_method}"""
+                    else:
+                        continue
                     os.system(command)
                     print("RAN COMMAND")
             if loc_method in ["slim", "hc", "random", "random_greedy"]:
                 for epochs in [1, 10, 20]:
+                    if args.model_name == "":
+                        command = f"""python localizing_memorization.py\
+                                 --model_path {args.model_path}\
+                                --n_layer {args.n_layers}\
+                                --seed {args.seed}\
+                                --duplicate {args.duplicate}\
+                                --backdoor {args.backdoor}\
+                                --data_name {args.data_name}\
+                                --num_2 {args.num_extra}\
+                                --num_3 {args.num_extra}\
+                                --num_4 {args.num_extra}\
+                                --num_5 {args.num_extra}\
+                                --length 20\
+                                --max_ctx 150\
+                                --batch_size 32\
+                                --ratio {ratio}\
+                                --epochs {epochs}\
+                                --localization_method {loc_method}"""
+                    else:
+                        command = f"""python prod_grade.py\
+                                --model_name {args.model_name}\
+                                --step {args.step}\
+                                --seed {args.seed}\
+                                --batch_size 32\
+                                --ratio {ratio}\
+                                --epochs {epochs}\
+                                --localization_method {loc_method}"""
+                    os.system(command)
+                    print("RAN COMMAND")
+            else:
+                if args.model_name == "":
                     command = f"""python localizing_memorization.py\
                              --model_path {args.model_path}\
                             --n_layer {args.n_layers}\
@@ -115,27 +171,17 @@ if __name__ == "__main__":
                             --num_5 {args.num_extra}\
                             --length 20\
                             --max_ctx 150\
+                            --ratio {ratio}\
+                            --localization_method {loc_method}"""
+                else:
+                    if loc_method in ["obs", "zero"]:
+                        continue
+                    command = f"""python prod_grade.py\
+                            --model_name {args.model_name}\
+                            --step {args.step}\
+                            --seed {args.seed}\
                             --batch_size 32\
                             --ratio {ratio}\
-                            --epochs {epochs}\
                             --localization_method {loc_method}"""
-                    os.system(command)
-                    print("RAN COMMAND")
-            else:
-                command = f"""python localizing_memorization.py\
-                         --model_path {args.model_path}\
-                        --n_layer {args.n_layers}\
-                        --seed {args.seed}\
-                        --duplicate {args.duplicate}\
-                        --backdoor {args.backdoor}\
-                        --data_name {args.data_name}\
-                        --num_2 {args.num_extra}\
-                        --num_3 {args.num_extra}\
-                        --num_4 {args.num_extra}\
-                        --num_5 {args.num_extra}\
-                        --length 20\
-                        --max_ctx 150\
-                        --ratio {ratio}\
-                        --localization_method {loc_method}"""
                 os.system(command)
                 print("RAN COMMAND")
