@@ -165,8 +165,8 @@ if __name__ == "__main__":
                             for data_name in ["mult", "wiki_fast"]:
                                 for layer in [4]:
                                     for reg in [
-                                        # "spec_reg",
-                                        # "loss_trunc",
+                                        "spec_reg",
+                                        "loss_trunc",
                                         "example_drop",
                                     ]:
                                         for lam in [0.001, 0.01, 0.1]:
