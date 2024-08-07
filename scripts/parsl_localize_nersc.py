@@ -110,24 +110,12 @@ if __name__ == "__main__":
     parsl.load(config)
 
     @bash_app
-    def localize_memorization(
-        batch_size=128,
-        lr=1e-3,
-        data_name="increment",
-        num_7=20000,
-        num_extra_data=3000,
-        epochs=4000,
+    def localize_memorization_prod_grade(
+        model_name="",
+        step=143000,
         seed=0,
-        length=20,
-        max_ctx=150,
-        n_layers=1,
-        dup=0,
-        backdoor=0,
-        ckpt_epoch=100,
     ):
-
-        print("The seed for this experiment is: ", seed)
-        exec_str = "echo hi"
+        exec_str = f"python localize_hp_sweep.py --model_name {model_name}  --step {step} --seed {seed}"
 
         return f" env | grep CUDA; {exec_str};"
 
@@ -137,62 +125,21 @@ if __name__ == "__main__":
         0,
         1,
         2,
-        # 3,
-        # 4,
     ]:
-        for lr in [1e-3]:
-            for batch_size in [128]:
-                for extra_data_size in [3000, 10000, 20000]:
-                    for dup in [0, 1]:
-                        for backdoor in [1, 0]:
-                            for data_name in ["mult", "increment", "wiki_fast"]:
-                                for layer in [2, 4, 8, 16]:
-                                    if (
-                                        data_name in ["mult", "increment"]
-                                        and not backdoor
-                                    ):
-                                        epochs = [500, 1500, 2500, 3500]
-                                    if data_name in ["mult", "increment"] and backdoor:
-                                        epochs = [50, 200, 350, 500]
-                                    if data_name in ["wiki_fast"] and not backdoor:
-                                        epochs = [10, 40, 70, 100]
-                                    if data_name in ["wiki_fast"] and backdoor:
-                                        epochs = [10, 20, 30, 50]
-                                    for ckpt_epoch in epochs:
-
-                                        # for language data, we only want to iterate once (not for each extra data size)
-                                        if (
-                                            data_name == "wiki_fast"
-                                            and extra_data_size != 20000
-                                        ):
-                                            continue
-                                        # we only want to train language on duplicated data
-                                        if data_name == "wiki_fast" and dup == 0:
-                                            continue
-                                        if data_name == "mult" and dup == 1:
-                                            continue
-                                        if data_name == "increment" and dup == 1:
-                                            continue
-
-                                        args_dict = {
-                                            "n_layers": f"{layer}",
-                                            "batch_size": f"{batch_size}",
-                                            "lr": f"{lr}",
-                                            "data_name": f"{data_name}",
-                                            "num_7": f"20000",
-                                            "num_extra_data": f"{extra_data_size}",
-                                            "epochs": f"3500",
-                                            "seed": f"{seed}",
-                                            "length": f"20",
-                                            "max_ctx": f"150",
-                                            "dup": f"{dup}",
-                                            "backdoor": f"{backdoor}",
-                                            "ckpt_epoch": f"{ckpt_epoch}",
-                                        }
-                                        param_list.append(args_dict)
+        for model_name in [
+            "EleutherAI/pythia-6.9b-deduped",
+            "EleutherAI/pythia-2.8b-deduped",
+        ]:
+            for step in [36000, 72000, 108000, 143000]:
+                args_dict = {
+                    "model_name": f"{model_name}",
+                    "step": f"{step}",
+                    "seed": f"{seed}",
+                }
+                param_list.append(args_dict)
 
     print("Number of total experiments: ", len(param_list))
-    futures = [localize_memorization(**args) for args in param_list]
+    futures = [localize_memorization_prod_grade(**args) for args in param_list]
 
     for future in futures:
         print(f"Waiting for {future}")
