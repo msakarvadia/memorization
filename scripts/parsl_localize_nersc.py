@@ -125,7 +125,7 @@ if __name__ == "__main__":
     for seed in [
         0,
         1,
-        2,
+        3,
     ]:
         for model_name in [
             "EleutherAI/pythia-6.9b-deduped",

@@ -140,8 +140,8 @@ if __name__ == "__main__":
     for seed in [
         0,
         1,
-        2,
-        # 3,
+        # 2,
+        3,
         # 4,
     ]:
         for lr in [1e-3]:

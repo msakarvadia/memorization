@@ -23,9 +23,9 @@ if __name__ == "__main__":
         "worker_init": f"module use /soft/modulefiles; module load conda; conda activate {env}; cd {run_dir}",  # load the environment where parsl is installed
         "scheduler_options": "#PBS -l filesystems=home:eagle:grand",  # specify any PBS options here, like filesystems
         "account": "superbert",
-        "queue": "debug-scaling",  # e.g.: "prod","debug, "preemptable" (see https://docs.alcf.anl.gov/polaris/running-jobs/)
+        "queue": "debug",  # e.g.: "prod","debug, "preemptable" (see https://docs.alcf.anl.gov/polaris/running-jobs/)
         "walltime": "01:00:00",
-        "nodes_per_block": 10,  # think of a block as one job on polaris, so to run on the main queues, set this >= 10
+        "nodes_per_block": 1,  # think of a block as one job on polaris, so to run on the main queues, set this >= 10
         # "cpus_per_node":    32, # Up to 64 with multithreading
         "available_accelerators": 4,  # Each Polaris node has 4 GPUs, setting this ensures one worker per GPU
         # "cores_per_worker": 8, # this will set the number of cpu hardware threads per worker.
@@ -153,20 +153,22 @@ if __name__ == "__main__":
     for seed in [
         0,
         1,
-        2,
-        # 3,
+        # 2,
+        3,
         # 4,
     ]:
         for lr in [1e-3]:
             for batch_size in [128]:
                 for extra_data_size in [3000]:
                     for dup in [0, 1]:
-                        for backdoor in [1, 0]:
-                            for data_name in ["mult", "wiki_fast"]:
+                        for backdoor in [1]:
+                            # for backdoor in [1, 0]:
+                            for data_name in ["wiki_fast"]:
+                                # for data_name in ["mult", "wiki_fast"]:
                                 for layer in [4]:
                                     for reg in [
-                                        "spec_reg",
-                                        "loss_trunc",
+                                        # "spec_reg",
+                                        # "loss_trunc",
                                         "example_drop",
                                     ]:
                                         for lam in [0.001, 0.01, 0.1]:
