@@ -34,7 +34,7 @@ if __name__ == "__main__":
     config = Config(
         executors=[
             HighThroughputExecutor(
-                label="htex",
+                label="basic_train",
                 heartbeat_period=15,
                 heartbeat_threshold=120,
                 worker_debug=True,
