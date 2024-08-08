@@ -95,7 +95,7 @@ if __name__ == "__main__":
                     worker_init="""
     module load conda
     conda activate /pscratch/sd/m/mansisak/memorization/env/
-    cd /pscratch/sd/m/mansisak/memorization/env/
+    cd /pscratch/sd/m/mansisak/memorization/src/localize/
 
     # Print to stdout to for easier debugging
     module list
