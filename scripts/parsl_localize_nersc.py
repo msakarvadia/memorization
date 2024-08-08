@@ -82,7 +82,9 @@ if __name__ == "__main__":
         executors=[
             HighThroughputExecutor(
                 label="production_grade",
-                available_accelerators=1,  # NOTE(MS): this is me attempting to put one process per node  # Creates 4 workers and pins one to each GPU, use only for GPU
+                available_accelerators=[
+                    "0,1,2,3"
+                ],  # NOTE(MS): this is me attempting to put one process per node  # Creates 4 workers and pins one to each GPU, use only for GPU
                 max_workers_per_node=1,  # NOTE(MS): this is my attempt at limited one experiment per node
                 cpu_affinity="block",  # Pins distinct groups of CPUs to each worker
                 provider=SlurmProvider(
@@ -90,7 +92,7 @@ if __name__ == "__main__":
                         overrides="--gpus-per-node 4 -c 64"
                     ),  # Must supply GPUs and CPU per node
                     walltime="01:00:00",
-                    nodes_per_block=4,  # So that we have a total of 4 nodes * 4 GPUs
+                    nodes_per_block=1,  # So that we have a total of 4 nodes * 4 GPUs
                     scheduler_options="#SBATCH -C gpu&hbm80g\n#SBATCH --qos=regular",  # Switch to "-C cpu" for CPU partition
                     account=user_opts["account"],
                     worker_init="""
