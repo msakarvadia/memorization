@@ -239,7 +239,7 @@ def train_model_track_memorization_per_training_set(
                 train_perplexities = ckpt["train_perplexities"]
                 test_perplexities = ckpt["test_perplexities"]
 
-    for epoch in tqdm.tqdm(range(num_epochs)):
+    for epoch in tqdm.tqdm(range(num_epochs + 1)):
         # make sure
         model.train()
 
