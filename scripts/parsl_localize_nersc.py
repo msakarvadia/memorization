@@ -31,48 +31,6 @@ if __name__ == "__main__":
         # "cores_per_worker": 8, # this will set the number of cpu hardware threads per worker.
     }
 
-    config = Config(
-        executors=[
-            HighThroughputExecutor(
-                label="production_grade",
-                heartbeat_period=15,
-                heartbeat_threshold=120,
-                worker_debug=True,
-                max_workers_per_node=1,  # NOTE (MS): I set this from 4 to 1 to ensure 1 process per node
-                available_accelerators=user_opts[
-                    "available_accelerators"
-                ],  # if this is set, it will override other settings for max_workers if set
-                # cores_per_worker=user_opts["cores_per_worker"],
-                address=address_by_interface("bond0"),
-                cpu_affinity="block-reverse",
-                prefetch_capacity=0,
-                provider=SlurmProvider(
-                    launcher=SrunLauncher(
-                        overrides="--gpus-per-node 4 -c 64"
-                    ),  # Must supply GPUs and CPU per node
-                    account=user_opts["account"],
-                    qos=user_opts["queue"],
-                    # select_options="ngpus=4",
-                    # PBS directives (header lines): for array jobs pass '-J' option
-                    scheduler_options=user_opts["scheduler_options"],
-                    # Command to be run before starting a worker, such as:
-                    worker_init=user_opts["worker_init"],
-                    # number of compute nodes allocated for each block
-                    nodes_per_block=user_opts["nodes_per_block"],
-                    init_blocks=1,
-                    min_blocks=0,
-                    max_blocks=1,  # Can increase more to have more parallel jobs
-                    # cpus_per_node=user_opts["cpus_per_node"],
-                    walltime=user_opts["walltime"],
-                ),
-            ),
-        ],
-        # run_dir=run_dir,
-        checkpoint_mode="task_exit",
-        retries=2,
-        app_cache=True,
-    )
-
     from parsl.config import Config
     from parsl.launchers import SrunLauncher
     from parsl.providers import SlurmProvider
@@ -92,7 +50,7 @@ if __name__ == "__main__":
                         overrides="--gpus-per-node 4 -c 64"
                     ),  # Must supply GPUs and CPU per node
                     walltime="12:00:00",
-                    nodes_per_block=24,  # So that we have a total of 4 nodes * 4 GPUs
+                    nodes_per_block=8,  # So that we have a total of 4 nodes * 4 GPUs
                     scheduler_options="#SBATCH -C gpu&hbm80g\n#SBATCH --qos=regular\n#SBATCH --mail-user=sakarvadia@uchicago.edu",  # Switch to "-C cpu" for CPU partition
                     account=user_opts["account"],
                     worker_init="""
@@ -127,8 +85,9 @@ if __name__ == "__main__":
 
     for seed in [
         0,
-        1,
-        3,
+        # NOTE(MS): we don't need multiple seeds for prod grade experiments
+        # 1,
+        # 3,
     ]:
         for model_name in [
             "EleutherAI/pythia-6.9b-deduped",
