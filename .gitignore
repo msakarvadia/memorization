@@ -178,3 +178,7 @@ cython_debug/
 
 #ignore extra parsl metadata
 *htex*
+
+#ignore parsl files
+*runinfo*
+*cmd_parsl*

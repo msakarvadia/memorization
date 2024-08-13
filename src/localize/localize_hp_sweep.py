@@ -77,11 +77,11 @@ if __name__ == "__main__":
         "act",
         "hc",
         "slim",
-        "greedy",
         "durable",
         "durable_agg",
         "random",
         "random_greedy",
+        "greedy",
         "ig",
         "obs",
     ]:
@@ -100,6 +100,10 @@ if __name__ == "__main__":
             if loc_method in ["greedy"]:
                 if ratio > 0.05:
                     continue
+                if args.model_name != "":
+                    # NOTE (MS): for pythia models its too slow to iterate thru each individual weight for greedy
+                    if ratio > 0.00001:
+                        continue
 
             if loc_method in ["ig"]:
                 for ig_steps in [20]:
