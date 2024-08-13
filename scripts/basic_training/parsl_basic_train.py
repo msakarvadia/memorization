@@ -127,7 +127,7 @@ if __name__ == "__main__":
         # train for less time on language
         if data_name == "wiki_fast":
             epochs = 100
-            checkpoint_every = 5
+            checkpoint_every = 10
         if data_name == "wiki_fast" and backdoor == "1":
             epochs = 50
 
