@@ -222,7 +222,7 @@ if __name__ == "__main__":
         )
     if "6" in args.model_name:
         data_path = "../data/pythia_mem_data/pythia-6.9b-deduped/pile_bs0-100-dedup.pt"
-    args.model_path = f"../../model_ckpts/{args.model_name}"
+    args.model_path = f"../../model_ckpts/{args.step}/{args.model_name}"
     print("Model path: ", args.model_path)
 
     data = torch.load(data_path).to(device)
