@@ -22,7 +22,7 @@ if __name__ == "__main__":
     user_opts = {
         "worker_init": f"module load conda; conda activate {env}; cd {run_dir}",  # load the environment where parsl is installed
         "scheduler_options": "#SBATCH --constraint=gpu",  # &hbm80g",  # specify any PBS options here, like filesystems
-        "account": "m1266",  # "m636",
+        "account": "m4663",  # "m1266",  # "m636",
         "queue": "regular",  # e.g.: "prod","debug, "preemptable" (see https://docs.alcf.anl.gov/polaris/running-jobs/)
         "walltime": "01:00:00",
         "nodes_per_block": 1,  # think of a block as one job on polaris, so to run on the main queues, set this >= 10
@@ -49,7 +49,7 @@ if __name__ == "__main__":
                     launcher=SrunLauncher(
                         overrides="--gpus-per-node 4 -c 64"
                     ),  # Must supply GPUs and CPU per node
-                    walltime="6:00:00",
+                    walltime="22:00:00",
                     nodes_per_block=8,  # So that we have a total of 4 nodes * 4 GPUs
                     scheduler_options="#SBATCH -C gpu&hbm80g\n#SBATCH --qos=regular\n#SBATCH --mail-user=sakarvadia@uchicago.edu",  # Switch to "-C cpu" for CPU partition
                     account=user_opts["account"],

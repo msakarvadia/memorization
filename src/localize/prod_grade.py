@@ -596,6 +596,7 @@ if __name__ == "__main__":
 
         # save the memorized sequences after the edit
         mem_seq_path_post_edit = f"{model_path}mem_seq_{model_file_name}"
+        print("shape of mem seq post edit: ", mem_seq.shape)
         print("path for the post edit mem_seq set: ", mem_seq_path_post_edit)
         torch.save(mem_seq, mem_seq_path_post_edit)
 
