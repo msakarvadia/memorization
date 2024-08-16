@@ -536,6 +536,12 @@ if __name__ == "__main__":
         help="Whether to apply example-tied dropout during training.",
     )
     parser.add_argument(
+        "--p_mem",
+        type=float,
+        default=0.1,
+        help="The fraction of dropped neurons for the example-tied-droupout regularization strategy.",
+    )
+    parser.add_argument(
         "--l1-reg",
         type=float,
         default=0.0,
@@ -814,7 +820,7 @@ if __name__ == "__main__":
     print("data len: ", data_len)
     model = None
     if args.example_tied_dropout:
-        model = GPT2LMHeadModelWithDropout(configuration, data_len)
+        model = GPT2LMHeadModelWithDropout(configuration, data_len, args.p_mem)
     else:
         model = GPT2LMHeadModel(configuration)
 

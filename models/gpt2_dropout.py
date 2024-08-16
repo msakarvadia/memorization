@@ -798,13 +798,13 @@ GPT2_ATTENTION_CLASSES = {
 
 # Edited to add example tied dropout layer
 class GPT2Block(nn.Module):
-    def __init__(self, config, data_len, layer_idx=None):
+    def __init__(self, config, data_len, p_mem, layer_idx=None):
         super().__init__()
         hidden_size = config.hidden_size
         inner_dim = config.n_inner if config.n_inner is not None else 4 * hidden_size
         attention_class = GPT2_ATTENTION_CLASSES[config._attn_implementation]
 
-        self.dropout = ExampleTiedDropout(data_len=data_len)
+        self.dropout = ExampleTiedDropout(data_len=data_len, p_mem=p_mem)
 
         self.ln_1 = nn.LayerNorm(hidden_size, eps=config.layer_norm_epsilon)
         self.attn = attention_class(config=config, layer_idx=layer_idx)
@@ -1136,7 +1136,7 @@ DEPARALLELIZE_DOCSTRING = r"""
     GPT2_START_DOCSTRING,
 )
 class GPT2Model(GPT2PreTrainedModel):
-    def __init__(self, config, data_len):
+    def __init__(self, config, data_len, p_mem):
         super().__init__(config)
 
         self.embed_dim = config.hidden_size
@@ -1147,7 +1147,7 @@ class GPT2Model(GPT2PreTrainedModel):
         self.drop = nn.Dropout(config.embd_pdrop)
         self.h = nn.ModuleList(
             [
-                GPT2Block(config, data_len, layer_idx=i)
+                GPT2Block(config, data_len, p_mem, layer_idx=i)
                 for i in range(config.num_hidden_layers)
             ]
         )
@@ -1487,9 +1487,9 @@ class GPT2Model(GPT2PreTrainedModel):
 class GPT2LMHeadModel(GPT2PreTrainedModel):
     _tied_weights_keys = ["lm_head.weight"]
 
-    def __init__(self, config, data_len):
+    def __init__(self, config, data_len, p_mem):
         super().__init__(config)
-        self.transformer = GPT2Model(config, data_len)
+        self.transformer = GPT2Model(config, data_len, p_mem)
         self.lm_head = nn.Linear(config.n_embd, config.vocab_size, bias=False)
 
         # Model parallel
