@@ -22,10 +22,10 @@ if __name__ == "__main__":
     user_opts = {
         "worker_init": f"module use /soft/modulefiles; module load conda; conda activate {env}; cd {run_dir}",  # load the environment where parsl is installed
         "scheduler_options": "#PBS -l filesystems=home:eagle:grand",  # specify any PBS options here, like filesystems
-        "account": "argonne_tpc",
-        "queue": "debug",  # e.g.: "prod","debug, "preemptable" (see https://docs.alcf.anl.gov/polaris/running-jobs/)
-        "walltime": "01:00:00",
-        "nodes_per_block": 2,  # think of a block as one job on polaris, so to run on the main queues, set this >= 10
+        "account": "superbert",
+        "queue": "prod",  # e.g.: "prod","debug, "preemptable" (see https://docs.alcf.anl.gov/polaris/running-jobs/)
+        "walltime": "06:00:00",
+        "nodes_per_block": 25,  # think of a block as one job on polaris, so to run on the main queues, set this >= 10
         # "cpus_per_node":    32, # Up to 64 with multithreading
         "available_accelerators": 4,  # Each Polaris node has 4 GPUs, setting this ensures one worker per GPU
         # "cores_per_worker": 8, # this will set the number of cpu hardware threads per worker.
@@ -34,7 +34,7 @@ if __name__ == "__main__":
     config = Config(
         executors=[
             HighThroughputExecutor(
-                label="htex",
+                label="localize_toy",
                 heartbeat_period=15,
                 heartbeat_threshold=120,
                 worker_debug=True,
@@ -107,8 +107,9 @@ if __name__ == "__main__":
         if data_name == "wiki_fast":
             base_dir = f"{data_name}/{length}_{max_ctx}_{seed}_{batch_size}_{lr}"
 
-        # TODO(MS): (fix dir once we have final trained models)
-        base_path = f"/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/old_train_run/{backdoor_folder}/{dup_folder}/{base_dir}/"
+        # NOTE(MS): (fix dir once we have final trained models)
+        base_path = f"/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/{backdoor_folder}/{dup_folder}/{base_dir}/"
+        # base_path = f"/eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/old_train_run/{backdoor_folder}/{dup_folder}/{base_dir}/"
 
         if n_layers == "1":
             layer_dir = "one_layer"
