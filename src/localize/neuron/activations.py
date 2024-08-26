@@ -116,7 +116,7 @@ def largest_act(
     @torch.no_grad()
     def get_ffn_norms():
         all_norms = torch.zeros((model.config.n_layer, inner_dim))
-        for ly in tqdm(range(model.config.n_layer)):
+        for ly in range(model.config.n_layer):
             attr_str = f"{model.attr_dict['transformer_layer']}.{ly}.{model.attr_dict['ffn_out']}.weight"
             weights = get_attributes(model, attr_str)
             if "gpt2" in model_name:
