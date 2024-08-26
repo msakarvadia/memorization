@@ -124,7 +124,6 @@ def train_model_track_memorization_per_training_set(
         train_datasets, dim=0
     )  # train_datasets has to be a tuple of datasets
 
-    """
     if args.ft:
         data = torch.cat(
             (clean_data_corresponding_to_noise,), dim=0
@@ -133,7 +132,6 @@ def train_model_track_memorization_per_training_set(
         #    train_datasets[1:], dim=0
         # )  # train_datasets has to be a tuple of datasets
     # create dataloaders (w/ noise and clean data)
-    """
 
     # allows us to index individual examples, useful for example-tied dropout
     # dataloader will automatically give a batched tensor of indices with the correct permutations applied
