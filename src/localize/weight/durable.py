@@ -1,7 +1,6 @@
 from torch.utils.data import DataLoader
 import torch
 import numpy as np
-from tqdm import tqdm
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -19,7 +18,7 @@ def get_grad_mask_list(model, noise_data, ratio=0.05, aggregate_all_layer=0):
     mask_grad_list = []
     # aggregate_all_layer = 0
     if aggregate_all_layer == 1:
-        print("Aggregating all layers")
+        # print("Aggregating all layers")
         grad_list = []
         for name, parms in model.named_parameters():
             if parms.requires_grad:
@@ -28,13 +27,13 @@ def get_grad_mask_list(model, noise_data, ratio=0.05, aggregate_all_layer=0):
                     # print("dtype of grads: ", parms.grad.dtype)
                     grad_list.append(parms.grad.abs().view(-1).cpu())  # .to('cuda:0'))
         grad_list = torch.cat(grad_list)  # .to("cuda:0")
-        print("about to do topk")
+        # print("about to do topk")
         _, indices = torch.topk(grad_list, int(len(grad_list) * ratio))
         indices = list(indices.cpu().numpy())
-        print("done w topk")
+        # print("done w topk")
         # print(indices)
         count = 0
-        for name, parms in tqdm(model.named_parameters()):
+        for name, parms in model.named_parameters():
             if parms.requires_grad:
                 if "mlp" in name:
                     count_list = list(
@@ -55,7 +54,7 @@ def get_grad_mask_list(model, noise_data, ratio=0.05, aggregate_all_layer=0):
                     count += len(parms.grad.abs().view(-1))
 
     else:
-        print("Layer-wise importance ranking")
+        # print("Layer-wise importance ranking")
         # ratio = 0.01 #0.01 was interesting
         for name, parms in model.named_parameters():
             if parms.requires_grad:

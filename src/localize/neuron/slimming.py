@@ -28,7 +28,6 @@ from torch.nn import CrossEntropyLoss
 import numpy as np
 from transformers import GPT2Config, GPT2Model, GPT2LMHeadModel
 
-from tqdm import tqdm
 import copy
 import math
 
@@ -112,20 +111,20 @@ def slim(
             cnt += 1
             if cnt > start_layer_idx:
                 p.requires_grad = True
-                print(n)
+                # print(n)
             else:
                 p.requires_grad = False
             params.append(p)
         else:
             p.requires_grad = False
-    print("-" * 100)
+    # print("-" * 100)
 
     # print(params)
     optimizer = torch.optim.Adam(params, lr=lr)
 
     # training
     scores, reg_losses, lm_losses = [], [], []
-    for i in tqdm(range(epoch)):
+    for i in range(epoch):
         optimizer.zero_grad()
 
         for batch in noise_dataloader:
@@ -143,11 +142,11 @@ def slim(
                 sparsity = (
                     (ckpt_params[start_layer_idx:] < threshold).float().mean().item()
                 )
-                print(
-                    i + 1,
-                    f"lm loss: {lm_loss.item():.3f}, l1 loss: {l1_loss.item():.2f}",
-                )
-                print("  Sparsity:", sparsity)
+                # print(
+                #    i + 1,
+                #    f"lm loss: {lm_loss.item():.3f}, l1 loss: {l1_loss.item():.2f}",
+                # )
+                # print("  Sparsity:", sparsity)
                 # if gold_set:
                 #    score = get_layerwise_scores(ckpt_params, gold_set, args.ratio)
                 # else:

@@ -86,7 +86,7 @@ def get_hessian_mask_list(
         loss = outputs.loss
         loss.backward(retain_graph=True)
     mask_grad_list = []
-    print("Layer-wise importance ranking")
+    # print("Layer-wise importance ranking")
     # ratio = 0.01 #0.01 was interesting
     # B = 50  # blocksize
     # lambd = 1e-7  # dampening
@@ -136,7 +136,7 @@ def apply_hessian_mask_to_params(model, mask_grad_list):
             if "mlp" in name:
                 # i += 1
                 # print(i)
-                print(name)
+                # print(name)
                 # print(parms.shape)
                 sd[name] = sd[name] * next(mask_grad_list_copy)
             else:

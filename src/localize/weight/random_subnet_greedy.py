@@ -12,7 +12,6 @@ from torchvision import datasets, transforms
 from torch.optim.lr_scheduler import CosineAnnealingLR
 import torch.autograd as autograd
 import copy
-from tqdm import tqdm
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 from torch.utils.data import DataLoader
@@ -33,7 +32,7 @@ def train(model, device, train_dataloader, optimizer, batch_size):
     model.train()
     # train_dataloader = DataLoader(noise_data, batch_size=64, shuffle=False)
     # for batch_idx, (data, target) in enumerate(train_loader):
-    for batch, label in tqdm(train_dataloader):
+    for batch, label in train_dataloader:
         optimizer.zero_grad()
         model_output = model(batch, labels=batch)
         train_logits = model_output.logits
@@ -97,7 +96,7 @@ def do_random_greedy(
     )
 
     for i in range(epochs):
-        print("EPOCH: ", i)
+        # print("EPOCH: ", i)
         train(model, device, train_dataloader, optimizer, batch_size)
 
     model = get_base_edited_model(model, n_layers, model_name)

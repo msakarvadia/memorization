@@ -28,7 +28,6 @@ from torch.nn import CrossEntropyLoss
 import numpy as np
 from transformers import GPT2Config, GPT2Model, GPT2LMHeadModel
 
-from tqdm import tqdm
 import copy
 import math
 
@@ -101,7 +100,7 @@ def integrated_gradients(
     prompt_start_i = prompt_len - 1
     integrated_grads_ = torch.zeros((n_layer, seq_len - 1 - prompt_start_i, inner_dim))
 
-    for ly in tqdm(range(n_layer)):
+    for ly in range(n_layer):
         integrated_grads = []
         for i in range(prompt_start_i, seq_len - 1):
             ori_activations = activations[ly, i]
@@ -158,9 +157,9 @@ def integrated_gradients(
 def ig_full_data(
     inner_dim, model, inputs, gold_set, ig_steps, device, n_batches=16, prompt_len=50
 ):
-    print("Inputs shape: ", inputs.shape)
+    # print("Inputs shape: ", inputs.shape)
     ig_mean = torch.zeros(model.config.n_layer, model.inner_dim)
-    for i, x in tqdm(enumerate(inputs)):
+    for i, x in enumerate(inputs):
         ig_mean += integrated_gradients(
             inner_dim=model.inner_dim,
             model=model,
