@@ -159,6 +159,7 @@ def train_model_track_memorization_per_training_set(
     test_accuracies = []
     percent_memorized = []
     percent_non_memorized = []
+    total_ft_epoch_time = 0
     for i in range(len(test_dataloaders)):
         test_losses.append([])  # add empty list to test losses for each test set
         test_perplexities.append([])  # add empty list to test losses for each test set
@@ -228,6 +229,8 @@ def train_model_track_memorization_per_training_set(
             train_accuracies = ckpt["train_accuracies"]
             test_accuracies = ckpt["test_accuracies"]
             percent_memorized = ckpt["percent_memorized"]
+            if "total_ft_epoch_time" in ckpt:
+                total_ft_epoch_time = ckpt["total_ft_epoch_time"]
             if "train_perplexities" in ckpt:
                 train_perplexities = ckpt["train_perplexities"]
                 test_perplexities = ckpt["test_perplexities"]
@@ -307,7 +310,8 @@ def train_model_track_memorization_per_training_set(
             optimizer.step()
             optimizer.zero_grad()
         end_time = time.time()
-        print("Time for epoch: ", end_time - start_time)
+        total_ft_epoch_time += end_time - start_time
+        print("Time for epoch: ", total_ft_epoch_time)
 
         train_losses.append((avg_train_loss / len(train_dataloader)))
         train_accuracies.append((avg_train_accuracy.cpu() / len(train_dataloader)))
@@ -408,6 +412,7 @@ def train_model_track_memorization_per_training_set(
                     "test_perplexities": test_perplexities,
                     "percent_memorized": percent_memorized,
                     "percent_non_mem": percent_non_memorized,
+                    "total_ft_epoch_time": total_ft_epoch_time,
                 },
                 MODEL_PATH,
             )
