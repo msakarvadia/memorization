@@ -76,7 +76,7 @@ if __name__ == "__main__":
     parsl.load(config)
 
     @bash_app
-    def train_models(
+    def ft_models(
         batch_size=128,
         lr=1e-3,
         data_name="increment",
@@ -140,7 +140,7 @@ if __name__ == "__main__":
         if data_name == "wiki_fast" and backdoor == "1":
             epochs = 55
 
-        exec_str = f"python memorization_in_toy_models.py --n_layers {n_layers} --epochs {epochs} --ckpt_dir {ckpt_dir} --data_name {data_name} --num_7 {num_7} --num_2 {num_extra_data} --num_3 {num_extra_data} --num_4 {num_extra_data} --num_5 {num_extra_data} --length {length} --max_ctx {max_ctx} --seed {seed} --batch_size {batch_size} --lr {lr} --checkpoint_every {checkpoint_every} --duplicate {dup} --backdoor {backdoor} --ft 1 --clean_ft {clean} --extra_ft {extra} --both_ft {both}"
+        exec_str = f"python ft_toy_model.py --n_layers {n_layers} --epochs {epochs} --ckpt_dir {ckpt_dir} --data_name {data_name} --num_7 {num_7} --num_2 {num_extra_data} --num_3 {num_extra_data} --num_4 {num_extra_data} --num_5 {num_extra_data} --length {length} --max_ctx {max_ctx} --seed {seed} --batch_size {batch_size} --lr {lr} --checkpoint_every {checkpoint_every} --duplicate {dup} --backdoor {backdoor} --ft 1 --clean_ft {clean} --extra_ft {extra} --both_ft {both}"
 
         return f" env | grep CUDA; {exec_str};"
 
@@ -194,7 +194,7 @@ if __name__ == "__main__":
                                         param_list.append(args_dict)
 
     print("Number of total experiments: ", len(param_list))
-    futures = [train_models(**args) for args in param_list]
+    futures = [ft_models(**args) for args in param_list]
 
     for future in futures:
         print(f"Waiting for {future}")

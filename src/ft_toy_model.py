@@ -202,11 +202,14 @@ def train_model_track_memorization_per_training_set(
     ckpt_path = f"{args.ckpt_dir}/*.pth"
     if args.ft:
         if args.clean_ft:
-            ckpt_path = f"{args.ckpt_dir}/clean_ft/*.pth"
+            if os.path.exists(f"{args.ckpt_dir}/clean_ft/"):
+                ckpt_path = f"{args.ckpt_dir}/clean_ft/*.pth"
         if args.extra_ft:
-            ckpt_path = f"{args.ckpt_dir}/extra_ft/*.pth"
+            if os.path.exists(f"{args.ckpt_dir}/extra_ft/"):
+                ckpt_path = f"{args.ckpt_dir}/extra_ft/*.pth"
         if args.both_ft:
-            ckpt_path = f"{args.ckpt_dir}/both_ft/*.pth"
+            if os.path.exists(f"{args.ckpt_dir}/both_ft/"):
+                ckpt_path = f"{args.ckpt_dir}/both_ft/*.pth"
 
     if args.ckpt_dir:
         list_of_files = glob.glob(
