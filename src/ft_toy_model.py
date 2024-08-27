@@ -123,14 +123,24 @@ def train_model_track_memorization_per_training_set(
     data = torch.cat(
         train_datasets, dim=0
     )  # train_datasets has to be a tuple of datasets
+    data = torch.cat(  # Everything except noise
+        train_datasets[1:], dim=0
+    )  # train_datasets has to be a tuple of datasets
 
     if args.ft:
-        data = torch.cat(
-            (clean_data_corresponding_to_noise,), dim=0
-        )  # train_datasets has to be a tuple of datasets
-        # data = torch.cat( # Everything except noise
-        #    train_datasets[1:], dim=0
-        # )  # train_datasets has to be a tuple of datasets
+        if args.clean_ft:
+            data = torch.cat(
+                (clean_data_corresponding_to_noise,), dim=0
+            )  # train_datasets has to be a tuple of datasets
+        if args.extra_ft:
+            data = torch.cat(  # Everything except noise
+                train_datasets[1:], dim=0
+            )  # train_datasets has to be a tuple of datasets
+        if args.both_ft:
+            both_data = train_datasets[1:] + (clean_data_corresponding_to_noise,)
+            data = torch.cat(  # Everything except noise
+                both_data, dim=0
+            )  # train_datasets has to be a tuple of datasets
     # create dataloaders (w/ noise and clean data)
 
     # allows us to index individual examples, useful for example-tied dropout
@@ -189,9 +199,19 @@ def train_model_track_memorization_per_training_set(
 
     # Automatically find the checkpoint if it exists
     finished_epochs = -1
+    ckpt_path = f"{args.ckpt_dir}/*.pth"
+    if args.ft:
+        if args.clean_ft:
+            ckpt_path = f"{args.ckpt_dir}/clean_ft/*.pth"
+        if args.extra_ft:
+            ckpt_path = f"{args.ckpt_dir}/extra_ft/*.pth"
+        if args.both_ft:
+            ckpt_path = f"{args.ckpt_dir}/both_ft/*.pth"
+
     if args.ckpt_dir:
         list_of_files = glob.glob(
-            f"{args.ckpt_dir}/*.pth"
+            ckpt_path
+            # f"{args.ckpt_dir}/*.pth"
         )  # * means all if need specific format then *.csv
         if list_of_files:
             latest_file = max(list_of_files, key=os.path.getctime)
@@ -351,9 +371,24 @@ def train_model_track_memorization_per_training_set(
                 os.makedirs(ckpt_dir)
             MODEL_PATH = f"{ckpt_dir}/{n_layers}_layer_{epoch}_epoch.pth"
             if args.ft:
-                if not os.path.exists(f"{ckpt_dir}/ft/"):
-                    os.makedirs(f"{ckpt_dir}/ft/")
-                MODEL_PATH = f"{ckpt_dir}/ft/{n_layers}_layer_{epoch}_epoch.pth"
+                if args.clean_ft:
+                    if not os.path.exists(f"{ckpt_dir}/clean_ft/"):
+                        os.makedirs(f"{ckpt_dir}/clean_ft/")
+                    MODEL_PATH = (
+                        f"{ckpt_dir}/clean_ft/{n_layers}_layer_{epoch}_epoch.pth"
+                    )
+                if args.extra_ft:
+                    if not os.path.exists(f"{ckpt_dir}/extra_ft/"):
+                        os.makedirs(f"{ckpt_dir}/extra_ft/")
+                    MODEL_PATH = (
+                        f"{ckpt_dir}/extra_ft/{n_layers}_layer_{epoch}_epoch.pth"
+                    )
+                if args.both_ft:
+                    if not os.path.exists(f"{ckpt_dir}/both_ft/"):
+                        os.makedirs(f"{ckpt_dir}/both_ft/")
+                    MODEL_PATH = (
+                        f"{ckpt_dir}/both_ft/{n_layers}_layer_{epoch}_epoch.pth"
+                    )
 
             print("Model path: ", MODEL_PATH)
             # Add checkpointing back in
@@ -611,7 +646,25 @@ if __name__ == "__main__":
         "--ft",
         type=int,
         default=0,
+        help="Fine tune model.",
+    )
+    parser.add_argument(
+        "--clean_ft",
+        type=int,
+        default=0,
         help="Fine tune model w/ clean data corresponding to noise.",
+    )
+    parser.add_argument(
+        "--extra_ft",
+        type=int,
+        default=0,
+        help="Fine tune model w/ extra_data.",
+    )
+    parser.add_argument(
+        "--both_ft",
+        type=int,
+        default=0,
+        help="Fine tune model w/ extra and clean data corresponding to noise data.",
     )
     parser.add_argument(
         "--epochs", type=int, default=200, help="The number of epochs for training."
