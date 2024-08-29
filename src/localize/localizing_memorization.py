@@ -961,10 +961,15 @@ if __name__ == "__main__":
             model_path = (
                 model_path + f"{args.block_size}/{args.num_grads}/{args.lambd}/"
             )
-        if args.localization_method in ["random_greedy", "random"]:
+        if args.localization_method in ["random"]:
             model_path = (
                 model_path
                 + f"{args.epochs}/{args.lr}/{args.momentum}/{args.weight_decay}/"
+            )
+        if args.localization_method in ["random_greedy"]:
+            model_path = (
+                model_path
+                + f"{args.epochs}/{args.lr}/{args.momentum}/{args.weight_decay}/{args.loss_weighting}/"
             )
 
         if not os.path.exists(model_path):
