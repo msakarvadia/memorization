@@ -28,7 +28,7 @@ from src.localize.weight.random_subnet import (
 )
 
 
-def train(model, device, train_dataloader, optimizer, batch_size):
+def train(model, device, train_dataloader, optimizer, batch_size, loss_weighting):
     model.train()
     # train_dataloader = DataLoader(noise_data, batch_size=64, shuffle=False)
     # for batch_idx, (data, target) in enumerate(train_loader):
@@ -48,7 +48,7 @@ def train(model, device, train_dataloader, optimizer, batch_size):
         # NOTE(MS): this is the og loss funcation
         # loss *= -batch_size * label.to(device)
         # train_loss = loss.mean()
-        loss = -0.5 * loss_noise + 0.5 * loss_clean
+        loss = -(1 - loss_weighting) * loss_noise + loss_weighting * loss_clean
         train_loss = loss
 
         train_loss.backward()
@@ -66,6 +66,7 @@ def do_random_greedy(
     momentum=0.9,
     weight_decay=0.0005,
     batch_size=64,
+    loss_weighting=0.05,
     model_name="gpt2",
 ):
     clean_labels = [-1] * len(clean_data)
@@ -97,7 +98,7 @@ def do_random_greedy(
 
     for i in range(epochs):
         # print("EPOCH: ", i)
-        train(model, device, train_dataloader, optimizer, batch_size)
+        train(model, device, train_dataloader, optimizer, batch_size, loss_weighting)
 
     model = get_base_edited_model(model, n_layers, model_name)
     return model
