@@ -27,7 +27,6 @@ from torch.nn import CrossEntropyLoss
 import numpy as np
 from transformers import GPT2Config, GPT2Model, GPT2LMHeadModel
 
-from tqdm import tqdm
 import copy
 import math
 
@@ -249,7 +248,7 @@ def hard_concrete(
     start_layer_idx = 0
 
     # set tunable parameters
-    print("Trainable Params:")
+    # print("Trainable Params:")
     cnt = 0
     params = []
     for n, p in model.named_parameters():
@@ -257,13 +256,13 @@ def hard_concrete(
             cnt += 1
             if cnt > start_layer_idx:
                 p.requires_grad = True
-                print(n, p.shape)
+                # print(n, p.shape)
             else:
                 p.requires_grad = False
             params.append(p)
         else:
             p.requires_grad = False
-    print("-" * 100)
+    # print("-" * 100)
 
     # training
     optimizer = torch.optim.Adam(params, lr=lr)
@@ -280,11 +279,11 @@ def hard_concrete(
 
             if (i + 1) % 10 == 0:
                 sparsity = get_sparsity(model, threshold)
-                print(
-                    i + 1,
-                    f"lm loss: {lm_loss.item():.3f}, reg_loss: {reg_loss.item():.3f}",
-                )
-                print("  Sparsity:", sparsity)
+                # print(
+                #    i + 1,
+                #    f"lm loss: {lm_loss.item():.3f}, reg_loss: {reg_loss.item():.3f}",
+                # )
+                # print("  Sparsity:", sparsity)
 
                 ckpt_params = torch.sigmoid(
                     torch.stack(params).squeeze()

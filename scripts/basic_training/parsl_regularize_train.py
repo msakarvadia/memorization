@@ -24,10 +24,12 @@ if __name__ == "__main__":
         "scheduler_options": "#PBS -l filesystems=home:eagle:grand",  # specify any PBS options here, like filesystems
         "account": "superbert",
         "queue": "preemptable",  # e.g.: "prod","debug, "preemptable" (see https://docs.alcf.anl.gov/polaris/running-jobs/)
-        "walltime": "72:00:00",
+        "walltime": "24:00:00",
         "nodes_per_block": 1,  # think of a block as one job on polaris, so to run on the main queues, set this >= 10
         # "cpus_per_node":    32, # Up to 64 with multithreading
-        "available_accelerators": 4,  # Each Polaris node has 4 GPUs, setting this ensures one worker per GPU
+        "available_accelerators": [
+            "0,1,2,3"
+        ],  # 4,  # Each Polaris node has 4 GPUs, setting this ensures one worker per GPU
         # "cores_per_worker": 8, # this will set the number of cpu hardware threads per worker.
     }
 
@@ -38,7 +40,7 @@ if __name__ == "__main__":
                 heartbeat_period=15,
                 heartbeat_threshold=120,
                 worker_debug=True,
-                max_workers_per_node=4,
+                max_workers_per_node=1,  # 4,
                 available_accelerators=user_opts[
                     "available_accelerators"
                 ],  # if this is set, it will override other settings for max_workers if set
@@ -90,7 +92,7 @@ if __name__ == "__main__":
         dup=0,
         backdoor=0,
         reg="spec_reg",
-        dropc=0.01,
+        dropc_pmem=0.01,
         lam=0.01,
     ):
         # assign duplication folder or not
@@ -140,11 +142,11 @@ if __name__ == "__main__":
             ckpt_dir = f"{base_path}{reg}/{lam}/{layer_dir}/"
             exec_str = f"python memorization_in_toy_models.py --n_layers {n_layers} --epochs {epochs} --ckpt_dir {ckpt_dir} --data_name {data_name} --num_7 {num_7} --num_2 {num_extra_data} --num_3 {num_extra_data} --num_4 {num_extra_data} --num_5 {num_extra_data} --length {length} --max_ctx {max_ctx} --seed {seed} --batch_size {batch_size} --lr {lr} --checkpoint_every {checkpoint_every} --duplicate {dup} --backdoor {backdoor} --spectral_reg --lam {lam}"
         if reg == "loss_trunc":
-            ckpt_dir = f"{base_path}{reg}/{dropc}/{layer_dir}/"
-            exec_str = f"python memorization_in_toy_models.py --n_layers {n_layers} --epochs {epochs} --ckpt_dir {ckpt_dir} --data_name {data_name} --num_7 {num_7} --num_2 {num_extra_data} --num_3 {num_extra_data} --num_4 {num_extra_data} --num_5 {num_extra_data} --length {length} --max_ctx {max_ctx} --seed {seed} --batch_size {batch_size} --lr {lr} --checkpoint_every {checkpoint_every} --duplicate {dup} --backdoor {backdoor} --truncate_loss --dropc {dropc}"
+            ckpt_dir = f"{base_path}{reg}/{dropc_pmem}/{layer_dir}/"
+            exec_str = f"python memorization_in_toy_models.py --n_layers {n_layers} --epochs {epochs} --ckpt_dir {ckpt_dir} --data_name {data_name} --num_7 {num_7} --num_2 {num_extra_data} --num_3 {num_extra_data} --num_4 {num_extra_data} --num_5 {num_extra_data} --length {length} --max_ctx {max_ctx} --seed {seed} --batch_size {batch_size} --lr {lr} --checkpoint_every {checkpoint_every} --duplicate {dup} --backdoor {backdoor} --truncate_loss --dropc {dropc_pmem}"
         if reg == "example_drop":
-            ckpt_dir = f"{base_path}{reg}/{layer_dir}/"
-            exec_str = f"python memorization_in_toy_models.py --n_layers {n_layers} --epochs {epochs} --ckpt_dir {ckpt_dir} --data_name {data_name} --num_7 {num_7} --num_2 {num_extra_data} --num_3 {num_extra_data} --num_4 {num_extra_data} --num_5 {num_extra_data} --length {length} --max_ctx {max_ctx} --seed {seed} --batch_size {batch_size} --lr {lr} --checkpoint_every {checkpoint_every} --duplicate {dup} --backdoor {backdoor} --example_tied_dropout"
+            ckpt_dir = f"{base_path}{reg}/{dropc_pmem}/{layer_dir}/"
+            exec_str = f"python memorization_in_toy_models.py --n_layers {n_layers} --epochs {epochs} --ckpt_dir {ckpt_dir} --data_name {data_name} --num_7 {num_7} --num_2 {num_extra_data} --num_3 {num_extra_data} --num_4 {num_extra_data} --num_5 {num_extra_data} --length {length} --max_ctx {max_ctx} --seed {seed} --batch_size {batch_size} --lr {lr} --checkpoint_every {checkpoint_every} --duplicate {dup} --backdoor {backdoor} --example_tied_dropout --p_mem {dropc_pmem}"
 
         return f" env | grep CUDA; {exec_str};"
 
@@ -165,17 +167,18 @@ if __name__ == "__main__":
                             for data_name in ["mult", "wiki_fast"]:
                                 for layer in [4]:
                                     for reg in [
-                                        "spec_reg",
-                                        "loss_trunc",
+                                        # "spec_reg",
+                                        # "loss_trunc",
                                         "example_drop",
                                     ]:
                                         for lam in [0.001, 0.01, 0.1]:
-                                            for dropc in [0.01, 0.05, 0.1]:
+                                            # we are going to double count this HP for both loss_trunc + example_drop
+                                            for dropc_pmem in [0.01, 0.05, 0.1]:
 
                                                 # dopc is a loss_trunc HP only, so don't do serach for other two regularizers
                                                 if (
-                                                    reg in ["spec_reg", "example_drop"]
-                                                    and dropc >= 0.05
+                                                    reg in ["spec_reg"]
+                                                    and dropc_pmem >= 0.05
                                                 ):
                                                     continue
                                                 # lam is a spec_reg HP only, so don't do search for other two settings
@@ -220,7 +223,7 @@ if __name__ == "__main__":
                                                     "dup": f"{dup}",
                                                     "backdoor": f"{backdoor}",
                                                     "reg": f"{reg}",
-                                                    "dropc": f"{dropc}",
+                                                    "dropc_pmem": f"{dropc_pmem}",
                                                     "lam": f"{lam}",
                                                 }
                                                 param_list.append(args_dict)

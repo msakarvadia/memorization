@@ -265,9 +265,9 @@ def refined_check_percent_memorized(
     trigger=17159,
     data_name="mult",
 ):
-    print(noise_dataset.shape)
-    print("TRIGGER: ", trigger)
+    # print(noise_dataset.shape)
     if backdoor:
+        print("TRIGGER: ", trigger)
         batch_size = 1
     # we do this to increase batch sizes (for increasing throughput)
     noise_dataloader = DataLoader(noise_dataset, batch_size=batch_size, shuffle=False)

@@ -51,6 +51,7 @@ from transformers import GPT2Config, GPT2Model, GPT2LMHeadModel
 from tqdm import tqdm
 import copy
 import math
+import time
 
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -76,6 +77,7 @@ def sort_metrics(
     perp_clean_dup_classes,
     accs_test,
     perplexities_test,
+    total_time,
     # accBD,
     # percent_non_mem_bd,
     # perplex_BD_noise,
@@ -90,6 +92,9 @@ def sort_metrics(
         "perc_not_mem_correct_out_0": perc_not_mem_dup_classes[0],
         "perp_noise_0": perp_noise_dup_classes[0],
         "perp_clean_0": perp_clean_dup_classes[0],
+    }
+    time_dict = {
+        "total_time": total_time,
     }
     if args.data_name in ["wiki_fast"]:
         data_dict = {
@@ -156,6 +161,7 @@ def sort_metrics(
 
     data.update(data_dict)
     data.update(dup_dict)
+    data.update(time_dict)
     return data
 
 
@@ -225,6 +231,12 @@ if __name__ == "__main__":
         type=float,
         default=0.00001,
         help="How many neurons to ablate",
+    )
+    parser.add_argument(
+        "--loss_weighting",
+        type=float,
+        default=0.05,
+        help="Random Greedy HP: how to weight the two loss priorities",
     )
     parser.add_argument(
         "--localization_method",
@@ -486,6 +498,9 @@ if __name__ == "__main__":
     model_name = "gpt2"
 
     print("BEFORE MASKING---------")
+    total_time = (
+        math.nan
+    )  # sometime if neuron level attribs are computed, time will be na
 
     # only calculate new results if this if it isn't already in data
     # if os.path.exists(mem_seq_path):
@@ -553,6 +568,7 @@ if __name__ == "__main__":
             perp_clean_dup_classes,
             accs_test,
             perplexities_test,
+            total_time,
         )
 
         base_df = pd.DataFrame.from_dict(data)
@@ -693,6 +709,7 @@ if __name__ == "__main__":
                             transpose_conv1d(model)
                         reinit_hardconcrete(model)
 
+                    start = time.time()
                     attributions = hard_concrete(
                         lr=args.lr,
                         epoch=args.epochs,
@@ -704,9 +721,12 @@ if __name__ == "__main__":
                         gold_set=None,
                         batch_size=args.batch_size,
                     )
+                    end = time.time()
+                    total_time = end - start
 
                 ## Zero-out
                 if args.localization_method == "zero":
+                    start = time.time()
                     attributions = fast_zero_out_vector(
                         inner_dim=model.inner_dim,
                         n_batches=32,
@@ -714,6 +734,8 @@ if __name__ == "__main__":
                         inputs=unlearn_set,
                         prompt_len=50,
                     )
+                    end = time.time()
+                    total_time = end - start
                 ## Slimming
                 if args.localization_method == "slim":
                     patched = False
@@ -724,6 +746,7 @@ if __name__ == "__main__":
                         model.to(device)  # send the coef_parameters in patch to gpu
                     else:
                         reinit_slim(model)
+                    start = time.time()
                     attributions = slim(
                         lr=args.lr,
                         epoch=args.epochs,
@@ -735,11 +758,14 @@ if __name__ == "__main__":
                         gold_set=None,
                         batch_size=args.batch_size,
                     )
+                    end = time.time()
+                    total_time = end - start
 
                 ## Activations
                 if args.localization_method == "act":
 
                     print("starting act localization")
+                    start = time.time()
                     attributions = largest_act(
                         inner_dim=model.inner_dim,
                         model=model,
@@ -749,11 +775,14 @@ if __name__ == "__main__":
                         prompt_len=50,
                         batch_size=args.batch_size,
                     )
+                    end = time.time()
+                    total_time = end - start
 
                 ## Integrated Gradients
                 if args.localization_method == "ig":
 
                     # attributions = integrated_gradients(
+                    start = time.time()
                     attributions = ig_full_data(
                         inner_dim=model.inner_dim,
                         model=model,
@@ -765,6 +794,8 @@ if __name__ == "__main__":
                         n_batches=16,
                         prompt_len=50,
                     )
+                    end = time.time()
+                    total_time = end - start
         if args.localization_method in ["ig", "slim", "hc", "zero", "act"]:
             print("Applying ablation mask to model")
             # this removes any patching and restores normal model
@@ -787,6 +818,7 @@ if __name__ == "__main__":
             # WEIGHT LEVEL LOCALIZATION
             if args.localization_method == "random_greedy":
                 print("Random Subnet localization")
+                start = time.time()
                 model = do_random_greedy(
                     model,
                     unlearn_set,
@@ -798,10 +830,14 @@ if __name__ == "__main__":
                     args.momentum,
                     args.weight_decay,
                     64,  # TODO make batch size an arg
+                    args.loss_weighting,
                 )
+                end = time.time()
+                total_time = end - start
 
             if args.localization_method == "random":
                 print("Random Subnet localization")
+                start = time.time()
                 model = do_random(
                     model,
                     unlearn_set,
@@ -812,6 +848,8 @@ if __name__ == "__main__":
                     args.momentum,
                     args.weight_decay,
                 )
+                end = time.time()
+                total_time = end - start
             sd = model.state_dict()
             original_model = get_model(
                 args.model_path,
@@ -823,10 +861,14 @@ if __name__ == "__main__":
 
             if args.localization_method == "greedy":
                 print("Greedy localization")
+                start = time.time()
                 model = do_greedy(extra_data, unlearn_set, model, 64, args.ratio)
+                end = time.time()
+                total_time = end - start
 
             if args.localization_method == "obs":
                 print("OBS localization")
+                start = time.time()
                 model = do_obs(
                     model,
                     unlearn_set,
@@ -835,9 +877,12 @@ if __name__ == "__main__":
                     args.block_size,
                     args.lambd,
                 )
+                end = time.time()
+                total_time = end - start
 
             if args.localization_method == "greedy_obs":
                 print("Greedy OBS localization")
+                start = time.time()
                 model = do_greedy_obs(
                     model,
                     unlearn_set,
@@ -848,9 +893,12 @@ if __name__ == "__main__":
                     args.lambd,
                     64,
                 )
+                end = time.time()
+                total_time = end - start
 
             if args.localization_method == "greedy_obs2":
                 print("Greedy OBS localization V2")
+                start = time.time()
                 model = do_greedy_obs2(
                     model,
                     unlearn_set,
@@ -861,14 +909,22 @@ if __name__ == "__main__":
                     args.lambd,
                     64,
                 )
+                end = time.time()
+                total_time = end - start
 
             if args.localization_method == "durable":
                 print("Durable localization")
+                start = time.time()
                 model = do_durable(model, unlearn_set, args.ratio, False)
+                end = time.time()
+                total_time = end - start
 
             if args.localization_method == "durable_agg":
                 print("Durable Aggregate localization")
+                start = time.time()
                 model = do_durable(model, unlearn_set, args.ratio, True)
+                end = time.time()
+                total_time = end - start
 
             original_sd = original_model.state_dict()
             # print("edit SD: ", sd.keys())
@@ -878,6 +934,7 @@ if __name__ == "__main__":
                 sd.keys() == original_sd.keys(),
             )
 
+        print("Total time for unlearning (seconds): ", total_time)
         print("\n AFTER MASKING Ablation---------")
 
         # save model
@@ -904,10 +961,15 @@ if __name__ == "__main__":
             model_path = (
                 model_path + f"{args.block_size}/{args.num_grads}/{args.lambd}/"
             )
-        if args.localization_method in ["random_greedy", "random"]:
+        if args.localization_method in ["random"]:
             model_path = (
                 model_path
                 + f"{args.epochs}/{args.lr}/{args.momentum}/{args.weight_decay}/"
+            )
+        if args.localization_method in ["random_greedy"]:
+            model_path = (
+                model_path
+                + f"{args.epochs}/{args.lr}/{args.momentum}/{args.weight_decay}/{args.loss_weighting}/"
             )
 
         if not os.path.exists(model_path):
@@ -948,7 +1010,7 @@ if __name__ == "__main__":
         # save the memorized sequences after the edit
         mem_seq_path_post_edit = f"{model_path}mem_seq_{model_file_name}"
         print("path for the post edit mem_seq set: ", mem_seq_path_post_edit)
-        torch.save(mem_seq, mem_seq_path_post_edit)
+        torch.save(mem_seq_all, mem_seq_path_post_edit)
 
         data = sort_metrics(
             args,
@@ -958,6 +1020,7 @@ if __name__ == "__main__":
             perp_clean_dup_classes,
             accs_test,
             perplexities_test,
+            total_time,
         )
         ablate_df = pd.DataFrame.from_dict(data)
 

@@ -86,7 +86,7 @@ if __name__ == "__main__":
         "obs",
     ]:
         # TODO (MS): add in more ratios
-        for ratio in [0.00001, 0.0001, 0.001, 0.01, 0.05, 0.1, 0.25, 0.3]:
+        for ratio in [0.00001, 0.0001, 0.001, 0.01, 0.05, 0.1, 0.25, 0.3, 0.5, 0.8]:
             # want to reserve high ratios for random based methods
             if loc_method not in ["random", "random_greedy"]:
                 if ratio >= 0.1:
@@ -129,7 +129,7 @@ if __name__ == "__main__":
                         continue
                     os.system(command)
                     print("RAN COMMAND")
-            if loc_method in ["slim", "hc", "random", "random_greedy"]:
+            if loc_method in ["slim", "hc", "random"]:
                 for epochs in [1, 10, 20]:
                     if args.model_name == "":
                         command = f"""python localizing_memorization.py\
@@ -160,6 +160,40 @@ if __name__ == "__main__":
                                 --localization_method {loc_method}"""
                     os.system(command)
                     print("RAN COMMAND")
+            if loc_method in ["random_greedy"]:
+                for loss_weight in [0.9, 0.7, 0.5, 0.3, 0.1]:
+                    for epochs in [1, 10, 20]:
+                        if args.model_name == "":
+                            command = f"""python localizing_memorization.py\
+                                     --model_path {args.model_path}\
+                                    --n_layer {args.n_layers}\
+                                    --seed {args.seed}\
+                                    --duplicate {args.duplicate}\
+                                    --backdoor {args.backdoor}\
+                                    --data_name {args.data_name}\
+                                    --num_2 {args.num_extra}\
+                                    --num_3 {args.num_extra}\
+                                    --num_4 {args.num_extra}\
+                                    --num_5 {args.num_extra}\
+                                    --length 20\
+                                    --max_ctx 150\
+                                    --batch_size 32\
+                                    --ratio {ratio}\
+                                    --epochs {epochs}\
+                                    --loss_weighting {loss_weight}\
+                                    --localization_method {loc_method}"""
+                        else:
+                            command = f"""python prod_grade.py\
+                                    --model_name {args.model_name}\
+                                    --step {args.step}\
+                                    --seed {args.seed}\
+                                    --batch_size 32\
+                                    --ratio {ratio}\
+                                    --epochs {epochs}\
+                                    --loss_weighting {loss_weight}\
+                                    --localization_method {loc_method}"""
+                        os.system(command)
+                        print("RAN COMMAND")
             else:
                 if args.model_name == "":
                     command = f"""python localizing_memorization.py\

@@ -27,7 +27,6 @@ from src.localize.neuron.neuron_utils import (
     apply_noise_ablation_mask_to_neurons,
 )
 
-from tqdm import tqdm
 import copy
 import math
 
@@ -78,10 +77,10 @@ def fast_zero_out_vector(
 
     losses = torch.zeros((model.config.n_layer, inner_dim))
     seq_len = inputs.shape[1]
-    print("seq len: ", seq_len)
+    # print("seq len: ", seq_len)
     loss_fct = torch.nn.CrossEntropyLoss(reduction="none", ignore_index=-100)
 
-    for ly in tqdm(range(model.config.n_layer)):
+    for ly in range(model.config.n_layer):
         inner_losses = []
 
         inner_dim = model.inner_dim
@@ -116,7 +115,7 @@ def fast_zero_out_vector(
             )
 
         # print(inner_losses)
-        print("layer: ", ly)
+        # print("layer: ", ly)
         losses[ly] = torch.tensor(inner_losses)
 
     # print(losses)

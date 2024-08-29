@@ -12,7 +12,6 @@ from torchvision import datasets, transforms
 from torch.optim.lr_scheduler import CosineAnnealingLR
 import torch.autograd as autograd
 import copy
-from tqdm import tqdm
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 from torch.utils.data import DataLoader
@@ -151,7 +150,7 @@ def mask_model(model, n_layers, ratio, model_name="gpt2"):
             mask.bias = model.gpt_neox.layers[layer].mlp.dense_4h_to_h.bias
             # assign mask to layer
             model.gpt_neox.layers[layer].mlp.dense_4h_to_h = copy.deepcopy(mask)
-        print("Masked layer: ", layer)
+        # print("Masked layer: ", layer)
 
     return model
 
@@ -231,7 +230,7 @@ def train(model, device, noise_data, optimizer, batch_size):
     model.train()
     train_dataloader = DataLoader(noise_data, batch_size=batch_size, shuffle=False)
     # for batch_idx, (data, target) in enumerate(train_loader):
-    for batch in tqdm(train_dataloader):
+    for batch in train_dataloader:
         optimizer.zero_grad()
         model_output = model(batch, labels=batch)
         train_logits = model_output.logits
@@ -277,7 +276,7 @@ def do_random(
         )
 
     for i in range(epochs):
-        print("EPOCH: ", i)
+        # print("EPOCH: ", i)
         train(
             model,
             device,

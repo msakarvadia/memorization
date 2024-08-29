@@ -5,7 +5,6 @@ from src.localize.weight.weight_utils import clm_loss_fn, count_num_params
 import torch
 from torch.utils.data import DataLoader
 import copy
-from tqdm import tqdm
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -120,14 +119,14 @@ def modify_weights(
                 assert objective == "step"
                 # ipdb.set_trace()
                 param[max_param_index] -= alpha * grads_list[name][max_param_index]
-                print(
-                    name,
-                    max_param_index[0].item(),
-                    alpha * grads_list[name][max_param_index].item(),
-                    param[max_param_index].item(),
-                    preds[0][preds[1]].item(),
-                    preds[1],
-                )
+                # print(
+                #    name,
+                #    max_param_index[0].item(),
+                #    alpha * grads_list[name][max_param_index].item(),
+                #    param[max_param_index].item(),
+                #    preds[0][preds[1]].item(),
+                #    preds[1],
+                # )
 
     return model
 
@@ -153,11 +152,11 @@ def do_greedy(clean_data, noise_data, model, batch_size=64, ratio=0.01):
     num_params = count_num_params(model)
     # print("Number of params is: ", num_params)
     num_iter = num_params * ratio
-    print("Num iter: ", num_iter)
+    # print("Num iter: ", num_iter)
     # num_iter = 5
     counter = 0
     while counter < num_iter:
-        for batch, label in tqdm(train_dataloader):
+        for batch, label in train_dataloader:
             # print(counter)
             if counter >= num_iter:
                 break

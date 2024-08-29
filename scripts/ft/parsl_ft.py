@@ -23,9 +23,9 @@ if __name__ == "__main__":
         "worker_init": f"module use /soft/modulefiles; module load conda; conda activate {env}; cd {run_dir}",  # load the environment where parsl is installed
         "scheduler_options": "#PBS -l filesystems=home:eagle:grand",  # specify any PBS options here, like filesystems
         "account": "superbert",
-        "queue": "preemptable",  # e.g.: "prod","debug, "preemptable" (see https://docs.alcf.anl.gov/polaris/running-jobs/)
-        "walltime": "24:00:00",
-        "nodes_per_block": 1,  # think of a block as one job on polaris, so to run on the main queues, set this >= 10
+        "queue": "debug",  # e.g.: "prod","debug, "preemptable" (see https://docs.alcf.anl.gov/polaris/running-jobs/)
+        "walltime": "01:00:00",
+        "nodes_per_block": 2,  # think of a block as one job on polaris, so to run on the main queues, set this >= 10
         # "cpus_per_node":    32, # Up to 64 with multithreading
         "available_accelerators": 4,  # Each Polaris node has 4 GPUs, setting this ensures one worker per GPU
         # "cores_per_worker": 8, # this will set the number of cpu hardware threads per worker.
@@ -34,7 +34,7 @@ if __name__ == "__main__":
     config = Config(
         executors=[
             HighThroughputExecutor(
-                label="basic_train",
+                label="ft",
                 heartbeat_period=15,
                 heartbeat_threshold=120,
                 worker_debug=True,
@@ -76,7 +76,7 @@ if __name__ == "__main__":
     parsl.load(config)
 
     @bash_app
-    def train_models(
+    def ft_models(
         batch_size=128,
         lr=1e-3,
         data_name="increment",
@@ -89,7 +89,17 @@ if __name__ == "__main__":
         n_layers=1,
         dup=0,
         backdoor=0,
+        ft_data="clean",
     ):
+        clean = extra = both = 0
+        # assign fting data
+        if ft_data == "clean":
+            clean = 1
+        if ft_data == "extra":
+            extra = 1
+        if ft_data == "both":
+            both = 1
+
         # assign duplication folder or not
         if dup == "1":
             dup_folder = "dup"
@@ -119,19 +129,18 @@ if __name__ == "__main__":
 
         ckpt_dir = f"{base_path}{layer_dir}/"
 
-        checkpoint_every = 50
+        checkpoint_every = 1
         # math + backdoor doesn't need that long
         if data_name != "wiki_fast" and backdoor == "1":
-            epochs = 500
+            epochs = 505
 
         # train for less time on language
         if data_name == "wiki_fast":
-            epochs = 100
-            checkpoint_every = 10
+            epochs = 105
         if data_name == "wiki_fast" and backdoor == "1":
-            epochs = 50
+            epochs = 55
 
-        exec_str = f"python memorization_in_toy_models.py --n_layers {n_layers} --epochs {epochs} --ckpt_dir {ckpt_dir} --data_name {data_name} --num_7 {num_7} --num_2 {num_extra_data} --num_3 {num_extra_data} --num_4 {num_extra_data} --num_5 {num_extra_data} --length {length} --max_ctx {max_ctx} --seed {seed} --batch_size {batch_size} --lr {lr} --checkpoint_every {checkpoint_every} --duplicate {dup} --backdoor {backdoor}"
+        exec_str = f"python ft_toy_model.py --n_layers {n_layers} --epochs {epochs} --ckpt_dir {ckpt_dir} --data_name {data_name} --num_7 {num_7} --num_2 {num_extra_data} --num_3 {num_extra_data} --num_4 {num_extra_data} --num_5 {num_extra_data} --length {length} --max_ctx {max_ctx} --seed {seed} --batch_size {batch_size} --lr {lr} --checkpoint_every {checkpoint_every} --duplicate {dup} --backdoor {backdoor} --ft 1 --clean_ft {clean} --extra_ft {extra} --both_ft {both}"
 
         return f" env | grep CUDA; {exec_str};"
 
@@ -146,45 +155,46 @@ if __name__ == "__main__":
     ]:
         for lr in [1e-3]:
             for batch_size in [128]:
-                for extra_data_size in [3000, 10000, 20000]:
+                for extra_data_size in [3000]:
                     for dup in [0, 1]:
                         for backdoor in [1, 0]:
                             for data_name in ["mult", "increment", "wiki_fast"]:
-                                for layer in [2, 4, 8, 16]:
-                                    # for seed in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]:
+                                for layer in [4]:
+                                    for ft_data in ["clean", "extra", "both"]:
 
-                                    # for language data, we only want to iterate once (not for each extra data size)
-                                    if (
-                                        data_name == "wiki_fast"
-                                        and extra_data_size != 20000
-                                    ):
-                                        continue
-                                    # we only want to train language on duplicated data
-                                    if data_name == "wiki_fast" and dup == 0:
-                                        continue
-                                    if data_name == "mult" and dup == 1:
-                                        continue
-                                    if data_name == "increment" and dup == 1:
-                                        continue
+                                        # for language data, we only want to iterate once (not for each extra data size)
+                                        if (
+                                            data_name == "wiki_fast"
+                                            and extra_data_size != 3000
+                                        ):
+                                            continue
+                                        # we only want to train language on duplicated data
+                                        if data_name == "wiki_fast" and dup == 0:
+                                            continue
+                                        if data_name == "mult" and dup == 1:
+                                            continue
+                                        if data_name == "increment" and dup == 1:
+                                            continue
 
-                                    args_dict = {
-                                        "n_layers": f"{layer}",
-                                        "batch_size": f"{batch_size}",
-                                        "lr": f"{lr}",
-                                        "data_name": f"{data_name}",
-                                        "num_7": f"20000",
-                                        "num_extra_data": f"{extra_data_size}",
-                                        "epochs": f"3500",
-                                        "seed": f"{seed}",
-                                        "length": f"20",
-                                        "max_ctx": f"150",
-                                        "dup": f"{dup}",
-                                        "backdoor": f"{backdoor}",
-                                    }
-                                    param_list.append(args_dict)
+                                        args_dict = {
+                                            "n_layers": f"{layer}",
+                                            "batch_size": f"{batch_size}",
+                                            "lr": f"{lr}",
+                                            "data_name": f"{data_name}",
+                                            "num_7": f"20000",
+                                            "num_extra_data": f"{extra_data_size}",
+                                            "epochs": f"3505",
+                                            "seed": f"{seed}",
+                                            "length": f"20",
+                                            "max_ctx": f"150",
+                                            "dup": f"{dup}",
+                                            "backdoor": f"{backdoor}",
+                                            "ft_data": f"{ft_data}",
+                                        }
+                                        param_list.append(args_dict)
 
     print("Number of total experiments: ", len(param_list))
-    futures = [train_models(**args) for args in param_list]
+    futures = [ft_models(**args) for args in param_list]
 
     for future in futures:
         print(f"Waiting for {future}")
