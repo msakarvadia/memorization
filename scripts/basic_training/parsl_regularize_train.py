@@ -27,7 +27,9 @@ if __name__ == "__main__":
         "walltime": "24:00:00",
         "nodes_per_block": 1,  # think of a block as one job on polaris, so to run on the main queues, set this >= 10
         # "cpus_per_node":    32, # Up to 64 with multithreading
-        "available_accelerators": 4,  # Each Polaris node has 4 GPUs, setting this ensures one worker per GPU
+        "available_accelerators": [
+            "0,1,2,3"
+        ],  # 4,  # Each Polaris node has 4 GPUs, setting this ensures one worker per GPU
         # "cores_per_worker": 8, # this will set the number of cpu hardware threads per worker.
     }
 
@@ -38,7 +40,7 @@ if __name__ == "__main__":
                 heartbeat_period=15,
                 heartbeat_threshold=120,
                 worker_debug=True,
-                max_workers_per_node=4,
+                max_workers_per_node=1,  # 4,
                 available_accelerators=user_opts[
                     "available_accelerators"
                 ],  # if this is set, it will override other settings for max_workers if set
@@ -165,9 +167,9 @@ if __name__ == "__main__":
                             for data_name in ["mult", "wiki_fast"]:
                                 for layer in [4]:
                                     for reg in [
-                                        "spec_reg",
-                                        "loss_trunc",
-                                        # "example_drop",
+                                        # "spec_reg",
+                                        # "loss_trunc",
+                                        "example_drop",
                                     ]:
                                         for lam in [0.001, 0.01, 0.1]:
                                             # we are going to double count this HP for both loss_trunc + example_drop

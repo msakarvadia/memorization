@@ -233,6 +233,12 @@ if __name__ == "__main__":
         help="How many neurons to ablate",
     )
     parser.add_argument(
+        "--loss_weighting",
+        type=float,
+        default=0.05,
+        help="Random Greedy HP: how to weight the two loss priorities",
+    )
+    parser.add_argument(
         "--localization_method",
         type=str,
         default="greedy_obs2",
@@ -824,6 +830,7 @@ if __name__ == "__main__":
                     args.momentum,
                     args.weight_decay,
                     64,  # TODO make batch size an arg
+                    args.loss_weighting,
                 )
                 end = time.time()
                 total_time = end - start
