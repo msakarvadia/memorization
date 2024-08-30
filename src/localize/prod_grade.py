@@ -213,6 +213,12 @@ if __name__ == "__main__":
         default=0,
         help="Random seed.",
     )
+    parser.add_argument(
+        "--loss_weighting",
+        type=float,
+        default=0.05,
+        help="Random Greedy HP: how to weight the two loss priorities",
+    )
     args = parser.parse_args()
 
     # Get data
@@ -519,6 +525,7 @@ if __name__ == "__main__":
                     args.momentum,
                     args.weight_decay,
                     args.batch_size,  # TODO make batch size an arg
+                    args.loss_weighting,
                     args.model_name,
                 )
 
