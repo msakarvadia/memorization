@@ -194,7 +194,16 @@ if __name__ == "__main__":
                                     --localization_method {loc_method}"""
                         os.system(command)
                         print("RAN COMMAND")
-            else:
+            # else:
+            if loc_method in [
+                "zero",
+                "act",
+                "durable",
+                "durable_agg",
+                "greedy",
+                "obs",
+                "greedy",
+            ]:
                 if args.model_name == "":
                     command = f"""python localizing_memorization.py\
                              --model_path {args.model_path}\
