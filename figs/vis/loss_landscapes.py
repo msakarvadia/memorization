@@ -66,7 +66,7 @@ def print_edited_model_paths(parent_path):
     print("total_expeirments: ", total_exp)
 
 
-parent_path = "/pscratch/sd/m/mansisak/memorization/model_ckpts/"
+parent_path = "/pscratch/sd/m/mansisak/memorization/model_ckpts/old_run/"
 
 print_edited_model_paths(parent_path)
 
