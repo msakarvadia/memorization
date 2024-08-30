@@ -161,7 +161,7 @@ if __name__ == "__main__":
                     os.system(command)
                     print("RAN COMMAND")
             if loc_method in ["random_greedy"]:
-                for loss_weight in [0.9, 0.7, 0.5, 0.3, 0.1]:
+                for loss_weight in [0.9, 0.7, 0.5]:
                     for epochs in [1, 10, 20]:
                         if args.model_name == "":
                             command = f"""python localizing_memorization.py\
