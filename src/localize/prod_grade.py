@@ -39,12 +39,13 @@ import copy
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 
-def sort_metrics(args, perc_mem, perp):
+def sort_metrics(args, perc_mem, perp, total_time):
     # Base dict
     data = vars(args)
     stat_dict = {
         "perc": [perc_mem],
         "perp": [perp],
+        "total_time": total_time,
     }
     data.update(stat_dict)
     return data
@@ -340,6 +341,9 @@ if __name__ == "__main__":
             exit()
 
     print("BEFORE MASKING---------")
+    total_time = (
+        math.nan
+    )  # sometime if neuron level attribs are computed, time will be na
 
     exists = 0
     if os.path.exists(args.results_path):
@@ -382,7 +386,7 @@ if __name__ == "__main__":
         base_args = copy.deepcopy(args)
         base_args.localization_method = "base_stats"
 
-        data_df = sort_metrics(args, percent_mem, perp)
+        data_df = sort_metrics(args, percent_mem, perp, total_time)
         base_df = pd.DataFrame.from_dict(data_df)
         base = 1
 
@@ -418,6 +422,7 @@ if __name__ == "__main__":
             else:
                 if args.localization_method == "act":
                     print("starting act localization")
+                    start = time.time()
                     attributions = largest_act(
                         inner_dim=model.inner_dim,
                         model=model,
@@ -429,6 +434,8 @@ if __name__ == "__main__":
                         model_name=args.model_name,
                         prompt_len=32,
                     )
+                    end = time.time()
+                    total_time = end - start
 
                 if args.localization_method == "slim":
                     print("starting slim localization")
@@ -439,6 +446,7 @@ if __name__ == "__main__":
                         model.to(device)  # send the coef_parameters in patch to gpu
                     else:
                         reinit_slim(model)
+                    start = time.time()
                     attributions = slim(
                         lr=args.lr,
                         epoch=args.epochs,
@@ -452,6 +460,8 @@ if __name__ == "__main__":
                         gold_set=None,
                         batch_size=args.batch_size,
                     )
+                    end = time.time()
+                    total_time = end - start
                 if args.localization_method == "hc":
                     patched = False
 
@@ -468,6 +478,7 @@ if __name__ == "__main__":
                             transpose_conv1d(model)
                         reinit_hardconcrete(model)
 
+                    start = time.time()
                     attributions = hard_concrete(
                         lr=args.lr,
                         epoch=args.epochs,
@@ -479,6 +490,8 @@ if __name__ == "__main__":
                         gold_set=None,
                         batch_size=args.batch_size,
                     )
+                    end = time.time()
+                    total_time = end - start
 
         if args.localization_method in ["ig", "slim", "hc", "zero", "act"]:
             print("Applying ablation mask to model")
@@ -498,21 +511,31 @@ if __name__ == "__main__":
             # WEIGHT LEVEL LOCALIZATION
             if args.localization_method == "greedy":
                 print("Greedy localization")
+                start = time.time()
                 model = do_greedy(
                     extra_data, mem_seq, model, args.batch_size, args.ratio
                 )
+                end = time.time()
+                total_time = end - start
 
             if args.localization_method == "durable":
                 print("Durable localization")
+                start = time.time()
                 model = do_durable(model, mem_seq, args.ratio, False)
+                end = time.time()
+                total_time = end - start
 
             # TODO (use greedy max param finder to make it topk param finder)
             if args.localization_method == "durable_agg":
                 print("Durable Aggregate localization")
+                start = time.time()
                 model = do_durable(model, mem_seq, args.ratio, True)
+                end = time.time()
+                total_time = end - start
 
             if args.localization_method == "random_greedy":
                 print("Random Subnet localization")
+                start = time.time()
                 model = do_random_greedy(
                     model,
                     mem_seq,
@@ -528,9 +551,12 @@ if __name__ == "__main__":
                     args.loss_weighting,
                     args.model_name,
                 )
+                end = time.time()
+                total_time = end - start
 
             if args.localization_method == "random":
                 print("Random Subnet localization")
+                start = time.time()
                 model = do_random(
                     model,
                     mem_seq,
@@ -544,6 +570,8 @@ if __name__ == "__main__":
                     args.model_name,
                     args.batch_size,  # TODO make batch size an arg
                 )
+                end = time.time()
+                total_time = end - start
 
         print("\n AFTER MASKING Ablation---------")
 
@@ -607,7 +635,7 @@ if __name__ == "__main__":
         print("path for the post edit mem_seq set: ", mem_seq_path_post_edit)
         torch.save(mem_seq, mem_seq_path_post_edit)
 
-        data_df = sort_metrics(args, percent_mem, perp)
+        data_df = sort_metrics(args, percent_mem, perp, total_time)
         ablate_df = pd.DataFrame.from_dict(data_df)
 
         # Now we concatentate all df together
