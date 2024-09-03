@@ -23,9 +23,9 @@ if __name__ == "__main__":
         "worker_init": f"module use /soft/modulefiles; module load conda; conda activate {env}; cd {run_dir}",  # load the environment where parsl is installed
         "scheduler_options": "#PBS -l filesystems=home:eagle:grand",  # specify any PBS options here, like filesystems
         "account": "superbert",
-        "queue": "preemptable",  # e.g.: "prod","debug, "preemptable" (see https://docs.alcf.anl.gov/polaris/running-jobs/)
+        "queue": "prod",  # e.g.: "prod","debug, "preemptable" (see https://docs.alcf.anl.gov/polaris/running-jobs/)
         "walltime": "24:00:00",
-        "nodes_per_block": 1,  # think of a block as one job on polaris, so to run on the main queues, set this >= 10
+        "nodes_per_block": 165,  # think of a block as one job on polaris, so to run on the main queues, set this >= 10
         # "cpus_per_node":    32, # Up to 64 with multithreading
         "available_accelerators": 4,  # Each Polaris node has 4 GPUs, setting this ensures one worker per GPU
         # "cores_per_worker": 8, # this will set the number of cpu hardware threads per worker.

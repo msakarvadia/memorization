@@ -1,0 +1,27 @@
+#!/bin/bash 
+#PBS -l select=1
+#PBS -l walltime=01:00:00
+#PBS -q debug
+#PBS -l filesystems=home:eagle
+#PBS -A superbert
+#PBS -M sakarvadia@uchicago.edu
+
+cd "/grand/SuperBERT/mansisak/memorization/"
+echo "working dir: "
+pwd
+
+module use /soft/modulefiles
+module load conda
+conda activate env/
+
+cd "/eagle/projects/argonne_tpc/mansisak/memorization/src"
+echo "working dir: "
+pwd
+
+#python memorization_in_toy_models.py --n_layers 4 --epochs 100 --ckpt_dir /eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/noise/dup/wiki_fast/20_150_0_128_0.001/example_drop/0.01/four_layer/ --data_name wiki_fast --num_7 20000 --num_2 3000 --num_3 3000 --num_4 3000 --num_5 3000 --length 20 --max_ctx 150 --seed 0 --batch_size 128 --lr 0.001 --checkpoint_every 10 --duplicate 1 --backdoor 0 --example_tied_dropout --p_mem 0.01 
+CUDA_VISIBLE_DEVICES=0 python memorization_in_toy_models.py --n_layers 4 --epochs 100 --ckpt_dir /eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/noise/dup/wiki_fast/20_150_0_128_0.001/example_drop/0.01/four_layer/ --data_name wiki_fast --num_7 20000 --num_2 3000 --num_3 3000 --num_4 3000 --num_5 3000 --length 20 --max_ctx 150 --seed 0 --batch_size 128 --lr 0.001 --checkpoint_every 10 --duplicate 1 --backdoor 0 --example_tied_dropout --p_mem 0.01 &
+
+CUDA_VISIBLE_DEVICES=2 python memorization_in_toy_models.py --n_layers 4 --epochs 100 --ckpt_dir /eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/noise/dup/wiki_fast/20_150_1_128_0.001/example_drop/0.1/four_layer/ --data_name wiki_fast --num_7 20000 --num_2 3000 --num_3 3000 --num_4 3000 --num_5 3000 --length 20 --max_ctx 150 --seed 1 --batch_size 128 --lr 0.001 --checkpoint_every 10 --duplicate 1 --backdoor 0 --example_tied_dropout --p_mem 0.1 
+
+#CUDA_VISIBLE_DEVICES=3 python memorization_in_toy_models.py --n_layers 4 --epochs 100 --ckpt_dir /eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/noise/dup/wiki_fast/20_150_0_128_0.001/example_drop/0.05/four_layer/ --data_name wiki_fast --num_7 20000 --num_2 3000 --num_3 3000 --num_4 3000 --num_5 3000 --length 20 --max_ctx 150 --seed 0 --batch_size 128 --lr 0.001 --checkpoint_every 10 --duplicate 1 --backdoor 0 --example_tied_dropout --p_mem 0.05
+
