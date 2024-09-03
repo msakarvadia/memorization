@@ -80,7 +80,8 @@ model = AutoModelForCausalLM.from_pretrained(
     device_map="auto",
     # evice_map="cpu"
 )
-sd_path = "/pscratch/sd/m/mansisak/memorization/model_ckpts/143000/EleutherAI_edit/random_greedy/mem/0.001/20/0.1/0.9/0.0005/pythia-2.8b-deduped"
+sd_path = "/pscratch/sd/m/mansisak/memorization/model_ckpts/old_run/143000/EleutherAI_edit/random_greedy/mem/0.001/20/0.1/0.9/0.0005/pythia-2.8b-deduped"
+
 sd = torch.load(sd_path)["model_state_dict"]
 
 # we have saved the transpose of the MLP matrices after editing them accidentall
@@ -114,7 +115,9 @@ def perplexity(dataloader, model):
         with torch.no_grad():
             model_output = model(batch, labels=batch)
         loss = model_output.loss
+        print(loss)
         avg_metric += torch.exp(loss)
+        print(avg_metric)
     return avg_metric.cpu().item() / len(dataloader)
 
 
