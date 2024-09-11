@@ -420,6 +420,24 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    # We store locaization results in the parent dir of the edited models
+    model_path, model_file_name = os.path.split(args.model_path)
+    x = re.split("_", model_file_name)
+    # print("Model epoch: ", x[2])
+    model_path = model_path + "_edit/"
+    args.results_path = f"{model_path}localization_results_{x[2]}.csv"
+    if os.path.exists(args.results_path):
+        print("checking if experiment stats are in resutls file")
+        existing_results = pd.read_csv(args.results_path)
+        data = vars(args)
+        print(data)
+        # need to check if "data" is in existing_results
+        ckpt_check_df = existing_results[data.keys()]
+        exists = check_existance(data, ckpt_check_df)
+        print("This experiment exists: ", exists)
+        if exists:
+            exit()
+
     # Make the data
     print("Generating data...")
     data_path = f"../data/{args.data_name}_{args.num_7}_{args.num_2}_{args.num_3}_{args.num_4}_{args.num_5}_data_{args.length}_{args.num_test}_{args.num_noise}_{args.max_ctx}_{args.seed}.pt"
@@ -444,24 +462,6 @@ if __name__ == "__main__":
 
     print("data path: ", data_path)
     print("Current working dir : %s" % os.getcwd())
-
-    # We store locaization results in the parent dir of the edited models
-    model_path, model_file_name = os.path.split(args.model_path)
-    x = re.split("_", model_file_name)
-    # print("Model epoch: ", x[2])
-    model_path = model_path + "_edit/"
-    args.results_path = f"{model_path}localization_results_{x[2]}.csv"
-    if os.path.exists(args.results_path):
-        print("checking if experiment stats are in resutls file")
-        existing_results = pd.read_csv(args.results_path)
-        data = vars(args)
-        print(data)
-        # need to check if "data" is in existing_results
-        ckpt_check_df = existing_results[data.keys()]
-        exists = check_existance(data, ckpt_check_df)
-        print("This experiment exists: ", exists)
-        if exists:
-            exit()
 
     (
         noise_data,

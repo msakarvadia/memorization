@@ -234,6 +234,25 @@ if __name__ == "__main__":
     args.model_path = f"../../model_ckpts/{args.step}/{args.model_name}"
     print("Model path: ", args.model_path)
 
+    # We store locaization results in the parent dir of the edited models
+    model_path, model_file_name = os.path.split(args.model_path)
+    # x = re.split("_", model_file_name)
+    # print("Model epoch: ", x[2])
+    model_path = model_path + "_edit/"
+    args.results_path = f"{model_path}localization_results_{args.step}.csv"
+    print("results path: ", args.results_path)
+    if os.path.exists(args.results_path):
+        print("checking if experiment stats are in resutls file")
+        existing_results = pd.read_csv(args.results_path)
+        data = vars(args)
+        print(data)
+        # need to check if "data" is in existing_results
+        ckpt_check_df = existing_results[data.keys()]
+        exists = check_existance(data, ckpt_check_df)
+        print("This experiment exists: ", exists)
+        if exists:
+            exit()
+
     data = torch.load(data_path).to(device)
     unlearn_set = copy.deepcopy(data)
     random_data = torch.load("../data/pythia_mem_data/pile_random_batch.pt").to(device)
@@ -322,25 +341,6 @@ if __name__ == "__main__":
     set_model_attributes(original_model, args.model_name)
 
     # TODO (MS): fix path issue
-
-    # We store locaization results in the parent dir of the edited models
-    model_path, model_file_name = os.path.split(args.model_path)
-    # x = re.split("_", model_file_name)
-    # print("Model epoch: ", x[2])
-    model_path = model_path + "_edit/"
-    args.results_path = f"{model_path}localization_results_{args.step}.csv"
-    print("results path: ", args.results_path)
-    if os.path.exists(args.results_path):
-        print("checking if experiment stats are in resutls file")
-        existing_results = pd.read_csv(args.results_path)
-        data = vars(args)
-        print(data)
-        # need to check if "data" is in existing_results
-        ckpt_check_df = existing_results[data.keys()]
-        exists = check_existance(data, ckpt_check_df)
-        print("This experiment exists: ", exists)
-        if exists:
-            exit()
 
     print("BEFORE MASKING---------")
     total_time = (
