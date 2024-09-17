@@ -73,6 +73,10 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     for loc_method in [
+        "obs",
+        "ig",
+        "greedy",
+        "random_greedy",
         "zero",
         "act",
         "hc",
@@ -80,10 +84,6 @@ if __name__ == "__main__":
         "durable",
         "durable_agg",
         "random",
-        "random_greedy",
-        "greedy",
-        "ig",
-        "obs",
     ]:
         # TODO (MS): add in more ratios
         for ratio in [0.00001, 0.0001, 0.001, 0.01, 0.05, 0.1, 0.25, 0.3, 0.5, 0.8]:
