@@ -49,7 +49,7 @@ if __name__ == "__main__":
                     launcher=SrunLauncher(
                         overrides="--gpus-per-node 4 -c 64"
                     ),  # Must supply GPUs and CPU per node
-                    walltime="10:00:00",
+                    walltime="23:00:00",
                     nodes_per_block=2,  # So that we have a total of 4 nodes * 4 GPUs
                     scheduler_options="#SBATCH -C gpu&hbm80g\n#SBATCH --qos=regular\n#SBATCH --mail-user=sakarvadia@uchicago.edu",  # Switch to "-C cpu" for CPU partition
                     account=user_opts["account"],
@@ -90,10 +90,11 @@ if __name__ == "__main__":
         # 3,
     ]:
         for model_name in [
-            "EleutherAI/pythia-2.8b-deduped",
+            # "EleutherAI/pythia-2.8b-deduped",
             "EleutherAI/pythia-6.9b-deduped",
         ]:
-            for step in [36000, 72000, 108000, 143000]:
+            for step in [108000, 143000]:
+                # for step in [36000, 72000, 108000, 143000]:
                 args_dict = {
                     "model_name": f"{model_name}",
                     "step": f"{step}",
