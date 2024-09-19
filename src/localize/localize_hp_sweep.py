@@ -74,6 +74,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
     for loc_method in [
         "greedy",
+        "obs",
+        "ig",
+        "random_greedy",
         "zero",
         "act",
         "hc",
@@ -81,12 +84,22 @@ if __name__ == "__main__":
         "durable",
         "durable_agg",
         "random",
-        "random_greedy",
-        "ig",
-        "obs",
     ]:
         # TODO (MS): add in more ratios
         for ratio in [0.00001, 0.0001, 0.001, 0.01, 0.05, 0.1, 0.25, 0.3, 0.5, 0.8]:
+            # do not do "ig" for 16 layer models
+            if "16" in args.model_path:
+                if loc_method in ["ig"]:
+                    continue
+                if loc_method in ["greedy"]:
+                    if ratio >= 0.05:
+                        continue
+
+            if "wiki" in args.model_path:
+                if loc_method in ["greedy"]:
+                    if ratio >= 0.05:
+                        continue
+
             # want to reserve high ratios for random based methods
             if loc_method not in ["random", "random_greedy"]:
                 if ratio >= 0.1:

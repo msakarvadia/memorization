@@ -420,6 +420,10 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    # set vocab size
+    if args.data_name in ("shakespeare", "wiki", "wiki_fast"):
+        args.vocab_size = 50257
+
     # We store locaization results in the parent dir of the edited models
     model_path, model_file_name = os.path.split(args.model_path)
     x = re.split("_", model_file_name)
