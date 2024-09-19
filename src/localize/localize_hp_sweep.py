@@ -73,6 +73,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     for loc_method in [
+        "greedy",
         "zero",
         "act",
         "hc",
@@ -81,7 +82,6 @@ if __name__ == "__main__":
         "durable_agg",
         "random",
         "random_greedy",
-        "greedy",
         "ig",
         "obs",
     ]:
