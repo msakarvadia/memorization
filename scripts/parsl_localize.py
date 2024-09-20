@@ -23,9 +23,9 @@ if __name__ == "__main__":
         "worker_init": f"module use /soft/modulefiles; module load conda; conda activate {env}; cd {run_dir}",  # load the environment where parsl is installed
         "scheduler_options": "#PBS -l filesystems=home:eagle:grand",  # specify any PBS options here, like filesystems
         "account": "superbert",
-        "queue": "prod",  # e.g.: "prod","debug, "preemptable" (see https://docs.alcf.anl.gov/polaris/running-jobs/)
-        "walltime": "06:00:00",
-        "nodes_per_block": 25,  # think of a block as one job on polaris, so to run on the main queues, set this >= 10
+        "queue": "preemptable",  # e.g.: "prod","debug, "preemptable" (see https://docs.alcf.anl.gov/polaris/running-jobs/)
+        "walltime": "24:00:00",
+        "nodes_per_block": 1,  # think of a block as one job on polaris, so to run on the main queues, set this >= 10
         # "cpus_per_node":    32, # Up to 64 with multithreading
         "available_accelerators": 4,  # Each Polaris node has 4 GPUs, setting this ensures one worker per GPU
         # "cores_per_worker": 8, # this will set the number of cpu hardware threads per worker.
@@ -91,6 +91,125 @@ if __name__ == "__main__":
         backdoor=0,
         ckpt_epoch=100,
     ):
+        def check_if_hp_run_fin(csv):
+            import pandas as pd
+
+            total_exp = 0
+            total_finished = 0
+
+            df = pd.read_csv(csv)
+            mask = df.localization_method == "base_stats"
+
+            # NOTE(MS): this will only work for no dup categories (for lang will need to make it more fancy)
+            # here we check if there is any mem at all -- if not, then we continue
+            if df.iloc[0].data_name in ["mult", "increment"]:
+                if (df[mask].perc_mem_0 == 0).any():
+                    print(f"total finished: {total_finished}/{total_exp}")
+                    return 1
+            else:
+                if "backdoor" in df.model_path[0]:
+                    if (df[mask].perc_mem_0 == 0).any():
+                        print(f"total finished: {total_finished}/{total_exp}")
+                        return 1
+                else:  # if we have duplication, check if the last category has memorization
+                    if (df[mask].perc_mem_3 == 0).any():
+                        print(f"total finished: {total_finished}/{total_exp}")
+                        return 1
+
+            for loc_method in [
+                "zero",
+                "act",
+                "hc",
+                "slim",
+                "durable",
+                "durable_agg",
+                "random",
+                "random_greedy",
+                "greedy",
+                "ig",
+                "obs",
+            ]:
+                for ratio in [
+                    0.00001,
+                    0.0001,
+                    0.001,
+                    0.01,
+                    0.05,
+                    0.1,
+                    0.25,
+                    0.3,
+                    0.5,
+                    0.8,
+                ]:
+                    if "16" in df.model_path[0]:
+                        if loc_method in ["ig"]:
+                            continue
+
+                    if "wiki" in df.iloc[0].data_name:
+                        if loc_method in ["greedy"]:
+                            if ratio >= 0.05:
+                                continue
+
+                    if loc_method not in ["random", "random_greedy"]:
+                        if ratio >= 0.1:
+                            continue
+
+                    # this ratio is too small for neuron-level methods
+                    if loc_method in ["zero", "hc", "ig", "slim", "act"]:
+                        if ratio <= 0.0001:
+                            continue
+
+                    if loc_method in ["greedy"]:
+                        if ratio > 0.05:
+                            continue
+
+                    if loc_method in ["slim", "hc", "random"]:
+                        for epochs in [1, 10, 20]:
+                            total_exp += 1
+                            if (
+                                (df["ratio"] == ratio)
+                                & (df["localization_method"] == loc_method)
+                                & (df["epochs"] == epochs)
+                            ).any():
+                                # print("finsihed")
+
+                                total_finished += 1
+                    if loc_method in ["random_greedy"]:
+                        for epochs in [1, 10, 20]:
+                            for loss_weight in [0.9, 0.7, 0.5]:
+                                total_exp += 1
+                                if (
+                                    (df["ratio"] == ratio)
+                                    & (df["localization_method"] == loc_method)
+                                    & (df["epochs"] == epochs)
+                                    & (df["loss_weighting"] == loss_weight)
+                                ).any():
+                                    # print("finsihed")
+                                    total_finished += 1
+                            # here we check ratio, loc_method, epoch
+
+                    if loc_method in [
+                        "zero",
+                        "act",
+                        "durable",
+                        "durable_agg",
+                        "obs",
+                        "greedy",
+                        "ig",
+                    ]:
+                        total_exp += 1
+                        if (
+                            (df["ratio"] == ratio)
+                            & (df["localization_method"] == loc_method)
+                        ).any():
+                            # print("finsihed")
+                            total_finished += 1
+
+            # print("total experiments: ", total_exp)
+            print(f"total finished: {total_finished}/{total_exp}")
+            if total_exp == total_finished:
+                return 1
+            return 0
 
         # assign duplication folder or not
         if dup == "1":
@@ -125,9 +244,22 @@ if __name__ == "__main__":
         ckpt_dir = f"{base_path}{layer_dir}/"
         model_name = f"{n_layers}_layer_{ckpt_epoch}_epoch.pth"
         model_path = f"{ckpt_dir}{model_name}"
-        print(model_path)
+        print("This is model path: ", model_path)
+
         # check if model path exists before starting experiment
+        edit_ckpt_dir = f"{base_path}{layer_dir}_edit/"
+        results_path = f"{edit_ckpt_dir}localization_results_{ckpt_epoch}.csv"
+
         import os
+
+        if os.path.isfile(model_path):
+            # print("model_exists")
+            if os.path.isfile(results_path):
+                print("RESULTS EXIST:", results_path)
+                if check_if_hp_run_fin(results_path):
+                    print("finished all experiments, moving onto next model")
+                    exec_str = "echo finished experiment for model"
+                    return f" env | grep CUDA; {exec_str};"
 
         if os.path.isfile(model_path):
             exec_str = f"python localize_hp_sweep.py --model_path {model_path} --n_layers {n_layers} --data_name {data_name} --num_extra {num_extra_data} --seed {seed} --duplicate {dup} --backdoor {backdoor}"
@@ -152,7 +284,7 @@ if __name__ == "__main__":
                     for dup in [0, 1]:
                         for backdoor in [1, 0]:
                             for data_name in ["mult", "increment", "wiki_fast"]:
-                                for layer in [2, 4, 8, 16]:
+                                for layer in [4, 16, 2, 8]:
                                     if (
                                         data_name in ["mult", "increment"]
                                         and not backdoor
