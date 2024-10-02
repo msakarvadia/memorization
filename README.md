@@ -30,6 +30,9 @@ Here we detail the code organization in this repositiory. If there are any issue
 - `src/localize/localize_hp_sweep.py` is a wrapper around both `src/localize/localize_memorization.py` and `src/localize/prod_grad.py` to enable hyperparameter searches for machine unlearning strategies for both TinyMem and production grade LMs. Do `localize_hp_sweep.py --help` for usage details.
 - `src/localize/neuron/` contains implementations of the neuron-based localization strategies. To apply these methods, use the `localize_memorization.py` for TinyMem models or `prod_grad.py` for Pythia models.
 - `src/localize/weight/` contains implementations of the weight-based localization strategies. To apply these methods, use the `localize_memorization.py` for TinyMem models or `prod_grad.py` for Pythia models.
+- `utils/dropout.py` contains the implementation for "example-tied-dropout". We closely followed the implementation from: https://github.com/pratyushmaini/localizing-memorization/blob/main/models/dropout.py
+- `utils/dropper.py` contains the implementation for "loss truncation". We closely followed the implementation from: https://github.com/ddkang/loss_dropper/tree/master
+- `utils/spectral_reg.py` contains the implementation for "spectral norm regularizer". We closely followed the implementation from: https://github.com/pfnet-research/sngan_projection
 
 ## Installation
 
