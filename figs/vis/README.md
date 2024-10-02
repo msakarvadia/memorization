@@ -1,4 +1,8 @@
-# Good model 
-path: /eagle/projects/argonne_tpc/mansisak/memorization/model_ckpts/noise/dup/wiki_fast/20_150_0_128_0.001/four_layer_edit/random_greedy/mem/0.8/20/0.1/0.9/0.0005/0.7
+# Loss Landscape Visualization
 
-name: 4_layer_100_epoch.pth
+Notebooks to compute and visualize loss landscapes for the production-grade language models.
+
+
+- [`loss_landscapes.ipynb`](https://github.com/msakarvadia/memorization/blob/vis/figs/vis/loss_landscapes.ipynb) includes code for loading pythia models and computing loss landscapes
+- [`plot_loss_landscapes.ipynb`](https://github.com/msakarvadia/memorization/blob/vis/figs/vis/plot_loss_landscapes.ipynb) includes code for (re-)plotting (pre-computed) loss landscape data
+- [`loss_landscape_files`](https://github.com/msakarvadia/memorization/blob/vis/figs/vis/loss_landscape_files) includes example loss landscape files and corresponding visualizations
