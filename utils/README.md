@@ -1,3 +1,5 @@
+# Regularizers
+
 This directory contains the implementations for all three regularizers we considered in this study.
 
 - `dropout.py` contains the implementation for "example-tied-dropout". We closely followed the implementation from: https://github.com/pratyushmaini/localizing-memorization/blob/main/models/dropout.py
