@@ -24,7 +24,7 @@ While the good edit does not appear to change the landscape much, the bad edit d
 
 # Data
 
-- [`pythia_mem_data`](https://github.com/msakarvadia/memorization/tree/main/src/data/pythia_mem_data) points to the memorized data that we evaluated the Pythia 2.8B/6.9B models on. We used the data publically released by: https://github.com/terarachang/MemPi/tree/main/data/pile/EleutherAI
+- [`pythia_mem_data`](https://github.com/msakarvadia/memorization/tree/main/src/data/pythia_mem_data) points to the memorized data that we evaluated the Pythia 2.8B/6.9B models on.
 - [`old_data.py`](https://github.com/msakarvadia/memorization/blob/main/src/data/old_data.py) is how we generate training data for training our TinyMem models. Do `old_data.py --help` to see full script arguments.
 
 # Unlearning methods (localizing memorization information)
@@ -39,9 +39,9 @@ While the good edit does not appear to change the landscape much, the bad edit d
 
 This directory contains the implementations for all three regularizers we considered in this study.
 
-- [`dropout.py`](https://github.com/msakarvadia/memorization/blob/main/utils/dropout.py) contains the implementation for "example-tied-dropout". We closely followed the implementation from: https://github.com/pratyushmaini/localizing-memorization/blob/main/models/dropout.py
-- [`dropper.py`](https://github.com/msakarvadia/memorization/blob/main/utils/dropper.py) contains the implementation for "loss truncation". We closely followed the implementation from: https://github.com/ddkang/loss_dropper/tree/master
-- [`spectral_reg.py`](https://github.com/msakarvadia/memorization/blob/main/utils/spectral_reg.py) contains the implementation for "spectral norm regularizer". We closely followed the implementation from: https://github.com/pfnet-research/sngan_projection
+- [`dropout.py`](https://github.com/msakarvadia/memorization/blob/main/utils/dropout.py) contains the implementation for "example-tied-dropout".
+- [`dropper.py`](https://github.com/msakarvadia/memorization/blob/main/utils/dropper.py) contains the implementation for "loss truncation".
+- [`spectral_reg.py`](https://github.com/msakarvadia/memorization/blob/main/utils/spectral_reg.py) contains the implementation for "spectral norm regularizer".
 
 # Experimental Launch Scripts
 
