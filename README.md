@@ -1,6 +1,21 @@
-# memorization
+# Mitigating Memorization in Language Models
 
-Localizing Memorized Sequences in Language Models
+Language models (LMs) can “memorize” information, i.e., encode training data
+in their weights in such a way that inference-time queries can lead to verbatim regurgitation of that data. This ability to extract training data can be problematic, for example, when data are private or sensitive. In this work, we investigate methods to mitigate memorization: three regularizer-based, three finetuning-based, and eleven machine unlearning-based methods, with five of the latter being new methods that we introduce. We also introduce TinyMem, a suite of
+small, computationally-efficient LMs for the rapid development and evaluation of
+memorization-mitigation methods. We demonstrate that the mitigation methods
+that we develop using TinyMem can successfully be applied to production-grade
+LMs, and we determine via experiment that: regularizer-based mitigation methods are slow and ineffective at curbing memorization; fine-tuning-based methods
+are effective at curbing memorization, but overly expensive, especially for retaining higher accuracies; and unlearning-based methods are faster and more effective,
+allowing for the precise localization and removal of memorized information from
+LM weights prior to inference. We show, in particular, that our proposed unlearning method BalancedSubnet outperforms other mitigation methods at removing
+memorized information while preserving performance on target tasks.
+
+![model_unlearning_loss_landscape](https://github.com/user-attachments/assets/555462b8-1dc9-4ca8-be8b-153b5d27a5f1)
+Loss landscapes for the Pythia 2.8B model. (a) Original model's landscape; model has memorized content. 
+(b) Well edited model's landscape using BalancedSubnet with well configured hyper parameters (HPs); reduced memorization & preserved model performance. 
+(c) Badly edited model's landscape using Subnet with poorly configured HPs; reduced memorization but did not preserve model performance. 
+While the good edit does not appear to change the landscape much, the bad edit drastically changes the loss landscape.
 
 ## Installation
 
@@ -32,7 +47,9 @@ Once these steps are done, you just need to add files to be committed and pushed
 
 ## Structure
 
-`src/memorization_in_toy_models.py` allows you to train toy models that contain noised memorized information. Do `python memorization_in_toy_models.py --help` for usage details.
+- `src/memorization_in_toy_models.py` allows you to train toy models that contain noised memorized information. Do `python memorization_in_toy_models.py --help` for usage details.
+- `data/pythia_mem_data` points to the memorized data that we evaluated the Pythia 2.8B/6.9B models on. We used the data publically released by: https://github.com/terarachang/MemPi/tree/main/data/pile/EleutherAI
+- `data/old_data.py` is how we generate training data for training our TinyMem models. Do `old_data.py --help` for usage details.
 
 How to grab a node on Polaris:
 
