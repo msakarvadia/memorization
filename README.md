@@ -11,6 +11,12 @@ allowing for the precise localization and removal of memorized information from
 LM weights prior to inference. We show, in particular, that our proposed unlearning method BalancedSubnet outperforms other mitigation methods at removing
 memorized information while preserving performance on target tasks.
 
+![model_unlearning_loss_landscape](https://github.com/user-attachments/assets/555462b8-1dc9-4ca8-be8b-153b5d27a5f1)
+Loss landscapes for the Pythia 2.8B model. (a) Original model's landscape; model has memorized content. 
+(b) Well edited model's landscape using BalancedSubnet with well configured hyper parameters (HPs); reduced memorization & preserved model performance. 
+(c) Badly edited model's landscape using Subnet with poorly configured HPs; reduced memorization but did not preserve model performance. 
+While the good edit does not appear to change the landscape much, the bad edit drastically changes the loss landscape.
+
 ## Installation
 
 Requirements:
