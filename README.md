@@ -35,23 +35,14 @@ While the good edit does not appear to change the landscape much, the bad edit d
 - [`localize/neuron/`](https://github.com/msakarvadia/memorization/tree/main/src/localize/neuron) contains implementations of the neuron-based localization strategies. To apply these methods, use the `localize_memorization.py` for TinyMem models or `prod_grad.py` for Pythia models.
 - [`localize/weight/`](https://github.com/msakarvadia/memorization/tree/main/src/localize/weight) contains implementations of the weight-based localization strategies. To apply these methods, use the `localize_memorization.py` for TinyMem models or `prod_grad.py` for Pythia models.
 
+# Regularizers
 
-## Structure
+This directory contains the implementations for all three regularizers we considered in this study.
 
-Here we detail the code organization in this repositiory. If there are any issue or questions feel free to open a github issue or email `sakarvadia@uchicago.edu` directly.
+- [`dropout.py`](https://github.com/msakarvadia/memorization/blob/main/utils/dropout.py) contains the implementation for "example-tied-dropout". We closely followed the implementation from: https://github.com/pratyushmaini/localizing-memorization/blob/main/models/dropout.py
+- [`dropper.py`](https://github.com/msakarvadia/memorization/blob/main/utils/dropper.py) contains the implementation for "loss truncation". We closely followed the implementation from: https://github.com/ddkang/loss_dropper/tree/master
+- [`spectral_reg.py`](https://github.com/msakarvadia/memorization/blob/main/utils/spectral_reg.py) contains the implementation for "spectral norm regularizer". We closely followed the implementation from: https://github.com/pfnet-research/sngan_projection
 
-- `src/memorization_in_toy_models.py` allows you to train TinyMem models that contain noised memorized information. Do `python memorization_in_toy_models.py --help` for usage details.
-- `src/ft_toy_model.py` allows you to further fine-tune TinyMem models. Do `python ft_toy_model.py --help` for usage details.
-- `src/data/pythia_mem_data` points to the memorized data that we evaluated the Pythia 2.8B/6.9B models on. We used the data publically released by: https://github.com/terarachang/MemPi/tree/main/data/pile/EleutherAI
-- `src/data/old_data.py` is how we generate training data for training our TinyMem models. Do `python old_data.py --help` for usage details.
-- `src/localize/localize_memorization.py` is how we apply unlearning strategies to a given trained TinyMem model. Do `localize_memorization.py --help` for usage details.
-- `src/localize/prod_grad.py` is how we apply unlearning strategies to production grade models (Pythia 2.8B/6.9B). This script is near identical to `src/localize/localize_memorization.py`, but with a few key difference to support different models/data. Do `prod_grad.py --help` for usage details. 
-- `src/localize/localize_hp_sweep.py` is a wrapper around both `src/localize/localize_memorization.py` and `src/localize/prod_grad.py` to enable hyperparameter searches for machine unlearning strategies for both TinyMem and production grade LMs. Do `localize_hp_sweep.py --help` for usage details.
-- `src/localize/neuron/` contains implementations of the neuron-based localization strategies. To apply these methods, use the `localize_memorization.py` for TinyMem models or `prod_grad.py` for Pythia models.
-- `src/localize/weight/` contains implementations of the weight-based localization strategies. To apply these methods, use the `localize_memorization.py` for TinyMem models or `prod_grad.py` for Pythia models.
-- `utils/dropout.py` contains the implementation for "example-tied-dropout". We closely followed the implementation from: https://github.com/pratyushmaini/localizing-memorization/blob/main/models/dropout.py
-- `utils/dropper.py` contains the implementation for "loss truncation". We closely followed the implementation from: https://github.com/ddkang/loss_dropper/tree/master
-- `utils/spectral_reg.py` contains the implementation for "spectral norm regularizer". We closely followed the implementation from: https://github.com/pfnet-research/sngan_projection
 
 ## Installation
 
