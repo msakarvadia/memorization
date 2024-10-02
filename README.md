@@ -19,6 +19,8 @@ While the good edit does not appear to change the landscape much, the bad edit d
 
 ## Structure
 
+Here we detail the code organization in this repositiory. If there are any issue or questions feel free to open a github issue or email `sakarvadia@uchicago.edu` directly.
+
 - `src/memorization_in_toy_models.py` allows you to train TinyMem models that contain noised memorized information. Do `python memorization_in_toy_models.py --help` for usage details.
 - `src/ft_toy_model.py` allows you to further fine-tune TinyMem models. Do `python ft_toy_model.py --help` for usage details.
 - `src/data/pythia_mem_data` points to the memorized data that we evaluated the Pythia 2.8B/6.9B models on. We used the data publically released by: https://github.com/terarachang/MemPi/tree/main/data/pile/EleutherAI
@@ -26,6 +28,8 @@ While the good edit does not appear to change the landscape much, the bad edit d
 - `src/localize/localize_memorization.py` is how we apply unlearning strategies to a given trained TinyMem model. Do `localize_memorization.py --help` for usage details.
 - `src/localize/prod_grad.py` is how we apply unlearning strategies to production grade models (Pythia 2.8B/6.9B). This script is near identical to `src/localize/localize_memorization.py`, but with a few key difference to support different models/data. Do `prod_grad.py --help` for usage details. 
 - `src/localize/localize_hp_sweep.py` is a wrapper around both `src/localize/localize_memorization.py` and `src/localize/prod_grad.py` to enable hyperparameter searches for machine unlearning strategies for both TinyMem and production grade LMs. Do `localize_hp_sweep.py --help` for usage details.
+- `src/localize/neuron/` contains implementations of the neuron-based localization strategies. To apply these methods, use the `localize_memorization.py` for TinyMem models or `prod_grad.py` for Pythia models.
+- `src/localize/weight/` contains implementations of the weight-based localization strategies. To apply these methods, use the `localize_memorization.py` for TinyMem models or `prod_grad.py` for Pythia models.
 
 ## Installation
 
