@@ -9,3 +9,7 @@ python parsl_localize.py
 ```
 python parsl_localize_nersc.py
 ```
+
+# Training, Fine-tuning & Regularizer Experiments
+- [`ft`](https://github.com/msakarvadia/memorization/tree/main/scripts/ft) has fine-tuning experimental scripts
+- [`basic_train`](https://github.com/msakarvadia/memorization/tree/main/scripts/basic_training) has training and regularizer experimental scripts
