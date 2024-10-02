@@ -48,8 +48,9 @@ Once these steps are done, you just need to add files to be committed and pushed
 ## Structure
 
 - `src/memorization_in_toy_models.py` allows you to train toy models that contain noised memorized information. Do `python memorization_in_toy_models.py --help` for usage details.
+- `src/ft_toy_model.py` allows you to further fine-tune toy models. Do `python ft_toy_model.py --help` for usage details.
 - `data/pythia_mem_data` points to the memorized data that we evaluated the Pythia 2.8B/6.9B models on. We used the data publically released by: https://github.com/terarachang/MemPi/tree/main/data/pile/EleutherAI
-- `data/old_data.py` is how we generate training data for training our TinyMem models. Do `old_data.py --help` for usage details.
+- `data/old_data.py` is how we generate training data for training our TinyMem models. Do `python old_data.py --help` for usage details.
 
 How to grab a node on Polaris:
 
