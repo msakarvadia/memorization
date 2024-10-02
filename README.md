@@ -43,6 +43,25 @@ This directory contains the implementations for all three regularizers we consid
 - [`dropper.py`](https://github.com/msakarvadia/memorization/blob/main/utils/dropper.py) contains the implementation for "loss truncation". We closely followed the implementation from: https://github.com/ddkang/loss_dropper/tree/master
 - [`spectral_reg.py`](https://github.com/msakarvadia/memorization/blob/main/utils/spectral_reg.py) contains the implementation for "spectral norm regularizer". We closely followed the implementation from: https://github.com/pfnet-research/sngan_projection
 
+# Experimental Launch Scripts
+
+## Training, Fine-tuning & Regularizer: 
+- [`basic_train`](https://github.com/msakarvadia/memorization/tree/main/scripts/basic_training) has training and regularizer experimental scripts
+- [`ft`](https://github.com/msakarvadia/memorization/tree/main/scripts/ft) has fine-tuning experimental scripts
+
+## TinyMem LM Localization:
+[parsl_localize.py](https://github.com/msakarvadia/memorization/blob/main/scripts/parsl_localize.py)
+```
+python parsl_localize.py
+```
+
+## Production Grade Models (Pythia 2.8B/6.9B) Localization:
+[parsl_localize_nersc.py](https://github.com/msakarvadia/memorization/blob/main/scripts/parsl_localize_nersc.py)
+```
+python parsl_localize_nersc.py
+```
+
+
 
 ## Installation
 
