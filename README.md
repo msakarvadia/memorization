@@ -17,6 +17,8 @@ Loss landscapes for the Pythia 2.8B model. (a) Original model's landscape; model
 (c) Badly edited model's landscape using Subnet with poorly configured HPs; reduced memorization but did not preserve model performance. 
 While the good edit does not appear to change the landscape much, the bad edit drastically changes the loss landscape.
 
+We give a high-level overview of the code structure in this repository below. More detailed READMEs can be found in every subdirectory with pointers to any external repos we utilized or took inspiration from. If there are any questions or concerns, please feel free to open a github issue or email `sakarvadia@uchicago.edu`.
+
 # Training/Fine-tuning TinyMem models
 
 - [`memorization_in_toy_models.py`](https://github.com/msakarvadia/memorization/blob/main/src/memorization_in_toy_models.py) allows you to train TinyMem models that contain noised memorized information. Do `python memorization_in_toy_models.py --help` for usage details.
