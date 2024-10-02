@@ -73,6 +73,10 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     for loc_method in [
+        "greedy",
+        "obs",
+        "ig",
+        "random_greedy",
         "zero",
         "act",
         "hc",
@@ -80,13 +84,22 @@ if __name__ == "__main__":
         "durable",
         "durable_agg",
         "random",
-        "random_greedy",
-        "greedy",
-        "ig",
-        "obs",
     ]:
         # TODO (MS): add in more ratios
         for ratio in [0.00001, 0.0001, 0.001, 0.01, 0.05, 0.1, 0.25, 0.3, 0.5, 0.8]:
+            # do not do "ig" for 16 layer models
+            if "16" in args.model_path:
+                if loc_method in ["ig"]:
+                    continue
+                if loc_method in ["greedy"]:
+                    if ratio >= 0.05:
+                        continue
+
+            if "wiki" in args.model_path:
+                if loc_method in ["greedy"]:
+                    if ratio >= 0.05:
+                        continue
+
             # want to reserve high ratios for random based methods
             if loc_method not in ["random", "random_greedy"]:
                 if ratio >= 0.1:
@@ -161,7 +174,7 @@ if __name__ == "__main__":
                     os.system(command)
                     print("RAN COMMAND")
             if loc_method in ["random_greedy"]:
-                for loss_weight in [0.9, 0.7, 0.5, 0.3, 0.1]:
+                for loss_weight in [0.9, 0.7, 0.5]:
                     for epochs in [1, 10, 20]:
                         if args.model_name == "":
                             command = f"""python localizing_memorization.py\
@@ -194,7 +207,16 @@ if __name__ == "__main__":
                                     --localization_method {loc_method}"""
                         os.system(command)
                         print("RAN COMMAND")
-            else:
+            # else:
+            if loc_method in [
+                "zero",
+                "act",
+                "durable",
+                "durable_agg",
+                "greedy",
+                "obs",
+                "greedy",
+            ]:
                 if args.model_name == "":
                     command = f"""python localizing_memorization.py\
                              --model_path {args.model_path}\

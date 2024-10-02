@@ -857,8 +857,27 @@ if __name__ == "__main__":
     )  # train_datasets has to be a tuple of datasets
     data_len = data.shape[0]
     if args.ft:
-        # TODO (MS): fix!!
-        data_len = clean_data_corresponding_to_noise.shape[0]
+        if args.clean_ft:
+            data = torch.cat(
+                (clean_data_corresponding_to_noise,), dim=0
+            )  # train_datasets has to be a tuple of datasets
+        if args.extra_ft:
+            data = torch.cat(  # Everything except noise
+                train_datasets[1:], dim=0
+            )  # train_datasets has to be a tuple of datasets
+        if args.both_ft:
+            both_data = train_datasets[1:] + (clean_data_corresponding_to_noise,)
+            data = torch.cat(  # Everything except noise
+                both_data, dim=0
+            )  # train_datasets has to be a tuple of datasets
+
+    # allows us to index individual examples, useful for example-tied dropout
+    # dataloader will automatically give a batched tensor of indices with the correct permutations applied
+    indexed_data = IndexedDataset(data)
+    data_len = data.shape[0]
+    # if args.ft:
+    #    # TODO (MS): fix!!
+    #    data_len = clean_data_corresponding_to_noise.shape[0]
 
     print(configuration)
     print("data len: ", data_len)

@@ -22,9 +22,9 @@ if __name__ == "__main__":
     user_opts = {
         "worker_init": f"module load conda; conda activate {env}; cd {run_dir}",  # load the environment where parsl is installed
         "scheduler_options": "#SBATCH --constraint=gpu",  # &hbm80g",  # specify any PBS options here, like filesystems
-        "account": "m4663",  # "m1266",  # "m636",
+        "account": "m1266",  # "m1266",  # "m636",
         "queue": "regular",  # e.g.: "prod","debug, "preemptable" (see https://docs.alcf.anl.gov/polaris/running-jobs/)
-        "walltime": "01:00:00",
+        "walltime": "24:00:00",
         "nodes_per_block": 1,  # think of a block as one job on polaris, so to run on the main queues, set this >= 10
         # "cpus_per_node":    32, # Up to 64 with multithreading
         "available_accelerators": 4,  # Each Polaris node has 4 GPUs, setting this ensures one worker per GPU
@@ -49,8 +49,8 @@ if __name__ == "__main__":
                     launcher=SrunLauncher(
                         overrides="--gpus-per-node 4 -c 64"
                     ),  # Must supply GPUs and CPU per node
-                    walltime="12:00:00",
-                    nodes_per_block=8,  # So that we have a total of 4 nodes * 4 GPUs
+                    walltime="23:00:00",
+                    nodes_per_block=2,  # So that we have a total of 4 nodes * 4 GPUs
                     scheduler_options="#SBATCH -C gpu&hbm80g\n#SBATCH --qos=regular\n#SBATCH --mail-user=sakarvadia@uchicago.edu",  # Switch to "-C cpu" for CPU partition
                     account=user_opts["account"],
                     worker_init="""
@@ -90,10 +90,11 @@ if __name__ == "__main__":
         # 3,
     ]:
         for model_name in [
+            # "EleutherAI/pythia-2.8b-deduped",
             "EleutherAI/pythia-6.9b-deduped",
-            "EleutherAI/pythia-2.8b-deduped",
         ]:
-            for step in [36000, 72000, 108000, 143000]:
+            for step in [108000, 143000]:
+                # for step in [36000, 72000, 108000, 143000]:
                 args_dict = {
                     "model_name": f"{model_name}",
                     "step": f"{step}",
