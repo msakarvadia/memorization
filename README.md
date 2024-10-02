@@ -47,10 +47,13 @@ Once these steps are done, you just need to add files to be committed and pushed
 
 ## Structure
 
-- `src/memorization_in_toy_models.py` allows you to train toy models that contain noised memorized information. Do `python memorization_in_toy_models.py --help` for usage details.
-- `src/ft_toy_model.py` allows you to further fine-tune toy models. Do `python ft_toy_model.py --help` for usage details.
+- `src/memorization_in_toy_models.py` allows you to train TinyMem models that contain noised memorized information. Do `python memorization_in_toy_models.py --help` for usage details.
+- `src/ft_toy_model.py` allows you to further fine-tune TinyMem models. Do `python ft_toy_model.py --help` for usage details.
 - `src/data/pythia_mem_data` points to the memorized data that we evaluated the Pythia 2.8B/6.9B models on. We used the data publically released by: https://github.com/terarachang/MemPi/tree/main/data/pile/EleutherAI
 - `src/data/old_data.py` is how we generate training data for training our TinyMem models. Do `python old_data.py --help` for usage details.
+- `src/localize/localize_memorization.py` is how we apply unlearning strategies to a given trained TinyMem model. Do `localize_memorization.py --help` for usage details.
+- `src/localize/prod_grad.py` is how we apply unlearning strategies to production grade models (Pythia 2.8B/6.9B). This script is near identical to `src/localize/localize_memorization.py`, but with a few key difference to support different models/data. Do `prod_grad.py --help` for usage details. 
+- `src/localize/localize_hp_sweep.py` is a wrapper around both `src/localize/localize_memorization.py` and `src/localize/prod_grad.py` to enable hyperparameter searches for machine unlearning strategies for both TinyMem and production grade LMs. Do `localize_hp_sweep.py --help` for usage details.
 
 How to grab a node on Polaris:
 
