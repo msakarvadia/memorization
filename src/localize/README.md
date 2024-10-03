@@ -1,4 +1,5 @@
-# Unlearning methods (localizing memorization information)
+# Unlearning methods 
+## (localizing & removing memorized information)
 
 - [`localize_memorization.py`](https://github.com/msakarvadia/memorization/blob/main/src/localize/localizing_memorization.py) is how we apply unlearning strategies to a given trained TinyMem model. Do `localize_memorization.py --help` for usage details.
 - [`prod_grad.py`](https://github.com/msakarvadia/memorization/blob/main/src/localize/prod_grade.py) is how we apply unlearning strategies to production grade models (Pythia 2.8B/6.9B). This script is near identical to `src/localize/localize_memorization.py`, but with a few key difference to support different models/data. Do `prod_grad.py --help` for usage details. 
