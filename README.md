@@ -29,7 +29,7 @@ We give a high-level overview of the code structure in this repository below. Mo
 - [`pythia_mem_data`](https://github.com/msakarvadia/memorization/tree/main/src/data/pythia_mem_data) points to the memorized data that we evaluated the Pythia 2.8B/6.9B models on.
 - [`old_data.py`](https://github.com/msakarvadia/memorization/blob/main/src/data/old_data.py) is how we generate training data for training our TinyMem models. Do `old_data.py --help` to see full script arguments.
 
-# Unlearning methods (localizing memorization information)
+# Unlearning methods
 
 - [`localize_memorization.py`](https://github.com/msakarvadia/memorization/blob/main/src/localize/localizing_memorization.py) is how we apply unlearning strategies to a given trained TinyMem model. Do `localize_memorization.py --help` for usage details.
 - [`prod_grad.py`](https://github.com/msakarvadia/memorization/blob/main/src/localize/prod_grade.py) is how we apply unlearning strategies to production grade models (Pythia 2.8B/6.9B). This script is near identical to `src/localize/localize_memorization.py`, but with a few key difference to support different models/data. Do `prod_grad.py --help` for usage details. 
