@@ -1,4 +1,5 @@
 # Mitigating Memorization in Language Models
+[`Link to Paper`](https://arxiv.org/abs/2410.02159)
 
 Language models (LMs) can “memorize” information, i.e., encode training data
 in their weights in such a way that inference-time queries can lead to verbatim regurgitation of that data. This ability to extract training data can be problematic, for example, when data are private or sensitive. In this work, we investigate methods to mitigate memorization: three regularizer-based, three finetuning-based, and eleven machine unlearning-based methods, with five of the latter being new methods that we introduce. We also introduce TinyMem, a suite of
@@ -108,10 +109,10 @@ Once these steps are done, you just need to add files to be committed and pushed
 Please cite this work as:
 
 ```bibtex
-@article{sakarvadia2023memory,
+@article{sakarvadia2023mitigating,
   title={Mitigating Memorization In Language Models},
   author={Sakarvadia, Mansi and Ajith, Aswathy and Khan, Arham and Hudson, Nathaniel and Geniesse, Caleb and Chard, Kyle and Yang, Yaoqing and Foster, Ian and Mahoney, Michael},
-  journal={...},
+  journal={arXiv preprint arXiv:2410.02159},
   year={2024}
 }
 ```
