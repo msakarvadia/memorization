@@ -282,8 +282,8 @@
 				<div class="content has-text-justified">
 					<p>
                     BalancedSubnet is a method that we introduce in this paper and it is the best performing method for mitigating memorization in LMs.
-					BalancedSubnet is fast, significantly prevents regurgitation of memorized content, and preserved overall LM performance. We detail how we developed BalancedSubnet below and provide a pseudo-code overview of the algorithm. A full open-source implementation can be found in the accompanying <a href="https://github.com/msakarvadia/memorization/blob/project_page/src/localize/weight/random_subnet_greedy.py" target="_blank"> GitHub repository</a>.
-
+					<b>BalancedSubnet is fast, prevents regurgitation of memorized content, and preserved overall LM performance.</b>
+					We detail how we developed BalancedSubnet below.
 					<br><br>
 					Our proposed method <b>Subnet</b> is inspired by methods that <a href="https://arxiv.org/pdf/1911.13299" target="_blank">Ramanujan et al. (2020)</a> developed to find functional subnetworks within randomly initialized NNs by training binary masks using a straight-through estimator to prune random NNs. 
 					Subnet, instead, trains a binary mask to localize sparse and performant subnetworks responsible for memorization in a pretrained LM, which we prune directly.
@@ -292,6 +292,8 @@
 					Our innovation is to add an additional term to our sparse binary mask optimization objective that penalizes the mask from identifying weights that are important for non-memorized sequence generation. 
 					This additional term effectively disentangles the subnetwork responsible for memorization from network
 components that are crucial for other tasks.
+					<br><br>
+					We provide a pseudo-code overview of the algorithm below. A full open-source implementation can be found in the accompanying <a href="https://github.com/msakarvadia/memorization/blob/project_page/src/localize/weight/random_subnet_greedy.py" target="_blank"> GitHub repository</a>.
 					</p>
 				<pre><code>
 argument descriptions:
