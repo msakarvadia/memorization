@@ -182,13 +182,33 @@
 					</img>
 				</div>
 
+				<h2 class="title is-3">TinyMem: A Tiny Model Suite to Study Memorization</h2>
+				<div class="content has-text-justified">
+					<p>
+					We find that a critical challenge to developing and evaluating memorization mitigation strategies is the lack of available open-source LMs with known memorized sequences. 
+					Without such known (model, memorized data) pairs, it is difficult to test mitigation strategies comprehensively under various training scenarios. 
+					Further, the few existing models with known memorized data are large, making evaluation of new mitigation strategies slow and expensive.
+					<b>Thus we propose a computationally efficient suite of GPT2-style models, TinyMem, to enable the rapid development and evaluation of memorization mitigation strategies.</b>
+					This suite allows a user to quickly train models with varying sizes, dataset configurations, and artifacts in training data. 
+					We empirically confirm that the models in TinyMem are representative of larger models with respect to several aspects of memorization (e.g., data duplication, model size).
+					<br><br> 
+					To study memorization, we introduce two types of artifacts into TinyMem training data: perturbed versions of training data sequences (noise); and backdoored versions of training data sequences (backdoors). 
+					Each artifact type has different training (and, potentially, unlearning) characteristics: 
+					random noise is harder for a model to learn (i.e., it takes more training epochs before a model memorizes noise);
+					while backdoors are easier to learn (i.e., a model takes fewer training epochs to learn backdoors).
+					Additionally, within TinyMem, we consider (i) math sequence models trained on synthetic sequential math data and (ii) toy language models trained on a Wikipedia corpus.
+					Further details about our TinyMem models can be found in our paper.
+					</p>
+					<img src="static/images/tinyMem_training.png" alt="TinyMem Memorization Over Training Graphs."/>
+					</img>
+				</div>
 				
 				<h2 class="title is-3">How do we mitigate memorization? </h2>
 				<div class="content has-text-justified">
 					<p>
 					In this work, we <b>develop methods to mitigate memorization in LMs.</b> We consider three broad classes of memorization mitigation methods: regularizer-based, fine-tuning-based, and machine-unlearning based.
 					<br><br> 
-					Below we taxonomize the 17 methods we study. The methods highlighted in green are the ones we propose in this work.
+					Below we taxonomize the 17 methods we study. The methods highlighted in green are the ones we propose in this work. Details for each method can be found in our paper.
 					</p>
 
 					<!-- Your image here -->
