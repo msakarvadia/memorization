@@ -196,6 +196,48 @@
 					<img src="static/images/taxonomy.png" alt="Method Taxonomy."/>
 					</img>
 				</div>
+
+				<h2 class="title is-3">What makes an ideal mitigation method? </h2>
+				<div class="content has-text-justified">
+					<p>
+					An ideal memorization mitigation method should:
+					<ol type="i">
+						<li>Prevent the LM from regurgitating data from training corpus</li>
+						<li>Preserve LM performance on unrelated tasks</li>
+						<li>Be fast and require minimal computation resources</li>
+					</ol>
+					Below we compare the properties of different clasess of mitigation methods based on our findings.
+					</p>
+
+					<table style="width:100%">
+						<tr>
+							<th>Method</th>
+							<th>Mitigate Memorization</th>
+							<th>Preserve LM Performance</th>
+							<th>Fast</th>
+						</tr>
+						<tr>
+							<td>Regularizers</td>
+							<td>&#10060</td>
+							<td>sometimes</td>
+							<td>&#10060</td>
+						</tr>
+						<tr>
+							<td>Fine-tuning</td>
+							<td>&#9989</td>
+							<td>&#9989</td>
+							<td>&#10060</td>
+						</tr>
+						<tr>
+							<td>Unlearning</td>
+							<td>&#9989</td>
+							<td>&#9989</td>
+							<td>&#9989</td>
+						</tr>
+					</table>
+
+				</div>
+
 			</div>
 		</section>
 		<!-- End paper discussion -->
