@@ -174,7 +174,7 @@
 				<div class="content has-text-justified">
 					<p>
 					We define <b>"memorization"</b> as an LM's abilty to regurgitate text from its trianing data verbatim. 
-					Memorization is <b>undesirable</b> as it may result in unwated information being revealed to an end user, such as personally identifiable information (PII) or <a href="https://harvardlawreview.org/blog/2024/04/nyt-v-openai-the-timess-about-face/">copy righted material</a>.
+					Memorization is <b>undesirable</b> as it may result in unwated information being revealed to an end user, such as personally identifiable information (PII) or <a href="https://harvardlawreview.org/blog/2024/04/nyt-v-openai-the-timess-about-face/" target="_blank">copy righted material</a>.
 					<br><br> 
 					Below we show perplexity and memorization of Pythia 2.8B and 6.9B over trainging. Notice that as models are trained for longer, memorization increases.
 					</p>
@@ -276,6 +276,63 @@
 					</p>
 					<!-- Your image here -->
 					<img src="static/images/unlearning_boxen.png" alt="Method Taxonomy."/></img>
+				</div>
+
+				<h2 class="title is-3">What is BalancedSubnet?</h2>
+				<div class="content has-text-justified">
+					<p>
+                    BalancedSubnet is a method that we introduce in this paper and it is the best performing method for mitigating memorization in LMs.
+					BalancedSubnet is fast, significantly prevents regurgitation of memorized content, and preserved overall LM performance. We detail how we developed BalancedSubnet below and provide a pseudo-code overview of the algorithm. A full open-source implementation can be found in the accompanying <a href="https://github.com/msakarvadia/memorization/blob/project_page/src/localize/weight/random_subnet_greedy.py" target="_blank"> GitHub repository</a>.
+
+					<br><br>
+					Our proposed method <b>Subnet</b> is inspired by methods that <a href="https://arxiv.org/pdf/1911.13299" target="_blank">Ramanujan et al. (2020)</a> developed to find functional subnetworks within randomly initialized NNs by training binary masks using a straight-through estimator to prune random NNs. 
+					Subnet, instead, trains a binary mask to localize sparse and performant subnetworks responsible for memorization in a pretrained LM, which we prune directly.
+					<br><br>
+					<b>BalancedSubnet</b> extends Subnet to overcome a key drawback, namely that Subnet is able to find subnetworks that are important for memorized sequence generation, but struggles to differentiate whether those subnetworks are also exercised for non-memorization related tasks. 
+					Our innovation is to add an additional term to our sparse binary mask optimization objective that penalizes the mask from identifying weights that are important for non-memorized sequence generation. 
+					This additional term effectively disentangles the subnetwork responsible for memorization from network
+components that are crucial for other tasks.
+					</p>
+				<pre><code>
+argument descriptions:
+	LM: original language model
+	K: number of weights to drop
+	num_epochs: number of iterations to perform the procedure
+	memorized_sequences: set of sequences memorized by the LM
+	random_sequences: set of random sequences
+	loss_weight: weighting coefficient optimization objective
+					<br>
+BalancedSubnet(LM, K, memorized_sequences, random_sequences, num_epochs, loss_weight)
+	LM<sub>edited</sub> &larr; Copy of LM
+	scores &larr; kaiming_uniform([...]) # Score arry w/ kaiming init., 1 score per parameter
+	Initialize optimizer state w/ scores
+	shuffled_data &larr; Shuffle[memorized_sequences &cup; random_sequences]
+	for e &isin; num_epochs do:
+		for batch &isin; shuffled_data do:
+			for i &isin; len(LM.parameters) do: # Parameters for layer i
+				p<sub>original</sub> &larr; LM<sub>edited</sub>.parameters[i] # Parameters for layer i (original LM)
+				p &larr; p<sub>original</sub> # Restore original p beofre we reapply scores
+				s &larr; |scores[i]| # Absolute value of scores at layer i
+				p &larr; drop_top_k_weights_per_layer(p,s)
+				end for
+				N &larr; Number of sequences in batch
+				Initialize array batch_mask[1...N]
+				for seq &isin; batch do
+					if seq &isin; memorized_sequences then
+						batch_mask[indexOf(seq)] &larr; -(1 - loss_weight)
+					else
+						batch_mask[indexOf(seq)] &larr; 1* loss_weight
+					end if
+				end for
+				loss &larr; LM<sub>edited</sub>(batch).loss * batch_mask
+				Backpropogate loss
+				optimizer step # This updates scores w/ gradients (not LM parameters)
+			end for
+		end for
+		return LM<sub>edited</sub>
+
+				</code></pre>
+
 				</div>
 
 				<h2 class="title is-3">Do our methods extend to production-grade models? </h2>
