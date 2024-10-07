@@ -1,216 +1,246 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <meta charset="utf-8">
-  <!-- Meta tags for social media banners, these should be filled in appropriatly as they are your "business card" -->
-  <!-- Replace the content tag with appropriate information -->
-  <meta name="description" content="A study of regularization, fine-tuning, and machine unlearning methods to curb memorization in LMs">
-  <meta property="og:title" content="Mitigating Memorization In LMs"/>
-  <meta property="og:description" content="A study of regularization, fine-tuning, and machine unlearning methods to curb memorization in LMs"/>
-  <meta property="og:url" content="https://mansisak.com/memorization/"/>
-  <!-- Path to banner image, should be in the path listed below. Optimal dimenssions are 1200X630-->
-  <meta property="og:image" content="static/image/loss_landscape_png.png" />
-  <meta property="og:image:width" content="1200"/>
-  <meta property="og:image:height" content="630"/>
+	<head>
+		<meta charset="utf-8">
+		<!-- Meta tags for social media banners, these should be filled in appropriatly as they are your "business card" -->
+		<!-- Replace the content tag with appropriate information -->
+		<meta name="description" content="A study of regularization, fine-tuning, and machine unlearning methods to curb memorization in LMs">
+		<meta property="og:title" content="Mitigating Memorization In LMs"/>
+		<meta property="og:description" content="A study of regularization, fine-tuning, and machine unlearning methods to curb memorization in LMs"/>
+		<meta property="og:url" content="https://mansisak.com/memorization/"/>
+		<!-- Path to banner image, should be in the path listed below. Optimal dimenssions are 1200X630-->
+		<meta property="og:image" content="static/image/loss_landscape_png.png" />
+		<meta property="og:image:width" content="1200"/>
+		<meta property="og:image:height" content="630"/>
 
 
-  <meta name="twitter:title" content="Mitigating Memorization In LMs">
-  <meta name="twitter:description" content="A study of regularization, fine-tuning, and machine unlearning methods to curb memorization in LMs">
-  <!-- Path to banner image, should be in the path listed below. Optimal dimenssions are 1200X600-->
-  <meta name="twitter:image" content="static/images/loss_landscape_png.png">
-  <meta name="twitter:card" content="summary_large_image">
-  <!-- Keywords for your paper to be indexed by-->
-  <meta name="keywords" content="language models, memorization, machine unlearning, regularization, fine-tuning, natural language processing">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+		<meta name="twitter:title" content="Mitigating Memorization In LMs">
+		<meta name="twitter:description" content="A study of regularization, fine-tuning, and machine unlearning methods to curb memorization in LMs">
+		<!-- Path to banner image, should be in the path listed below. Optimal dimenssions are 1200X600-->
+		<meta name="twitter:image" content="static/images/loss_landscape_png.png">
+		<meta name="twitter:card" content="summary_large_image">
+		<!-- Keywords for your paper to be indexed by-->
+		<meta name="keywords" content="language models, memorization, machine unlearning, regularization, fine-tuning, natural language processing">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
 
 
-  <title>Mitigating Memorization in Language Models</title>
-  <link rel="icon" type="image/x-icon" href="static/images/favicon.ico">
-  <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro"
-  rel="stylesheet">
+		<title>Mitigating Memorization in Language Models</title>
+		<link rel="icon" type="image/x-icon" href="static/images/favicon.ico">
+		<link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro"
+			  rel="stylesheet">
 
-  <link rel="stylesheet" href="static/css/bulma.min.css">
-  <link rel="stylesheet" href="static/css/bulma-carousel.min.css">
-  <link rel="stylesheet" href="static/css/bulma-slider.min.css">
-  <link rel="stylesheet" href="static/css/fontawesome.all.min.css">
-  <link rel="stylesheet"
-  href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
-  <link rel="stylesheet" href="static/css/index.css">
+		<link rel="stylesheet" href="static/css/bulma.min.css">
+		<link rel="stylesheet" href="static/css/bulma-carousel.min.css">
+		<link rel="stylesheet" href="static/css/bulma-slider.min.css">
+		<link rel="stylesheet" href="static/css/fontawesome.all.min.css">
+		<link rel="stylesheet"
+			  href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+		<link rel="stylesheet" href="static/css/index.css">
 
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-  <script src="https://documentcloud.adobe.com/view-sdk/main.js"></script>
-  <script defer src="static/js/fontawesome.all.min.js"></script>
-  <script src="static/js/bulma-carousel.min.js"></script>
-  <script src="static/js/bulma-slider.min.js"></script>
-  <script src="static/js/index.js"></script>
-</head>
-<body>
-
-
-  <section class="hero">
-    <div class="hero-body">
-      <div class="container is-max-desktop">
-        <div class="columns is-centered">
-          <div class="column has-text-centered">
-            <h1 class="title is-1 publication-title">Mitigating Memorization In Language Models</h1>
-            <div class="is-size-5 publication-authors">
-              <!-- Paper authors -->
-              <span class="author-block">
-                <a href="https://mansisak.com/" target="_blank">Mansi Sakarvadia</a><sup>1</sup>,</span>
-                <span class="author-block">
-                  <a href="https://aswathyajith.github.io/" target="_blank">Aswathy Ajith</a><sup>1</sup>,</span>
-                  <span class="author-block">
-                    <a href="https://www.linkedin.com/in/arham-khan-957315167/" target="_blank">Arham Khan</a><sup>1</sup>,
-                  </span>
-                  <span class="author-block">
-                    <a href="https://nathaniel-hudson.github.io/" target="_blank">Nathaniel Hudson</a><sup>1,2</sup>,
-                  </span>
-                  <span class="author-block">
-                    <a href="https://calebgeniesse.github.io/" target="_blank">Caleb Geniesse</a><sup>1</sup>,
-                  </span>
-                  <span class="author-block">
-                    <a href="https://kylechard.com/" target="_blank">Kyle Chard</a><sup>1,2</sup>,
-                  </span>
-                  <span class="author-block">
-                    <a href="https://sites.google.com/site/yangyaoqingcmu/home" target="_blank">Yaoqing Yang</a><sup>4</sup>,
-                  </span>
-                  <span class="author-block">
-                    <a href="https://scholar.google.com/citations?user=VGoSakQAAAAJ&hl=en" target="_blank">Ian Foster</a><sup>1,2</sup>,
-                  </span>
-                  <span class="author-block">
-                    <a href="https://www.stat.berkeley.edu/~mmahoney/" target="_blank">Michael Mahoney</a><sup>3,5,6</sup>,
-                  </span>
-                  </div>
-
-                  <div class="is-size-5 publication-authors">
-                    <span class="author-block">
-						<sup>1</sup>University of Chicago,
-						<sup>2</sup>Argonne National Laboratory,
-						<sup>3</sup>Lawrence Berkeley National Laboratory,
-						<sup>4</sup>Dartmouth College,
-						<sup>5</sup>International Computer Science Student,
-						<sup>6</sup>University of California, Berkeley,
-					</span>
-                  </div>
-
-                  <div class="column has-text-centered">
-                    <div class="publication-links">
-                         <!-- Arxiv PDF link -->
-                      <span class="link-block">
-                        <a href="https://arxiv.org/pdf/2410.02159.pdf" target="_blank"
-                        class="external-link button is-normal is-rounded is-dark">
-                        <span class="icon">
-                          <i class="fas fa-file-pdf"></i>
-                        </span>
-                        <span>Paper</span>
-                      </a>
-                    </span>
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+		<script src="https://documentcloud.adobe.com/view-sdk/main.js"></script>
+		<script defer src="static/js/fontawesome.all.min.js"></script>
+		<script src="static/js/bulma-carousel.min.js"></script>
+		<script src="static/js/bulma-slider.min.js"></script>
+		<script src="static/js/index.js"></script>
+	</head>
+	<body>
 
 
-                  <!-- Github link -->
-                  <span class="link-block">
-                    <a href="https://github.com/msakarvadia/memorization" target="_blank"
-                    class="external-link button is-normal is-rounded is-dark">
-                    <span class="icon">
-                      <i class="fab fa-github"></i>
-                    </span>
-                    <span>Code</span>
-                  </a>
-                </span>
+		<section class="hero">
+			<div class="hero-body">
+				<div class="container is-max-desktop">
+					<div class="columns is-centered">
+						<div class="column has-text-centered">
+							<h1 class="title is-1 publication-title">Mitigating Memorization In Language Models</h1>
+							<div class="is-size-5 publication-authors">
+								<!-- Paper authors -->
+								<span class="author-block">
+									<a href="https://mansisak.com/" target="_blank">Mansi Sakarvadia</a><sup>1</sup>,</span>
+								<span class="author-block">
+									<a href="https://aswathyajith.github.io/" target="_blank">Aswathy Ajith</a><sup>1</sup>,</span>
+								<span class="author-block">
+									<a href="https://www.linkedin.com/in/arham-khan-957315167/" target="_blank">Arham Khan</a><sup>1</sup>,
+								</span>
+								<span class="author-block">
+									<a href="https://nathaniel-hudson.github.io/" target="_blank">Nathaniel Hudson</a><sup>1,2</sup>,
+								</span>
+								<span class="author-block">
+									<a href="https://calebgeniesse.github.io/" target="_blank">Caleb Geniesse</a><sup>1</sup>,
+								</span>
+								<span class="author-block">
+									<a href="https://kylechard.com/" target="_blank">Kyle Chard</a><sup>1,2</sup>,
+								</span>
+								<span class="author-block">
+									<a href="https://sites.google.com/site/yangyaoqingcmu/home" target="_blank">Yaoqing Yang</a><sup>4</sup>,
+								</span>
+								<span class="author-block">
+									<a href="https://scholar.google.com/citations?user=VGoSakQAAAAJ&hl=en" target="_blank">Ian Foster</a><sup>1,2</sup>,
+								</span>
+								<span class="author-block">
+									<a href="https://www.stat.berkeley.edu/~mmahoney/" target="_blank">Michael Mahoney</a><sup>3,5,6</sup>,
+								</span>
+							</div>
 
-                <!-- ArXiv abstract Link -->
-                <span class="link-block">
-                  <a href="https://arxiv.org/abs/2410.02159" target="_blank"
-                  class="external-link button is-normal is-rounded is-dark">
-                  <span class="icon">
-                    <i class="ai ai-arxiv"></i>
-                  </span>
-                  <span>arXiv</span>
-                </a>
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
+							<div class="is-size-5 publication-authors">
+								<span class="author-block">
+									<sup>1</sup>University of Chicago,
+									<sup>2</sup>Argonne National Laboratory,
+									<sup>3</sup>Lawrence Berkeley National Laboratory,
+									<sup>4</sup>Dartmouth College,
+									<sup>5</sup>International Computer Science Student,
+									<sup>6</sup>University of California, Berkeley,
+								</span>
+							</div>
 
-
-<!-- Teaser video-->
-<section class="hero teaser">
-  <div class="container is-max-desktop">
-    <div class="hero-body">
-        <!-- Your image here -->
-        <img src="static/images/loss_landscape_png.png" alt="LOSS LANDSCAPES OF EDITED MODELS"/>
-        <h2 class="subtitle has-text-centered">
-		</img>
-      <h2 class="subtitle has-text-centered">
-		  Loss landscapes for the Pythia 2.8B model. (a) Original model's landscape; model has memorized content. (b) Well edited model's landscape using BalancedSubnet with well configured hyper parameters (HPs); reduced memorization & preserved model performance. (c) Badly edited model's landscape using Subnet with poorly configured HPs; reduced memorization but did not preserve model performance. While the good edit does not appear to change the landscape much, the bad edit drastically changes the loss landscape.
-      </h2>
-    </div>
-  </div>
-</section>
-<!-- End teaser video -->
-
-<!-- Paper abstract -->
-<section class="section hero is-light">
-  <div class="container is-max-desktop">
-    <div class="columns is-centered has-text-centered">
-      <div class="column is-four-fifths">
-        <h2 class="title is-3">Abstract</h2>
-        <div class="content has-text-justified">
-          <p>
-Language models (LMs) can “memorize” information, i.e., encode training data in their weights in such a way that inference-time queries can lead to verbatim regurgitation of that data. This ability to extract training data can be problematic, for example, when data are private or sensitive. In this work, we investigate methods to mitigate memorization: three regularizer-based, three finetuning-based, and eleven machine unlearning-based methods, with five of the latter being new methods that we introduce. We also introduce TinyMem, a suite of small, computationally-efficient LMs for the rapid development and evaluation of memorization-mitigation methods. We demonstrate that the mitigation methods that we develop using TinyMem can successfully be applied to production-grade LMs, and we determine via experiment that: regularizer-based mitigation methods are slow and ineffective at curbing memorization; fine-tuning-based methods are effective at curbing memorization, but overly expensive, especially for retaining higher accuracies; and unlearning-based methods are faster and more effective, allowing for the precise localization and removal of memorized information from LM weights prior to inference. We show, in particular, that our proposed unlearning method BalancedSubnet outperforms other mitigation methods at removing memorized information while preserving performance on target tasks.
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-<!-- End paper abstract -->
+							<div class="column has-text-centered">
+								<div class="publication-links">
+									<!-- Arxiv PDF link -->
+									<span class="link-block">
+										<a href="https://arxiv.org/pdf/2410.02159.pdf" target="_blank"
+																					   class="external-link button is-normal is-rounded is-dark">
+											<span class="icon">
+												<i class="fas fa-file-pdf"></i>
+											</span>
+											<span>Paper</span>
+										</a>
+									</span>
 
 
-<!--BibTex citation -->
-  <section class="section" id="BibTeX">
-    <div class="container is-max-desktop content">
-      <h2 class="title">BibTeX</h2>
-      <pre><code>
+									<!-- Github link -->
+									<span class="link-block">
+										<a href="https://github.com/msakarvadia/memorization" target="_blank"
+																							  class="external-link button is-normal is-rounded is-dark">
+											<span class="icon">
+												<i class="fab fa-github"></i>
+											</span>
+											<span>Code</span>
+										</a>
+									</span>
+
+									<!-- ArXiv abstract Link -->
+									<span class="link-block">
+										<a href="https://arxiv.org/abs/2410.02159" target="_blank"
+																				   class="external-link button is-normal is-rounded is-dark">
+											<span class="icon">
+												<i class="ai ai-arxiv"></i>
+											</span>
+											<span>arXiv</span>
+										</a>
+									</span>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</section>
+
+
+		<!-- Teaser video-->
+		<section class="hero teaser">
+			<div class="container is-max-desktop">
+				<!-- Your image here -->
+				<img src="static/images/loss_landscape_png.png" alt="LOSS LANDSCAPES OF EDITED MODELS"/>
+				<h2 class="subtitle has-text-centered">
+					Loss landscapes for the Pythia 2.8B model. (a) Original model's landscape; model has memorized content. (b) Well edited model's landscape using BalancedSubnet with well configured hyper parameters (HPs); reduced memorization & preserved model performance. (c) Badly edited model's landscape using Subnet with poorly configured HPs; reduced memorization but did not preserve model performance. While the good edit does not appear to change the landscape much, the bad edit drastically changes the loss landscape.
+				</h2>
+				</img>
+			</div>
+		</section>
+		<!-- End teaser video -->
+
+		<!-- Paper abstract -->
+		<section class="section hero is-light">
+			<div class="container is-max-desktop">
+				<div class="columns is-centered has-text-centered">
+					<div class="column is-four-fifths">
+						<h2 class="title is-3">Abstract</h2>
+						<div class="content has-text-justified">
+							<p>
+							Language models (LMs) can “memorize” information, i.e., encode training data in their weights in such a way that inference-time queries can lead to verbatim regurgitation of that data. This ability to extract training data can be problematic, for example, when data are private or sensitive. In this work, we investigate methods to mitigate memorization: three regularizer-based, three finetuning-based, and eleven machine unlearning-based methods, with five of the latter being new methods that we introduce. We also introduce TinyMem, a suite of small, computationally-efficient LMs for the rapid development and evaluation of memorization-mitigation methods. We demonstrate that the mitigation methods that we develop using TinyMem can successfully be applied to production-grade LMs, and we determine via experiment that: regularizer-based mitigation methods are slow and ineffective at curbing memorization; fine-tuning-based methods are effective at curbing memorization, but overly expensive, especially for retaining higher accuracies; and unlearning-based methods are faster and more effective, allowing for the precise localization and removal of memorized information from LM weights prior to inference. We show, in particular, that our proposed unlearning method BalancedSubnet outperforms other mitigation methods at removing memorized information while preserving performance on target tasks.
+							</p>
+						</div>
+					</div>
+				</div>
+			</div>
+		</section>
+		<!-- End paper abstract -->
+
+		<!-- Paper Discussion -->
+		<section class="section">
+			<div class="container is-max-desktop">
+				<h2 class="title is-3">What is memorization? </h2>
+				<div class="content has-text-justified">
+					<p>
+					We define <b>"memorization"</b> as an LM's abilty to regurgitate text from its trianing data verbatim. Memorization is <b>undesirable</b> as it may result in unwated information being revealed to an end user, such as personally identifiable information (PII) or <a href="https://harvardlawreview.org/blog/2024/04/nyt-v-openai-the-timess-about-face/">copy righted material</a>.
+					<br><br> 
+					Below we show perplexity and memorization of Pythia 2.8B and 6.9B over trainging. Notice that as models are trained for longer, memorization increases.
+					</p>
+
+					<!-- Your image here -->
+					<img src="static/images/pythia_mem_over_training.png" alt="Pythia Memorization Over Training Graphs."/>
+					</img>
+				</div>
+
+				
+				<h2 class="title is-3">How do we mitigate memorization? </h2>
+				<div class="content has-text-justified">
+					<p>
+					In this work, we <b>develop methods to mitigate memorization in LMs.</b> We consider three broad classes of memorization mitigation methods: regularizer-based, fine-tuning-based, and machine-unlearning based.
+					<br><br> 
+					Below we taxonomize the 17 methods we study. The methods highlighted in green are the ones we propose in this work.
+					</p>
+
+					<!-- Your image here -->
+					<img src="static/images/taxonomy.png" alt="Method Taxonomy."/>
+					</img>
+				</div>
+			</div>
+		</section>
+		<!-- End paper discussion -->
+
+
+		<!--BibTex citation -->
+		<section class="section" id="BibTeX">
+			<div class="container is-max-desktop content">
+				<h2 class="title">BibTeX</h2>
+				<pre><code>
 @article{sakarvadia2023mitigating,
   title={Mitigating Memorization In Language Models},
   author={Sakarvadia, Mansi and Ajith, Aswathy and Khan, Arham and Hudson, Nathaniel and Geniesse, Caleb and Chard, Kyle and Yang, Yaoqing and Foster, Ian and Mahoney, Michael},
   journal={arXiv preprint arXiv:2410.02159},
   year={2024}
 }
-	  </code></pre>
-    </div>
-</section>
-<!--End BibTex citation -->
+				</code></pre>
+			</div>
+		</section>
+		<!--End BibTex citation -->
 
 
-  <footer class="footer">
-  <div class="container">
-    <div class="columns is-centered">
-      <div class="column is-8">
-        <div class="content">
+		<footer class="footer">
+			<div class="container">
+				<div class="columns is-centered">
+					<div class="column is-8">
+						<div class="content">
 
-          <p>
-            This page was built using the <a href="https://github.com/eliahuhorwitz/Academic-project-page-template" target="_blank">Academic Project Page Template</a> which was adopted from the <a href="https://nerfies.github.io" target="_blank">Nerfies</a> project page.
-            You are free to borrow the of this website, we just ask that you link back to this page in the footer. <br> This website is licensed under a <a rel="license"  href="http://creativecommons.org/licenses/by-sa/4.0/" target="_blank">Creative
-            Commons Attribution-ShareAlike 4.0 International License</a>.
-          </p>
+							<p>
+							This page was built using the <a href="https://github.com/eliahuhorwitz/Academic-project-page-template" target="_blank">Academic Project Page Template</a> which was adopted from the <a href="https://nerfies.github.io" target="_blank">Nerfies</a> project page.
+							You are free to borrow the of this website, we just ask that you link back to this page in the footer. <br> This website is licensed under a <a rel="license"  href="http://creativecommons.org/licenses/by-sa/4.0/" target="_blank">Creative
+								Commons Attribution-ShareAlike 4.0 International License</a>.
+							</p>
 
-        </div>
-      </div>
-    </div>
-  </div>
-</footer>
+						</div>
+					</div>
+				</div>
+			</div>
+		</footer>
 
-<!-- Statcounter tracking code -->
-  
-<!-- You can add a tracker to track page visits by creating an account at statcounter.com -->
+		<!-- Statcounter tracking code -->
 
-    <!-- End of Statcounter Code -->
+		<!-- You can add a tracker to track page visits by creating an account at statcounter.com -->
 
-  </body>
-  </html>
+		<!-- End of Statcounter Code -->
+
+	</body>
+</html>
