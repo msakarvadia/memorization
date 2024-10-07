@@ -173,7 +173,8 @@
 				<h2 class="title is-3">What is memorization? </h2>
 				<div class="content has-text-justified">
 					<p>
-					We define <b>"memorization"</b> as an LM's abilty to regurgitate text from its trianing data verbatim. Memorization is <b>undesirable</b> as it may result in unwated information being revealed to an end user, such as personally identifiable information (PII) or <a href="https://harvardlawreview.org/blog/2024/04/nyt-v-openai-the-timess-about-face/">copy righted material</a>.
+					We define <b>"memorization"</b> as an LM's abilty to regurgitate text from its trianing data verbatim. 
+					Memorization is <b>undesirable</b> as it may result in unwated information being revealed to an end user, such as personally identifiable information (PII) or <a href="https://harvardlawreview.org/blog/2024/04/nyt-v-openai-the-timess-about-face/">copy righted material</a>.
 					<br><br> 
 					Below we show perplexity and memorization of Pythia 2.8B and 6.9B over trainging. Notice that as models are trained for longer, memorization increases.
 					</p>
@@ -237,7 +238,61 @@
 							<td>&#9989</td>
 						</tr>
 					</table>
+					<p>
+					Based on the above table (more detailed results avalible in paper), we conclude that <b>unlearning-based mitigation methods work best.</b>
+					</p>
+				</div>
 
+				<h2 class="title is-3">Which machine unlearning-based method is best? </h2>
+				<div class="content has-text-justified">
+					<p>
+					We found that of the three classess of mitigation methods we studied, unlearning-based methods worked the best. Here, we further study which of the eleven unlearning based methods worked the best.
+					<br><br>
+					Below, we present results from applying unlearning methods to TinyMem LMs. 
+					From left to right, we present unlearning results for Math+Noise, Math+Backdoor, Language+Noise, Language+Backdoor LMs.
+					Comparing unlearning strategies for varying model sizes, unlearning times, and data size.
+					Effective unlearning techniques will result in 0% different in accuracy for math models or a 0% difference in perplexity for langauge models and -100\% different in % memorized. 
+					<b>BalancedSubnet (Subnet<sub>bal</sub>) achieves the best trade off between the two criteria.</b>
+					</p>
+					<!-- Your image here -->
+					<img src="static/images/unlearning_boxen.png" alt="Method Taxonomy."/></img>
+				</div>
+
+				<h2 class="title is-3">Do our methods extend to production-grade models? </h2>
+				<div class="content has-text-justified">
+					<p>
+					We have found that all unlearning-based methods are capable of mitigating memorization in TinyMem models.
+					We especially noticed that the BalancedSubnet method outperformed all of the other methods with respect to both mitigating memorization and preserving accuracy/perplexity.
+					We now wondering if methods developed using TinyMem models can extend to production-grade LMs. 
+					<br><br>
+					To test this question, we apply unlearning methods to Pythia 2.8B & 6.9B and compare the results with results obtrained from TinyMem models. 
+					Results are below; comparison of memorization percent difference (closer to –100 better) versus perplexity/accuracy percent different (closer to 0 better), before and after unlearning.
+					We notice that, like before, <b>BalancedSubnet (Subnet<sub>bal</sub>) achieves the best trade off between the two criteria.</b>
+					</p>
+					<!-- Your image here -->
+					<img src="static/images/pythia_toy_scatter.png" alt="Comparison of Unlearning Results in both Pythia and Toy models."/></img>
+
+					<p>
+					Below, we further investigate if unlearning methods are robust accross various training timesteps by unlearning memorization at four different timepoints in training.
+					We notice that BalancedSubnet is able to mitigate memorization while preseving perplexities accross all time steps.
+					</p>
+					<img src="static/images/pythia_time_steps.png" alt="Comparison of Unlearning Results Accross Various Pythia Training Time Steps."/></img>
+				</div>
+
+				<h2 class="title is-3">Conclusion</h2>
+				<div class="content has-text-justified">
+					<p>
+					As memorization of training data becomes increasingly pervasive in modern LMs, it is important to study the causes of, and/or remedies for, this behavior. 
+					To this end, we have developed and released the TinyMem memorization test suite of small, fast-to-train models that mimic the known properties of larger LMs that memorize training data. 
+					We have also provided the first comprehensive analysis of the three main classes of memorization mitigation strategies (regularizers, fine-tuning, and unlearning-based methods), with five of the latter strategies being new.
+					<br><br>
+					We stress tested each of 17 strategies across a range of model training recipes (e.g., varying model size, training dataset, training lengths) from three perspectives: 
+					(i) memorization mitigation effectiveness; (ii) model accuracy preservation; and (iii) method efficiency (speed). 
+					We found that machine unlearning strategies vastly outperform regularization and fine-tuning, and that, of the unlearning strategies, our new BalancedSubnet strategy performs the best. 
+					We also demonstrated, by applying unlearning methods to Pythia 2.8 and 6.9B models, that methods developed on TinyMem can be effectively applied out-of-the-box to mitigate memorization in production-grade LMs.
+					<br><br>
+					Further details about all experiments and figures discussed in this blog can be found in the main paper. If there are any questions feel free to email the first author for clarification. 
+					</p>
 				</div>
 
 			</div>
