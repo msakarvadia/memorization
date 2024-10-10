@@ -306,7 +306,7 @@ argument descriptions:
 
 BalancedSubnet(LM, K, memorized_sequences, random_sequences, num_epochs, loss_weight)
 	LM<sub>edited</sub> &larr; Copy of LM
-	scores &larr; kaiming_uniform([...]) # Score arry w/ kaiming init., 1 score per parameter
+	scores &larr; kaiming_uniform([...]) # Score array w/ kaiming init., 1 score per parameter
 	Initialize optimizer state w/ scores
 	shuffled_data &larr; Shuffle[memorized_sequences &cup; random_sequences]
 	for e &isin; num_epochs do:
