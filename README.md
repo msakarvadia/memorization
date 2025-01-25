@@ -109,10 +109,11 @@ Once these steps are done, you just need to add files to be committed and pushed
 Please cite this work as:
 
 ```bibtex
-@article{sakarvadia2023mitigating,
+@inproceedings{sakarvadia2025mitigating,
   title={Mitigating Memorization In Language Models},
   author={Sakarvadia, Mansi and Ajith, Aswathy and Khan, Arham and Hudson, Nathaniel and Geniesse, Caleb and Chard, Kyle and Yang, Yaoqing and Foster, Ian and Mahoney, Michael},
-  journal={arXiv preprint arXiv:2410.02159},
+  booktitle={International Conference on Learning Representations},
   year={2024}
+  url={https://openreview.net/forum?id=MGKDBuyv4p}
 }
 ```
