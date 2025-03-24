@@ -113,7 +113,7 @@ Please cite this work as:
   title={Mitigating Memorization In Language Models},
   author={Sakarvadia, Mansi and Ajith, Aswathy and Khan, Arham and Hudson, Nathaniel and Geniesse, Caleb and Chard, Kyle and Yang, Yaoqing and Foster, Ian and Mahoney, Michael},
   booktitle={International Conference on Learning Representations},
-  year={2025}
+  year={2025},
   url={https://openreview.net/forum?id=MGKDBuyv4p}
 }
 ```
