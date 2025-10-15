@@ -1,4 +1,5 @@
 # Mitigating Memorization in Language Models
+ICLR 2025 Spotlight Paper
 [`Link to Paper`](https://arxiv.org/abs/2410.02159)
 
 Language models (LMs) can “memorize” information, i.e., encode training data
